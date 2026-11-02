@@ -1,0 +1,837 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model audit_logs {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pharmacy_id String     @db.Uuid
+  user_id     String?    @db.Uuid
+  action      String     @db.VarChar(100)
+  entity_name String     @db.VarChar(100)
+  entity_id   String     @db.VarChar(100)
+  old_values  Json?
+  new_values  Json?
+  ip_address  String?    @db.VarChar(50)
+  user_agent  String?
+  created_at  DateTime   @default(now()) @db.Timestamptz(6)
+  pharmacies  pharmacies @relation(fields: [pharmacy_id], references: [id], onUpdate: NoAction)
+  users       users?     @relation(fields: [user_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([entity_name, entity_id], map: "idx_audit_logs_entity")
+  @@index([pharmacy_id, created_at(sort: Desc)], map: "idx_audit_logs_pharmacy_date")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model cash_sessions {
+  id                  String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pharmacy_id         String              @db.Uuid
+  user_id             String              @unique(map: "uk_single_open_cash_session_per_user", where: raw("(status = 'OUVERTE'::cash_session_status)")) @db.Uuid
+  opened_at           DateTime            @default(now()) @db.Timestamptz(6)
+  closed_at           DateTime?           @db.Timestamptz(6)
+  initial_float_cdf   Decimal             @default(0.00) @db.Decimal(15, 2)
+  initial_float_usd   Decimal             @default(0.00) @db.Decimal(15, 2)
+  expected_amount_cdf Decimal?            @default(0.00) @db.Decimal(15, 2)
+  expected_amount_usd Decimal?            @default(0.00) @db.Decimal(15, 2)
+  counted_amount_cdf  Decimal?            @db.Decimal(15, 2)
+  counted_amount_usd  Decimal?            @db.Decimal(15, 2)
+  variance_cdf        Decimal?            @db.Decimal(15, 2)
+  variance_usd        Decimal?            @db.Decimal(15, 2)
+  variance_reason     String?
+  status              cash_session_status @default(OUVERTE)
+  pharmacies          pharmacies          @relation(fields: [pharmacy_id], references: [id], onUpdate: NoAction)
+  users               users               @relation(fields: [user_id], references: [id], onUpdate: NoAction)
+  customer_payments   customer_payments[]
+  expenses            expenses[]
+  sales               sales[]
+
+  @@index([user_id, status], map: "idx_cash_sessions_user_status")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model customers {
+  id                  String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pharmacy_id         String              @db.Uuid
+  code                String              @db.VarChar(50)
+  full_name           String              @db.VarChar(255)
+  phone               String?             @db.VarChar(50)
+  email               String?             @db.VarChar(255)
+  company_name        String?             @db.VarChar(255)
+  address             String?
+  customer_type       customer_type       @default(PARTICULIER)
+  credit_limit_cdf    Decimal             @default(0.00) @db.Decimal(15, 2)
+  current_balance_cdf Decimal             @default(0.00) @db.Decimal(15, 2)
+  medical_notes       String?
+  is_active           Boolean             @default(true)
+  created_at          DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime            @default(now()) @db.Timestamptz(6)
+  credit_notes        credit_notes[]
+  customer_payments   customer_payments[]
+  pharmacies          pharmacies          @relation(fields: [pharmacy_id], references: [id], onUpdate: NoAction)
+  prescriptions       prescriptions[]
+  sales               sales[]
+
+  @@unique([pharmacy_id, code], map: "uk_customers_pharmacy_code")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model exchange_rates {
+  id              String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pharmacy_id     String     @db.Uuid
+  base_currency   String     @default("USD") @db.VarChar(3)
+  target_currency String     @default("CDF") @db.VarChar(3)
+  rate            Decimal    @db.Decimal(12, 4)
+  created_by      String     @db.Uuid
+  effective_date  DateTime   @default(now()) @db.Timestamptz(6)
+  notes           String?
+  users           users      @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  pharmacies      pharmacies @relation(fields: [pharmacy_id], references: [id], onUpdate: NoAction)
+
+  @@unique([pharmacy_id, base_currency, target_currency, effective_date], map: "uk_exchange_rates_pharmacy_date")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model expense_categories {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pharmacy_id String     @db.Uuid
+  name        String     @db.VarChar(100)
+  created_at  DateTime   @default(now()) @db.Timestamptz(6)
+  pharmacies  pharmacies @relation(fields: [pharmacy_id], references: [id], onUpdate: NoAction)
+  expenses    expenses[]
+
+  @@unique([pharmacy_id, name], map: "uk_expense_categories_pharmacy_name")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model expenses {
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pharmacy_id        String             @db.Uuid
+  category_id        String             @db.Uuid
+  cash_session_id    String?            @db.Uuid
+  user_id            String             @db.Uuid
+  description        String
+  amount_cdf         Decimal            @db.Decimal(15, 2)
+  amount_usd         Decimal            @default(0.00) @db.Decimal(15, 2)
+  receipt_file_path  String?
+  created_at         DateTime           @default(now()) @db.Timestamptz(6)
+  reversed_at        DateTime?          @db.Timestamptz(6)
+  reversal_reason    String?
+  reversal_of_id     String?            @db.Uuid
+  cash_sessions      cash_sessions?     @relation(fields: [cash_session_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  reversal_of        expenses?          @relation("expense_reversals", fields: [reversal_of_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  reversals          expenses[]         @relation("expense_reversals")
+  expense_categories expense_categories @relation(fields: [category_id], references: [id], onUpdate: NoAction)
+  pharmacies         pharmacies         @relation(fields: [pharmacy_id], references: [id], onUpdate: NoAction)
+  users              users              @relation(fields: [user_id], references: [id], onUpdate: NoAction)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model permissions {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code             String             @unique @db.VarChar(100)
+  description      String?
+  category         String             @db.VarChar(50)
+  role_permissions role_permissions[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model pharmacies {
+  id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code               String               @unique @db.VarChar(50)
+  name               String               @db.VarChar(255)
+  address            String
+  city               String?              @default("Kinshasa") @db.VarChar(100)
+  country            String?              @default("RDC") @db.VarChar(100)
+  phone              String?              @db.VarChar(50)
+  email              String?              @db.VarChar(255)
+  tax_number         String?              @db.VarChar(100)
+  default_currency   String?              @default("CDF") @db.VarChar(3)
+  is_active          Boolean?             @default(true)
+  created_at         DateTime             @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime             @default(now()) @db.Timestamptz(6)
+  audit_logs         audit_logs[]
+  cash_sessions      cash_sessions[]
+  credit_notes       credit_notes[]
+  customer_payments  customer_payments[]
+  customers          customers[]
+  exchange_rates     exchange_rates[]
+  expense_categories expense_categories[]
+  expenses           expenses[]
+  goods_receipts     goods_receipts[]
+  inventory_counts   inventory_counts[]
+  invoice_sequences  invoice_sequences[]
+  notifications      notifications[]
+  product_barcodes   product_barcodes[]
+  product_categories product_categories[]
+  products           products[]
+  purchase_orders    purchase_orders[]
+  purchase_order_sequences purchase_order_sequences[]
+  sales              sales[]
+  settings           settings[]
+  stock_movements    stock_movements[]
+  stock_adjustments  stock_adjustments[]
+  suppliers          suppliers[]
+  users              users[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model prescriptions {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customer_id       String    @db.Uuid
+  prescriber_name   String    @db.VarChar(255)
+  health_center     String?   @db.VarChar(255)
+  prescription_date DateTime  @db.Date
+  storage_file_path String
+  prescription_text String?
+  verified_by       String?   @db.Uuid
+  verified_at       DateTime? @db.Timestamptz(6)
+  created_at        DateTime  @default(now()) @db.Timestamptz(6)
+  customers         customers @relation(fields: [customer_id], references: [id], onUpdate: NoAction)
+  users             users?    @relation(fields: [verified_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sales             sales[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model price_history {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  product_id    String   @db.Uuid
+  old_price_cdf Decimal? @db.Decimal(15, 2)
+  new_price_cdf Decimal  @db.Decimal(15, 2)
+  old_price_usd Decimal? @db.Decimal(15, 2)
+  new_price_usd Decimal  @db.Decimal(15, 2)
+  changed_by    String   @db.Uuid
+  reason        String?
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+  users         users    @relation(fields: [changed_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  products      products @relation(fields: [product_id], references: [id], onUpdate: NoAction)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model product_barcodes {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  product_id  String     @db.Uuid
+  barcode     String     @db.VarChar(100)
+  is_primary  Boolean    @default(false)
+  created_at  DateTime   @default(now()) @db.Timestamptz(6)
+  pharmacy_id String     @db.Uuid
+  pharmacies  pharmacies @relation(fields: [pharmacy_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_product_barcodes_pharmacy")
+  products    products   @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([pharmacy_id, barcode], map: "uk_product_barcodes_pharmacy_barcode")
+  @@index([barcode], map: "idx_product_barcodes_barcode")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model product_categories {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pharmacy_id String     @db.Uuid
+  name        String     @db.VarChar(100)
+  description String?
+  created_at  DateTime   @default(now()) @db.Timestamptz(6)
+  pharmacies  pharmacies @relation(fields: [pharmacy_id], references: [id], onUpdate: NoAction)
+  products    products[]
+
+  @@unique([pharmacy_id, name], map: "uk_product_categories_pharmacy_name")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model product_lots {
+  id                    String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  product_id            String                  @db.Uuid
+  lot_number            String                  @db.VarChar(100)
+  expiry_date           DateTime                @db.Date
+  purchase_price_cdf    Decimal                 @default(0.00) @db.Decimal(15, 2)
+  purchase_price_usd    Decimal                 @default(0.00) @db.Decimal(15, 2)
+  initial_quantity      Int
+  current_quantity      Int
+  is_quarantined        Boolean                 @default(false)
+  quarantine_reason     String?
+  quarantine_updated_at DateTime?               @db.Timestamptz(6)
+  storage_location      String?                 @db.VarChar(100)
+  created_at            DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime                @default(now()) @db.Timestamptz(6)
+  credit_note_lines     credit_note_lines[]
+  goods_receipt_lines   goods_receipt_lines[]
+  inventory_count_lines inventory_count_lines[]
+  products              products                @relation(fields: [product_id], references: [id], onUpdate: NoAction)
+  sale_items            sale_items[]
+  stock_movements       stock_movements[]
+  stock_adjustments     stock_adjustments[]
+
+  @@unique([product_id, lot_number], map: "uk_product_lot")
+  @@index([product_id, expiry_date, current_quantity], map: "idx_product_lots_fefo", where: raw("((is_quarantined = false) AND (current_quantity > 0))"))
+  @@index([product_id, expiry_date], map: "idx_product_lots_vendables", where: raw("((is_quarantined = false) AND (current_quantity > 0))"))
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model products {
+  id                      String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pharmacy_id             String                 @db.Uuid
+  category_id             String?                @db.Uuid
+  name                    String                 @db.VarChar(255)
+  dci                     String                 @db.VarChar(255)
+  dosage                  String?                @db.VarChar(100)
+  galenic_form            String?                @db.VarChar(100)
+  laboratory              String?                @db.VarChar(255)
+  selling_price_cdf       Decimal                @default(0.00) @db.Decimal(15, 2)
+  selling_price_usd       Decimal                @default(0.00) @db.Decimal(15, 2)
+  tax_rate                Decimal                @default(0.00) @db.Decimal(5, 2)
+  min_alert_threshold     Int                    @default(10)
+  max_threshold           Int?
+  security_stock          Int?
+  storage_location        String?                @db.VarChar(100)
+  requires_prescription   Boolean                @default(false)
+  is_controlled_substance Boolean                @default(false)
+  is_cold_chain           Boolean                @default(false)
+  is_active               Boolean                @default(true)
+  created_at              DateTime               @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime               @default(now()) @db.Timestamptz(6)
+  cump_cdf                Decimal                @default(0.00) @db.Decimal(15, 2)
+  credit_note_lines       credit_note_lines[]
+  goods_receipt_lines     goods_receipt_lines[]
+  price_history           price_history[]
+  product_barcodes        product_barcodes[]
+  product_lots            product_lots[]
+  product_categories      product_categories?    @relation(fields: [category_id], references: [id], onUpdate: NoAction)
+  pharmacies              pharmacies             @relation(fields: [pharmacy_id], references: [id], onUpdate: NoAction)
+  purchase_order_items    purchase_order_items[]
+  sale_items              sale_items[]
+
+  @@index([category_id], map: "idx_products_category")
+  @@index([dci], map: "idx_products_dci")
+  @@index([pharmacy_id, is_active], map: "idx_products_pharmacy_active")
+  @@index([dci(ops: raw("gin_trgm_ops"))], map: "idx_products_dci_trgm", type: Gin)
+  @@index([name(ops: raw("gin_trgm_ops"))], map: "idx_products_name_trgm", type: Gin)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model purchase_order_items {
+  id                  String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  order_id            String                @db.Uuid
+  product_id          String                @db.Uuid
+  ordered_quantity    Int
+  received_quantity   Int                   @default(0)
+  unit_price_cdf      Decimal               @default(0.00) @db.Decimal(15, 2)
+  unit_price_usd      Decimal               @default(0.00) @db.Decimal(15, 2)
+  goods_receipt_lines goods_receipt_lines[]
+  purchase_orders     purchase_orders       @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  products            products              @relation(fields: [product_id], references: [id], onUpdate: NoAction)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model purchase_orders {
+  id                     String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pharmacy_id            String                 @db.Uuid
+  supplier_id            String                 @db.Uuid
+  order_number           String                 @db.VarChar(100)
+  status                 purchase_order_status  @default(BROUILLON)
+  total_amount_cdf       Decimal                @default(0.00) @db.Decimal(15, 2)
+  total_amount_usd       Decimal                @default(0.00) @db.Decimal(15, 2)
+  created_by             String                 @db.Uuid
+  order_date             DateTime               @default(now()) @db.Timestamptz(6)
+  expected_delivery_date DateTime?              @db.Date
+  received_date          DateTime?              @db.Timestamptz(6)
+  notes                  String?
+  created_at             DateTime               @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime               @default(now()) @db.Timestamptz(6)
+  goods_receipts         goods_receipts[]
+  purchase_order_items   purchase_order_items[]
+  users                  users                  @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  pharmacies             pharmacies             @relation(fields: [pharmacy_id], references: [id], onUpdate: NoAction)
+  suppliers              suppliers              @relation(fields: [supplier_id], references: [id], onUpdate: NoAction)
+
+  @@unique([pharmacy_id, order_number], map: "uk_purchase_orders_pharmacy_num")
+}
+
+model purchase_order_sequences {
+  pharmacy_id  String     @db.Uuid
+  order_year   Int
+  next_number  Int        @default(1)
+  pharmacies   pharmacies @relation(fields: [pharmacy_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([pharmacy_id, order_year])
+  @@index([order_year], map: "purchase_order_sequences_year_idx")
+  @@map("purchase_order_sequences")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model role_permissions {
+  role_id       String      @db.Uuid
+  permission_id String      @db.Uuid
+  permissions   permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  roles         roles       @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([role_id, permission_id])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model roles {
+  id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                 String             @unique @db.VarChar(50)
+  description          String?
+  created_at           DateTime           @default(now()) @db.Timestamptz(6)
+  max_discount_percent Decimal            @default(0.00) @db.Decimal(5, 2)
+  role_permissions     role_permissions[]
+  users                users[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model sale_items {
+  id                  String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sale_id             String              @db.Uuid
+  product_id          String              @db.Uuid
+  lot_id              String              @db.Uuid
+  quantity            Int
+  unit_price_cdf      Decimal             @db.Decimal(15, 2)
+  unit_cost_cump_cdf  Decimal             @db.Decimal(15, 2)
+  discount_amount_cdf Decimal             @default(0.00) @db.Decimal(15, 2)
+  tax_rate            Decimal             @default(0.00) @db.Decimal(5, 2)
+  total_line_cdf      Decimal             @db.Decimal(15, 2)
+  credit_note_lines   credit_note_lines[]
+  product_lots        product_lots        @relation(fields: [lot_id], references: [id], onUpdate: NoAction)
+  products            products            @relation(fields: [product_id], references: [id], onUpdate: NoAction)
+  sales               sales               @relation(fields: [sale_id], references: [id], onUpdate: NoAction)
+
+  @@index([sale_id], map: "idx_sale_items_sale")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model sale_payments {
+  id                    String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sale_id               String         @db.Uuid
+  payment_method        payment_method
+  currency              String         @default("CDF") @db.VarChar(3)
+  amount_paid           Decimal        @db.Decimal(15, 2)
+  amount_in_cdf         Decimal        @db.Decimal(15, 2)
+  mobile_money_provider String?        @db.VarChar(50)
+  transaction_reference String?        @db.VarChar(100)
+  change_given_cdf      Decimal?       @default(0.00) @db.Decimal(15, 2)
+  created_at            DateTime       @default(now()) @db.Timestamptz(6)
+  sales                 sales          @relation(fields: [sale_id], references: [id], onUpdate: NoAction)
+
+  @@index([sale_id], map: "idx_sale_payments_sale")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model sales {
+  id                              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pharmacy_id                     String          @db.Uuid
+  cash_session_id                 String          @db.Uuid
+  invoice_number                  String          @db.VarChar(100)
+  sequence_number                 Int
+  fiscal_year                     Int
+  customer_id                     String?         @db.Uuid
+  user_id                         String          @db.Uuid
+  prescription_id                 String?         @db.Uuid
+  currency                        String          @default("CDF") @db.VarChar(3)
+  exchange_rate_applied           Decimal         @db.Decimal(12, 4)
+  subtotal_cdf                    Decimal         @db.Decimal(15, 2)
+  discount_cdf                    Decimal         @default(0.00) @db.Decimal(15, 2)
+  tax_amount_cdf                  Decimal         @default(0.00) @db.Decimal(15, 2)
+  total_amount_cdf                Decimal         @db.Decimal(15, 2)
+  total_amount_usd                Decimal         @db.Decimal(15, 2)
+  idempotency_key                 String?         @db.VarChar(100)
+  status                          sale_status     @default(VALIDEE)
+  cancellation_reason             String?
+  cancelled_by                    String?         @db.Uuid
+  cancelled_at                    DateTime?       @db.Timestamptz(6)
+  created_at                      DateTime        @default(now()) @db.Timestamptz(6)
+  credit_notes                    credit_notes[]
+  sale_items                      sale_items[]
+  sale_payments                   sale_payments[]
+  customer_payment_allocations    customer_payment_allocations[]
+  users_sales_cancelled_byTousers users?          @relation("sales_cancelled_byTousers", fields: [cancelled_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  cash_sessions                   cash_sessions   @relation(fields: [cash_session_id], references: [id], onUpdate: NoAction)
+  customers                       customers?      @relation(fields: [customer_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  pharmacies                      pharmacies      @relation(fields: [pharmacy_id], references: [id], onUpdate: NoAction)
+  prescriptions                   prescriptions?  @relation(fields: [prescription_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  users_sales_user_idTousers      users           @relation("sales_user_idTousers", fields: [user_id], references: [id], onUpdate: NoAction)
+
+  @@unique([pharmacy_id, idempotency_key], map: "uk_sales_pharmacy_idempotency", where: raw("(idempotency_key IS NOT NULL)"))
+  @@unique([pharmacy_id, invoice_number], map: "uk_sales_pharmacy_invoice")
+  @@unique([pharmacy_id, fiscal_year, sequence_number], map: "uk_sales_pharmacy_seq_fiscal")
+  @@index([pharmacy_id, created_at(sort: Desc)], map: "idx_sales_created_at")
+  @@index([pharmacy_id, fiscal_year, sequence_number], map: "idx_sales_pharmacy_seq")
+  @@index([pharmacy_id, created_at(sort: Desc)], map: "idx_sales_pharmacy_created")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model stock_movements {
+  id                                       String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pharmacy_id                              String        @db.Uuid
+  lot_id                                   String        @db.Uuid
+  user_id                                  String        @db.Uuid
+  reference_id                             String?       @db.Uuid
+  type                                     movement_type
+  quantity                                 Int
+  direction                                String        @db.VarChar(4)
+  unit_cost_cdf                            Decimal       @default(0.00) @db.Decimal(15, 2)
+  reason                                   String
+  approved_by                              String?       @db.Uuid
+  created_at                               DateTime      @default(now()) @db.Timestamptz(6)
+  users_stock_movements_approved_byTousers users?        @relation("stock_movements_approved_byTousers", fields: [approved_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  product_lots                             product_lots  @relation(fields: [lot_id], references: [id], onUpdate: NoAction)
+  pharmacies                               pharmacies    @relation(fields: [pharmacy_id], references: [id], onUpdate: NoAction)
+  users_stock_movements_user_idTousers     users         @relation("stock_movements_user_idTousers", fields: [user_id], references: [id], onUpdate: NoAction)
+
+  @@index([lot_id], map: "idx_stock_movements_lot")
+  @@index([pharmacy_id, created_at(sort: Desc)], map: "idx_stock_movements_pharmacy_date")
+  @@index([lot_id, created_at(sort: Desc)], map: "idx_stock_movements_lot_created")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+/// Demandes d'ajustement persistantes et auditables (STK-05, RG-11).
+model stock_adjustments {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pharmacy_id      String    @db.Uuid
+  lot_id           String    @db.Uuid
+  requested_by     String    @db.Uuid
+  approved_by      String?   @db.Uuid
+  system_quantity  Int
+  new_quantity     Int
+  variance         Int
+  reason           String
+  status           String    @default("DEMANDE") @db.VarChar(20)
+  rejection_reason String?
+  requested_at     DateTime  @default(now()) @db.Timestamptz(6)
+  approved_at      DateTime? @db.Timestamptz(6)
+  pharmacies       pharmacies  @relation(fields: [pharmacy_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  product_lots     product_lots @relation(fields: [lot_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  requested_by_user users      @relation("stock_adjustments_requested_by", fields: [requested_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  approved_by_user  users?     @relation("stock_adjustments_approved_by", fields: [approved_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([pharmacy_id, status], map: "idx_stock_adjustments_pharmacy_status")
+}
+
+model suppliers {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pharmacy_id     String            @db.Uuid
+  name            String            @db.VarChar(255)
+  contact_name    String?           @db.VarChar(255)
+  phone           String?           @db.VarChar(50)
+  email           String?           @db.VarChar(255)
+  address         String?
+  payment_terms   String?
+  lead_time_days  Int?              @default(2)
+  is_active       Boolean           @default(true)
+  created_at      DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime          @default(now()) @db.Timestamptz(6)
+  purchase_orders purchase_orders[]
+  pharmacies      pharmacies        @relation(fields: [pharmacy_id], references: [id], onUpdate: NoAction)
+
+  @@unique([pharmacy_id, name], map: "uk_suppliers_pharmacy_name")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model users {
+  id                                                    String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pharmacy_id                                           String              @db.Uuid
+  role_id                                               String              @db.Uuid
+  username                                              String              @unique @db.VarChar(100)
+  email                                                 String?             @unique @db.VarChar(255)
+  password_hash                                         String              @db.VarChar(255)
+  full_name                                             String              @db.VarChar(255)
+  pin_code_hash                                         String?             @db.VarChar(255)
+  failed_login_attempts                                 Int                 @default(0)
+  locked_until                                          DateTime?           @db.Timestamptz(6)
+  is_active                                             Boolean             @default(true)
+  last_login_at                                         DateTime?           @db.Timestamptz(6)
+  created_at                                            DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at                                            DateTime            @default(now()) @db.Timestamptz(6)
+  audit_logs                                            audit_logs[]
+  cash_sessions                                         cash_sessions?
+  credit_notes                                          credit_notes[]
+  customer_payments                                     customer_payments[]
+  exchange_rates                                        exchange_rates[]
+  expenses                                              expenses[]
+  goods_receipts                                        goods_receipts[]
+  notification_reads                                    notification_reads[]
+  inventory_counts_inventory_counts_created_byTousers   inventory_counts[]  @relation("inventory_counts_created_byTousers")
+  inventory_counts_inventory_counts_validated_byTousers inventory_counts[]  @relation("inventory_counts_validated_byTousers")
+  prescriptions                                         prescriptions[]
+  price_history                                         price_history[]
+  purchase_orders                                       purchase_orders[]
+  refresh_tokens                                        refresh_tokens[]
+  sales_sales_cancelled_byTousers                       sales[]             @relation("sales_cancelled_byTousers")
+  sales_sales_user_idTousers                            sales[]             @relation("sales_user_idTousers")
+  stock_movements_stock_movements_approved_byTousers    stock_movements[]   @relation("stock_movements_approved_byTousers")
+  stock_movements_stock_movements_user_idTousers        stock_movements[]   @relation("stock_movements_user_idTousers")
+  stock_adjustments_requested_by                         stock_adjustments[] @relation("stock_adjustments_requested_by")
+  stock_adjustments_approved_by                          stock_adjustments[] @relation("stock_adjustments_approved_by")
+  pharmacies                                            pharmacies          @relation(fields: [pharmacy_id], references: [id], onUpdate: NoAction)
+  roles                                                 roles               @relation(fields: [role_id], references: [id], onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model credit_note_lines {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  credit_note_id String       @db.Uuid
+  sale_item_id   String       @db.Uuid
+  product_id     String       @db.Uuid
+  lot_id         String       @db.Uuid
+  quantity       Int
+  unit_price_cdf Decimal      @db.Decimal(15, 2)
+  restocked      Boolean      @default(true)
+  credit_notes   credit_notes @relation(fields: [credit_note_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  product_lots   product_lots @relation(fields: [lot_id], references: [id], onUpdate: NoAction)
+  products       products     @relation(fields: [product_id], references: [id], onUpdate: NoAction)
+  sale_items     sale_items   @relation(fields: [sale_item_id], references: [id], onUpdate: NoAction)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model credit_notes {
+  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pharmacy_id        String              @db.Uuid
+  sale_id            String              @db.Uuid
+  credit_note_number String              @db.VarChar(100)
+  customer_id        String?             @db.Uuid
+  total_amount_cdf   Decimal             @default(0.00) @db.Decimal(15, 2)
+  total_amount_usd   Decimal             @default(0.00) @db.Decimal(15, 2)
+  reason             String
+  created_by         String              @db.Uuid
+  created_at         DateTime            @default(now()) @db.Timestamptz(6)
+  credit_note_lines  credit_note_lines[]
+  users              users               @relation(fields: [created_by], references: [id], onUpdate: NoAction)
+  customers          customers?          @relation(fields: [customer_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  pharmacies         pharmacies          @relation(fields: [pharmacy_id], references: [id], onUpdate: NoAction)
+  sales              sales               @relation(fields: [sale_id], references: [id], onUpdate: NoAction)
+
+  @@unique([pharmacy_id, credit_note_number], map: "uk_credit_notes_num")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model customer_payments {
+  id                String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pharmacy_id       String         @db.Uuid
+  customer_id       String         @db.Uuid
+  cash_session_id   String?        @db.Uuid
+  user_id           String         @db.Uuid
+  amount_paid_cdf   Decimal        @db.Decimal(15, 2)
+  amount_paid       Decimal?       @db.Decimal(15, 2)
+  currency          String         @default("CDF") @db.VarChar(3)
+  payment_method    String         @default("ESPECES") @db.VarChar(50)
+  idempotency_key   String?        @db.VarChar(100)
+  receipt_reference String?        @db.VarChar(100)
+  notes             String?
+  created_at        DateTime       @default(now()) @db.Timestamptz(6)
+  cash_sessions     cash_sessions? @relation(fields: [cash_session_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  customers         customers      @relation(fields: [customer_id], references: [id], onUpdate: NoAction)
+  pharmacies        pharmacies     @relation(fields: [pharmacy_id], references: [id], onUpdate: NoAction)
+  users             users          @relation(fields: [user_id], references: [id], onUpdate: NoAction)
+  customer_payment_allocations customer_payment_allocations[]
+
+  @@unique([pharmacy_id, idempotency_key], map: "uk_customer_payments_idempotency", where: raw("(idempotency_key IS NOT NULL)"))
+  @@index([customer_id, created_at(sort: Desc)], map: "idx_customer_payments_customer_date")
+}
+
+/// Imputation d'un règlement de créance sur une facture à crédit, dans l'ordre FIFO.
+model customer_payment_allocations {
+  id                  String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customer_payment_id String            @db.Uuid
+  sale_id             String            @db.Uuid
+  amount_cdf          Decimal           @db.Decimal(15, 2)
+  created_at          DateTime          @default(now()) @db.Timestamptz(6)
+  customer_payments   customer_payments @relation(fields: [customer_payment_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  sales               sales             @relation(fields: [sale_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@unique([customer_payment_id, sale_id], map: "uk_customer_payment_allocation")
+  @@index([sale_id], map: "idx_customer_payment_allocations_sale")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model goods_receipt_lines {
+  id                      String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  receipt_id              String                @db.Uuid
+  purchase_order_item_id  String?               @db.Uuid
+  product_id              String                @db.Uuid
+  lot_id                  String                @db.Uuid
+  ordered_quantity        Int                   @default(0)
+  received_quantity       Int
+  unit_purchase_price_cdf Decimal               @default(0.00) @db.Decimal(15, 2)
+  unit_purchase_price_usd Decimal               @default(0.00) @db.Decimal(15, 2)
+  product_lots            product_lots          @relation(fields: [lot_id], references: [id], onUpdate: NoAction)
+  products                products              @relation(fields: [product_id], references: [id], onUpdate: NoAction)
+  purchase_order_items    purchase_order_items? @relation(fields: [purchase_order_item_id], references: [id], onUpdate: NoAction)
+  goods_receipts          goods_receipts        @relation(fields: [receipt_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model goods_receipts {
+  id                      String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pharmacy_id             String                @db.Uuid
+  purchase_order_id       String?               @db.Uuid
+  receipt_number          String                @db.VarChar(100)
+  received_by             String                @db.Uuid
+  idempotency_key         String?               @db.VarChar(100)
+  supplier_invoice_number String?               @db.VarChar(100)
+  notes                   String?
+  received_at             DateTime              @default(now()) @db.Timestamptz(6)
+  created_at              DateTime              @default(now()) @db.Timestamptz(6)
+  goods_receipt_lines     goods_receipt_lines[]
+  pharmacies              pharmacies            @relation(fields: [pharmacy_id], references: [id], onUpdate: NoAction)
+  purchase_orders         purchase_orders?      @relation(fields: [purchase_order_id], references: [id], onUpdate: NoAction)
+  users                   users                 @relation(fields: [received_by], references: [id], onUpdate: NoAction)
+
+  @@unique([pharmacy_id, receipt_number], map: "uk_goods_receipts_number")
+  @@unique([pharmacy_id, idempotency_key], map: "uk_goods_receipts_pharmacy_idempotency")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model inventory_count_lines {
+  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  inventory_id     String           @db.Uuid
+  lot_id           String           @db.Uuid
+  system_quantity  Int
+  counted_quantity Int
+  variance         Int              @default(dbgenerated("(counted_quantity - system_quantity)"))
+  justification    String?
+  inventory_counts inventory_counts @relation(fields: [inventory_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  product_lots     product_lots     @relation(fields: [lot_id], references: [id], onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model inventory_counts {
+  id                                         String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pharmacy_id                                String                  @db.Uuid
+  reference                                  String                  @db.VarChar(100)
+  status                                     String                  @default("EN_COURS") @db.VarChar(50)
+  inventory_type                             String                  @default("COMPLET") @db.VarChar(20)
+  notes                                      String?
+  created_by                                 String                  @db.Uuid
+  validated_by                               String?                 @db.Uuid
+  validated_at                               DateTime?               @db.Timestamptz(6)
+  created_at                                 DateTime                @default(now()) @db.Timestamptz(6)
+  inventory_count_lines                      inventory_count_lines[]
+  users_inventory_counts_created_byTousers   users                   @relation("inventory_counts_created_byTousers", fields: [created_by], references: [id], onUpdate: NoAction)
+  pharmacies                                 pharmacies              @relation(fields: [pharmacy_id], references: [id], onUpdate: NoAction)
+  users_inventory_counts_validated_byTousers users?                  @relation("inventory_counts_validated_byTousers", fields: [validated_by], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@unique([pharmacy_id, reference], map: "uk_inventory_counts_ref")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model invoice_sequences {
+  pharmacy_id String     @db.Uuid
+  fiscal_year Int
+  last_number Int        @default(0)
+  updated_at  DateTime   @default(now()) @db.Timestamptz(6)
+  pharmacies  pharmacies @relation(fields: [pharmacy_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([pharmacy_id, fiscal_year])
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model refresh_tokens {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String   @db.Uuid
+  token_hash String   @unique @db.VarChar(255)
+  expires_at DateTime @db.Timestamptz(6)
+  is_revoked Boolean  @default(false)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model settings {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pharmacy_id String     @db.Uuid
+  key         String     @db.VarChar(100)
+  value       Json
+  updated_at  DateTime   @default(now()) @db.Timestamptz(6)
+  pharmacies  pharmacies @relation(fields: [pharmacy_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([pharmacy_id, key], map: "uk_settings_key")
+}
+
+enum cash_session_status {
+  OUVERTE
+  CLOTUREE
+}
+
+enum customer_type {
+  PARTICULIER
+  ENTREPRISE
+  ASSURANCE
+}
+
+enum movement_type {
+  RECEPTION_FOURNISSEUR
+  SORTIE_VENTE
+  AJUSTEMENT_POSITIF
+  AJUSTEMENT_NEGATIF
+  PEREMPTION
+  CASSE_PERTE
+  DON
+  USAGE_INTERNE
+  RETOUR_FOURNISSEUR
+  RETOUR_CLIENT
+}
+
+enum payment_method {
+  ESPECES
+  MOBILE_MONEY
+  CARTE_BANCAIRE
+  VIREMENT
+  CREDIT_CLIENT
+}
+
+enum purchase_order_status {
+  BROUILLON
+  ENVOYE
+  PARTIELLEMENT_RECU
+  RECU
+  ANNULE
+}
+
+enum sale_status {
+  VALIDEE
+  ANNULEE
+  AVOIR
+}
+
+model notifications {
+  id             String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pharmacy_id    String               @db.Uuid
+  type           String               @db.VarChar(50)
+  title          String               @db.VarChar(255)
+  message        String               @db.Text
+  severity       String               @default("INFO") @db.VarChar(20)
+  target_role    String?              @db.VarChar(50)
+  entity_type    String?              @db.VarChar(50)
+  entity_id      String?              @db.VarChar(100)
+  metadata       Json?
+  dedup_key      String               @db.VarChar(255)
+  created_at     DateTime             @default(now()) @db.Timestamptz(6)
+  pharmacies     pharmacies           @relation(fields: [pharmacy_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  notification_reads notification_reads[]
+
+  @@index([pharmacy_id, created_at(sort: Desc)], map: "idx_notifications_pharmacy")
+  @@index([target_role], map: "idx_notifications_target_role")
+  @@index([dedup_key], map: "idx_notifications_dedup_key")
+}
+
+model notification_reads {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  notification_id String        @db.Uuid
+  user_id         String        @db.Uuid
+  read_at         DateTime      @default(now()) @db.Timestamptz(6)
+  notifications   notifications @relation(fields: [notification_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users           users         @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([notification_id, user_id], map: "uk_notification_user_read")
+  @@index([user_id, notification_id], map: "idx_notification_reads_user")
+}
+

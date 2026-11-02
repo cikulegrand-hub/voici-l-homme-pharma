@@ -1,0 +1,22 @@
+{
+  "name": "voici-l-homme-pharma",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Système de gestion d'officine - Voici l'Homme Pharma (VHP-CDC-001)",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "start:backend": "npm run start:dev --workspace=@vhp/backend",
+    "start:frontend": "npm run start --workspace=@vhp/frontend",
+    "prisma:generate": "npm run prisma:generate --workspace=@vhp/backend",
+    "db:migrate": "npm run db:migrate --workspace=@vhp/backend",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces"
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3",
+    "typescript": "^5.5.4"
+  }
+}

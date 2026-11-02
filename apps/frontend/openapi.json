@@ -1,0 +1,2916 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "AuthController_login",
+        "summary": "Connexion utilisateur avec contrôle de verrouillage (AUT-01, AUT-02, SEC-03)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Connexion réussie avec token JWT et taux actif CDF/USD"
+          },
+          "401": {
+            "description": "Identifiants incorrects ou compte verrouillé"
+          },
+          "429": {
+            "description": "Trop de tentatives (limitation de débit)"
+          }
+        },
+        "tags": [
+          "Authentification & Utilisateurs (AUT)"
+        ]
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "operationId": "AuthController_refresh",
+        "summary": "Renouveler le jeton de session court avec un refresh token (AUT-03)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Nouveaux jetons d’accès et de rafraîchissement"
+          },
+          "401": {
+            "description": "Refresh token invalide ou expiré"
+          }
+        },
+        "tags": [
+          "Authentification & Utilisateurs (AUT)"
+        ]
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "operationId": "AuthController_getMe",
+        "summary": "Obtenir le profil complet de l’utilisateur connecté et ses permissions (AUT-03, AUT-05)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Utilisateur, rôle, permissions et taux actif"
+          },
+          "401": {
+            "description": "Non authentifié ou jeton expiré"
+          }
+        },
+        "tags": [
+          "Authentification & Utilisateurs (AUT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/users": {
+      "get": {
+        "operationId": "AuthController_getAllUsers",
+        "summary": "Lister tous les utilisateurs de l’officine (AUT-04)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Liste des utilisateurs avec rôle et statut"
+          }
+        },
+        "tags": [
+          "Authentification & Utilisateurs (AUT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "operationId": "AuthController_createUser",
+        "summary": "Créer un utilisateur avec rôle prédéfini (AUT-04, AUT-05)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Utilisateur créé avec succès"
+          }
+        },
+        "tags": [
+          "Authentification & Utilisateurs (AUT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/users/{id}": {
+      "get": {
+        "operationId": "AuthController_getUserById",
+        "summary": "Consulter les détails d’un utilisateur (AUT-04)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Authentification & Utilisateurs (AUT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "patch": {
+        "operationId": "AuthController_updateUser",
+        "summary": "Modifier les informations d’un utilisateur (AUT-04)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Authentification & Utilisateurs (AUT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/users/{username}/deactivate": {
+      "patch": {
+        "operationId": "AuthController_deactivateUser",
+        "summary": "Désactiver un utilisateur sans suppression physique (AUT-04, RG-06)",
+        "parameters": [
+          {
+            "name": "username",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Authentification & Utilisateurs (AUT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/users/{username}/activate": {
+      "patch": {
+        "operationId": "AuthController_activateUser",
+        "summary": "Réactiver un utilisateur désactivé (AUT-04)",
+        "parameters": [
+          {
+            "name": "username",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Authentification & Utilisateurs (AUT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/users/{id}/reset-password": {
+      "patch": {
+        "operationId": "AuthController_resetPassword",
+        "summary": "Réinitialisation du mot de passe par un administrateur (AUT-06)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Authentification & Utilisateurs (AUT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/change-password": {
+      "post": {
+        "operationId": "AuthController_changePassword",
+        "summary": "Changer son propre mot de passe (Page Profil)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeMyPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Authentification & Utilisateurs (AUT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/change-pin": {
+      "post": {
+        "operationId": "AuthController_changePin",
+        "summary": "Changer son propre code PIN (Page Profil)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeMyPinDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Authentification & Utilisateurs (AUT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/login-history": {
+      "get": {
+        "operationId": "AuthController_getLoginHistory",
+        "summary": "Consulter l’historique des connexions (date, utilisateur, IP, résultat) (AUT-07)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Authentification & Utilisateurs (AUT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/verify-pin": {
+      "post": {
+        "operationId": "AuthController_verifyPin",
+        "summary": "Vérifier un code PIN superviseur pour action sensible et obtenir une autorisation temporaire (AUT-08)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyPinDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Autorisation accordée pour 5 minutes avec token éphémère"
+          }
+        },
+        "tags": [
+          "Authentification & Utilisateurs (AUT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/audit/logs": {
+      "get": {
+        "operationId": "AuditController_getLogs",
+        "summary": "Consulter et rechercher dans le journal d’audit inaltérable (AUD-01 à AUD-04)",
+        "parameters": [
+          {
+            "name": "action",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "entityName",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Audit & Traçabilité inaltérable (AUD)"
+        ]
+      }
+    },
+    "/api/v1/catalog/categories": {
+      "post": {
+        "operationId": "CatalogController_createCategory",
+        "summary": "Créer une catégorie ou forme galénique (CAT-04)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCategoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalogue produits (CAT)"
+        ]
+      },
+      "get": {
+        "operationId": "CatalogController_listCategories",
+        "summary": "Lister les catégories administrables (CAT-04)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalogue produits (CAT)"
+        ]
+      }
+    },
+    "/api/v1/catalog/products": {
+      "post": {
+        "operationId": "CatalogController_createProduct",
+        "summary": "Créer une fiche produit complète avec unité de vente (CAT-01, CAT-02, CAT-03)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalogue produits (CAT)"
+        ]
+      },
+      "get": {
+        "operationId": "CatalogController_searchProducts",
+        "summary": "Recherche instantanée par nom, DCI ou code-barres (CAT-05)",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalogue produits (CAT)"
+        ]
+      }
+    },
+    "/api/v1/catalog/products/{id}": {
+      "get": {
+        "operationId": "CatalogController_getProduct",
+        "summary": "Consulter la fiche d’un produit",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalogue produits (CAT)"
+        ]
+      }
+    },
+    "/api/v1/catalog/products/{id}/price": {
+      "patch": {
+        "operationId": "CatalogController_updatePrice",
+        "summary": "Modifier le prix avec historique (CAT-06)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductPriceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalogue produits (CAT)"
+        ]
+      }
+    },
+    "/api/v1/catalog/products/{id}/price-history": {
+      "get": {
+        "operationId": "CatalogController_getPriceHistory",
+        "summary": "Historique des modifications de prix (CAT-06)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalogue produits (CAT)"
+        ]
+      }
+    },
+    "/api/v1/catalog/products/{id}/deactivate": {
+      "patch": {
+        "operationId": "CatalogController_deactivateProduct",
+        "summary": "Désactiver un produit sans perdre l’historique (CAT-08, RG-06)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalogue produits (CAT)"
+        ]
+      }
+    },
+    "/api/v1/catalog/export-csv": {
+      "get": {
+        "operationId": "CatalogController_exportCsv",
+        "summary": "Exporter le catalogue sous format CSV (CAT-07)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalogue produits (CAT)"
+        ]
+      }
+    },
+    "/api/v1/catalog/import-csv": {
+      "post": {
+        "operationId": "CatalogController_importCsv",
+        "summary": "Importer des produits via CSV avec rapport d’erreurs (CAT-07)",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalogue produits (CAT)"
+        ]
+      }
+    },
+    "/api/v1/stock/lots": {
+      "post": {
+        "operationId": "StockController_createLot",
+        "summary": "Réceptionner un lot avec date de péremption (STK-01, STK-02)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLotDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ]
+      }
+    },
+    "/api/v1/stock/products/{productId}": {
+      "get": {
+        "operationId": "StockController_getStockByProduct",
+        "summary": "Consulter les lots et le stock disponible par produit (STK-07)",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ]
+      }
+    },
+    "/api/v1/stock/alerts": {
+      "get": {
+        "operationId": "StockController_getAlerts",
+        "summary": "Alertes stock bas et péremptions à 30, 60, 90 jours (STK-08, STK-09)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ]
+      }
+    },
+    "/api/v1/stock/cump-valuation": {
+      "get": {
+        "operationId": "StockController_getCumpValuation",
+        "summary": "Valorisation intégrale du stock au Coût Unitaire Moyen Pondéré (STK-12, RG-14)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ]
+      }
+    },
+    "/api/v1/stock/controlled-substances-register": {
+      "get": {
+        "operationId": "StockController_getControlledSubstancesRegister",
+        "summary": "Registre officiel des stupéfiants et substances contrôlées (STK-14)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ]
+      }
+    },
+    "/api/v1/stock/adjustments/request": {
+      "post": {
+        "operationId": "StockController_requestAdjustment",
+        "summary": "Demander un ajustement de stock (Gestionnaire de stock) (STK-05)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestAdjustmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ]
+      }
+    },
+    "/api/v1/stock/adjustments/pending": {
+      "get": {
+        "operationId": "StockController_listPendingAdjustments",
+        "summary": "Lister les ajustements en attente de validation pharmacien (STK-05)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ]
+      }
+    },
+    "/api/v1/stock/adjustments/{id}/approve": {
+      "patch": {
+        "operationId": "StockController_approveAdjustment",
+        "summary": "Valider ou rejeter un ajustement (Pharmacien uniquement) (STK-05, RG-11)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ]
+      }
+    },
+    "/api/v1/stock/movements": {
+      "post": {
+        "operationId": "StockController_createMovement",
+        "summary": "Enregistrer un mouvement de stock avec motif obligatoire (STK-04, RG-11)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMovementDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ]
+      },
+      "get": {
+        "operationId": "StockController_getMovements",
+        "summary": "Consulter le journal inaltérable des mouvements de stock (STK-06)",
+        "parameters": [
+          {
+            "name": "lotId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ]
+      }
+    },
+    "/api/v1/stock/lots/{id}/quarantine": {
+      "post": {
+        "operationId": "StockController_quarantineLot",
+        "summary": "Mettre un lot en quarantaine / blocage sanitaire (STK-10, RG-03)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuarantineLotDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ]
+      }
+    },
+    "/api/v1/stock/inventories": {
+      "post": {
+        "operationId": "StockController_createInventory",
+        "summary": "Créer une session d’inventaire physique avec comptage (STK-11)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInventoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ]
+      }
+    },
+    "/api/v1/stock/inventories/{id}/validate": {
+      "post": {
+        "operationId": "StockController_validateInventory",
+        "summary": "Validation officielle de l’inventaire par le Pharmacien (STK-11)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateInventoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ]
+      }
+    },
+    "/api/v1/sales": {
+      "post": {
+        "operationId": "SalesController_createSale",
+        "summary": "Enregistrer une vente rapide au comptoir (VTE-01 à VTE-08)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSaleRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Vente validée, numérotation séquentielle et déstockage FEFO effectués"
+          }
+        },
+        "tags": [
+          "Ventes, Facturation & Caisse Comptoir (VTE)"
+        ]
+      },
+      "get": {
+        "operationId": "SalesController_listSales",
+        "summary": "Historique des ventes de l’officine",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Ventes, Facturation & Caisse Comptoir (VTE)"
+        ]
+      }
+    },
+    "/api/v1/sales/{id}": {
+      "get": {
+        "operationId": "SalesController_getSale",
+        "summary": "Consulter le détail d’une facture par ID",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Ventes, Facturation & Caisse Comptoir (VTE)"
+        ]
+      }
+    },
+    "/api/v1/sales/invoice/{invoiceNumber}/duplicata": {
+      "get": {
+        "operationId": "SalesController_getDuplicata",
+        "summary": "Réimpression d’une facture marquée DUPLICATA (VTE-16)",
+        "parameters": [
+          {
+            "name": "invoiceNumber",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Ventes, Facturation & Caisse Comptoir (VTE)"
+        ]
+      }
+    },
+    "/api/v1/sales/{id}/cancel": {
+      "patch": {
+        "operationId": "SalesController_cancelSale",
+        "summary": "Annuler une vente avec motif et émission d’avoir (VTE-13, RG-04)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelSaleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Ventes, Facturation & Caisse Comptoir (VTE)"
+        ]
+      }
+    },
+    "/api/v1/sales/hold-cart": {
+      "post": {
+        "operationId": "SalesController_holdCart",
+        "summary": "Mettre en attente un panier (VTE-11)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HoldCartDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Ventes, Facturation & Caisse Comptoir (VTE)"
+        ]
+      }
+    },
+    "/api/v1/sales/held-carts/list": {
+      "get": {
+        "operationId": "SalesController_listHeldCarts",
+        "summary": "Lister les paniers en attente de reprise",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Ventes, Facturation & Caisse Comptoir (VTE)"
+        ]
+      }
+    },
+    "/api/v1/sales/held-carts/{id}/resume": {
+      "post": {
+        "operationId": "SalesController_resumeHeldCart",
+        "summary": "Reprendre un panier mis en attente",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Ventes, Facturation & Caisse Comptoir (VTE)"
+        ]
+      }
+    },
+    "/api/v1/customers": {
+      "post": {
+        "operationId": "CustomersController_createCustomer",
+        "summary": "Créer un client (Particulier / Entreprise / Assurance) (CLI-01)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCustomerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Fichier Clients & Ordonnances (CLI)"
+        ]
+      },
+      "get": {
+        "operationId": "CustomersController_listCustomers",
+        "summary": "Lister les clients enregistrés",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Fichier Clients & Ordonnances (CLI)"
+        ]
+      }
+    },
+    "/api/v1/customers/{id}": {
+      "get": {
+        "operationId": "CustomersController_getCustomer",
+        "summary": "Consulter la fiche client et solde créance (CLI-01, CLI-03)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Fichier Clients & Ordonnances (CLI)"
+        ]
+      }
+    },
+    "/api/v1/customers/{id}/statement": {
+      "get": {
+        "operationId": "CustomersController_getStatement",
+        "summary": "Relevé de compte client, créances et plafond (CLI-03)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Fichier Clients & Ordonnances (CLI)"
+        ]
+      }
+    },
+    "/api/v1/customers/{id}/settle-debt": {
+      "patch": {
+        "operationId": "CustomersController_settleDebt",
+        "summary": "Encaisser un règlement de créance client (CLI-04)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettleDebtDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Fichier Clients & Ordonnances (CLI)"
+        ]
+      }
+    },
+    "/api/v1/customers/prescriptions": {
+      "post": {
+        "operationId": "CustomersController_createPrescription",
+        "summary": "Enregistrer une ordonnance avec lien signé temporaire (CLI-05, CLI-06)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePrescriptionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Fichier Clients & Ordonnances (CLI)"
+        ]
+      }
+    },
+    "/api/v1/customers/{id}/prescriptions": {
+      "get": {
+        "operationId": "CustomersController_getCustomerPrescriptions",
+        "summary": "Consulter les ordonnances archivées d’un patient (accès journalisé CLI-06)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Fichier Clients & Ordonnances (CLI)"
+        ]
+      }
+    },
+    "/api/v1/settings": {
+      "get": {
+        "operationId": "SettingsController_getSettings",
+        "summary": "Consulter l’ensemble des paramètres de l’officine (PAR-01 à PAR-04)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Paramétrage & Administration (PAR)"
+        ]
+      }
+    },
+    "/api/v1/settings/pharmacy": {
+      "patch": {
+        "operationId": "SettingsController_updatePharmacy",
+        "summary": "Mettre à jour l’identité et les coordonnées de l’officine (PAR-01)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePharmacySettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Paramétrage & Administration (PAR)"
+        ]
+      }
+    },
+    "/api/v1/settings/financial": {
+      "patch": {
+        "operationId": "SettingsController_updateFinancial",
+        "summary": "Mettre à jour les devises, taxes et plafonds de remises par rôle (PAR-02, PAR-03, PAR-04)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFinancialSettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Paramétrage & Administration (PAR)"
+        ]
+      }
+    },
+    "/api/v1/settings/alerts": {
+      "patch": {
+        "operationId": "SettingsController_updateAlerts",
+        "summary": "Mettre à jour les seuils de péremption et timeout d’inactivité (PAR-04, AUT-03, STK-09)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAlertSettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Paramétrage & Administration (PAR)"
+        ]
+      }
+    },
+    "/api/v1/cash/sessions/open": {
+      "post": {
+        "operationId": "CashController_openSession",
+        "summary": "Ouvrir une session de caisse avec fonds de départ CDF/USD (FIN-01)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenCashSessionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Caisse & Gestion Financière (FIN)"
+        ]
+      }
+    },
+    "/api/v1/cash/sessions/current": {
+      "get": {
+        "operationId": "CashController_getCurrentSession",
+        "summary": "Consulter la session de caisse en cours de l’utilisateur",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Caisse & Gestion Financière (FIN)"
+        ]
+      }
+    },
+    "/api/v1/cash/sessions/{id}/close": {
+      "patch": {
+        "operationId": "CashController_closeSession",
+        "summary": "Clôturer la caisse avec réconciliation des écarts obligatoirement justifiée (FIN-02, RG-12)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloseCashSessionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Caisse & Gestion Financière (FIN)"
+        ]
+      }
+    },
+    "/api/v1/cash/exchange-rates/active": {
+      "get": {
+        "operationId": "CashController_getActiveRate",
+        "summary": "Consulter le taux de change officiel actif (FIN-04, RG-08)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Caisse & Gestion Financière (FIN)"
+        ]
+      }
+    },
+    "/api/v1/cash/exchange-rates": {
+      "post": {
+        "operationId": "CashController_setExchangeRate",
+        "summary": "Saisir un nouveau taux de change CDF / USD (FIN-04, RG-08)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetExchangeRateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Caisse & Gestion Financière (FIN)"
+        ]
+      }
+    },
+    "/api/v1/cash/exchange-rates/history": {
+      "get": {
+        "operationId": "CashController_getRatesHistory",
+        "summary": "Historique des taux de change saisis",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Caisse & Gestion Financière (FIN)"
+        ]
+      }
+    },
+    "/api/v1/cash/expenses": {
+      "post": {
+        "operationId": "CashController_createExpense",
+        "summary": "Enregistrer une dépense avec catégorie (FIN-03)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateExpenseDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Caisse & Gestion Financière (FIN)"
+        ]
+      },
+      "get": {
+        "operationId": "CashController_listExpenses",
+        "summary": "Lister les dépenses de l’officine",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Caisse & Gestion Financière (FIN)"
+        ]
+      }
+    },
+    "/api/v1/cash/receivables-aging": {
+      "get": {
+        "operationId": "CashController_getAgingBalance",
+        "summary": "Balance âgée des créances clients 0-30, 31-60, >60 jours (FIN-06)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Caisse & Gestion Financière (FIN)"
+        ]
+      }
+    },
+    "/api/v1/suppliers": {
+      "post": {
+        "operationId": "SuppliersController_createSupplier",
+        "summary": "Créer une fiche fournisseur (ACH-01)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSupplierDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Achats & Fournisseurs (ACH)"
+        ]
+      },
+      "get": {
+        "operationId": "SuppliersController_listSuppliers",
+        "summary": "Lister les fournisseurs actifs",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Achats & Fournisseurs (ACH)"
+        ]
+      }
+    },
+    "/api/v1/suppliers/{id}": {
+      "get": {
+        "operationId": "SuppliersController_getSupplier",
+        "summary": "Consulter une fiche fournisseur",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Achats & Fournisseurs (ACH)"
+        ]
+      }
+    },
+    "/api/v1/suppliers/orders": {
+      "post": {
+        "operationId": "SuppliersController_createPurchaseOrder",
+        "summary": "Créer un bon de commande fournisseur (ACH-02)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePurchaseOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Achats & Fournisseurs (ACH)"
+        ]
+      }
+    },
+    "/api/v1/suppliers/orders/list": {
+      "get": {
+        "operationId": "SuppliersController_listOrders",
+        "summary": "Lister les bons de commande",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Achats & Fournisseurs (ACH)"
+        ]
+      }
+    },
+    "/api/v1/suppliers/orders/{id}/receive": {
+      "post": {
+        "operationId": "SuppliersController_receiveOrder",
+        "summary": "Réceptionner une commande fournisseur avec création automatique des lots (ACH-04, STK-01)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReceiveOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Achats & Fournisseurs (ACH)"
+        ]
+      }
+    },
+    "/api/v1/suppliers/orders/{id}/status": {
+      "patch": {
+        "operationId": "SuppliersController_updateStatus",
+        "summary": "Modifier le statut d’un bon de commande",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Achats & Fournisseurs (ACH)"
+        ]
+      }
+    },
+    "/api/v1/reports/dashboard": {
+      "get": {
+        "operationId": "ReportsController_getDashboardMetrics",
+        "summary": "Indicateurs consolidés du tableau de bord (RPT-01 à RPT-06)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Tableau de bord & Rapports (RPT)"
+        ]
+      }
+    },
+    "/api/v1/reports/sales": {
+      "get": {
+        "operationId": "ReportsController_getSalesDetailedReport",
+        "summary": "Rapport détaillé des ventes et chiffre d’affaires (RPT-08)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Tableau de bord & Rapports (RPT)"
+        ]
+      }
+    },
+    "/api/v1/reports/stock-alerts": {
+      "get": {
+        "operationId": "ReportsController_getStockDetailedReport",
+        "summary": "Rapport détaillé des alertes de stock et péremptions (RPT-08)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Tableau de bord & Rapports (RPT)"
+        ]
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "operationId": "HealthController_check",
+        "summary": "Vérification de l'état de santé du backend API et de la connexion PostgreSQL (OBS-01)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Supervision & Santé système (OBS-01)"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Voici l’Homme Pharma API",
+    "description": "API REST de gestion d’officine conforme au cahier des charges VHP-CDC-001",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "example": "admin",
+            "description": "Nom d’utilisateur"
+          },
+          "password": {
+            "type": "string",
+            "example": "Admin2026@VoiciLHomme!",
+            "description": "Mot de passe (10 caractères minimum selon AUT-02)"
+          }
+        },
+        "required": [
+          "username",
+          "password"
+        ]
+      },
+      "CreateUserDto": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "example": "j.kouame",
+            "description": "Identifiant unique"
+          },
+          "fullName": {
+            "type": "string",
+            "example": "Jean Kouamé",
+            "description": "Nom complet de l’utilisateur"
+          },
+          "email": {
+            "type": "string",
+            "example": "j.kouame@voicilhomme.cd",
+            "description": "Adresse email professionnelle"
+          },
+          "password": {
+            "type": "string",
+            "example": "SecretP@ssw0rd2026!",
+            "description": "Mot de passe conforme à la politique de sécurité"
+          },
+          "role": {
+            "type": "string",
+            "example": "CAISSIER",
+            "enum": [
+              "ADMIN",
+              "PHARMACIEN",
+              "CAISSIER",
+              "STOCK",
+              "COMPTABLE"
+            ]
+          },
+          "pinCode": {
+            "type": "string",
+            "example": "1234",
+            "description": "Code PIN à 4 chiffres pour actions sensibles (AUT-08)"
+          }
+        },
+        "required": [
+          "username",
+          "fullName",
+          "email",
+          "password",
+          "role",
+          "pinCode"
+        ]
+      },
+      "UpdateUserDto": {
+        "type": "object",
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "example": "Jean Kouamé Modifié"
+          },
+          "email": {
+            "type": "string",
+            "example": "j.kouame.updated@voicilhomme.cd"
+          },
+          "role": {
+            "type": "string",
+            "example": "PHARMACIEN",
+            "enum": [
+              "ADMIN",
+              "PHARMACIEN",
+              "CAISSIER",
+              "STOCK",
+              "COMPTABLE"
+            ]
+          },
+          "pinCode": {
+            "type": "string",
+            "example": "5678",
+            "description": "Nouveau code PIN à 4 chiffres"
+          }
+        }
+      },
+      "ResetPasswordDto": {
+        "type": "object",
+        "properties": {
+          "newPassword": {
+            "type": "string",
+            "example": "NouveauMdpFort2026@!"
+          }
+        },
+        "required": [
+          "newPassword"
+        ]
+      },
+      "ChangeMyPasswordDto": {
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "example": "AncienMdp2026@!"
+          },
+          "newPassword": {
+            "type": "string",
+            "example": "NouveauMdpFort2026@!"
+          }
+        },
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ]
+      },
+      "ChangeMyPinDto": {
+        "type": "object",
+        "properties": {
+          "currentPin": {
+            "type": "string",
+            "example": "1234",
+            "description": "Code PIN actuel à 4 chiffres"
+          },
+          "newPin": {
+            "type": "string",
+            "example": "5678",
+            "description": "Nouveau code PIN à 4 chiffres"
+          }
+        },
+        "required": [
+          "newPin"
+        ]
+      },
+      "VerifyPinDto": {
+        "type": "object",
+        "properties": {
+          "pinCode": {
+            "type": "string",
+            "example": "9999",
+            "description": "Code PIN à 4 chiffres du superviseur"
+          },
+          "action": {
+            "type": "string",
+            "example": "ANNULATION_VENTE",
+            "description": "Action sensible requérant le PIN"
+          }
+        },
+        "required": [
+          "pinCode",
+          "action"
+        ]
+      },
+      "CreateCategoryDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Antalgiques & Antipyrétiques"
+          },
+          "description": {
+            "type": "string",
+            "example": "Médicaments contre la douleur et la fièvre"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "CreateProductDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Doliprane 1000 mg"
+          },
+          "dci": {
+            "type": "string",
+            "example": "Paracétamol"
+          },
+          "dosage": {
+            "type": "string",
+            "example": "1000 mg"
+          },
+          "galenicForm": {
+            "type": "string",
+            "example": "Comprimé"
+          },
+          "sellingUnit": {
+            "type": "string",
+            "example": "Boîte de 16",
+            "description": "Unité de vente (CAT-01)"
+          },
+          "laboratory": {
+            "type": "string",
+            "example": "Sanofi"
+          },
+          "categoryId": {
+            "type": "string",
+            "example": "33333333-3333-3333-3333-333333333331"
+          },
+          "sellingPriceCdf": {
+            "type": "number",
+            "example": 3500,
+            "description": "Prix de vente en Franc Congolais (CDF)"
+          },
+          "sellingPriceUsd": {
+            "type": "number",
+            "example": 1.23,
+            "description": "Prix de vente en Dollar (USD)"
+          },
+          "taxRate": {
+            "type": "number",
+            "example": 16,
+            "description": "Taux TVA applicable en %",
+            "default": 0
+          },
+          "minAlertThreshold": {
+            "type": "number",
+            "example": 15,
+            "description": "Seuil minimal d’alerte de stock (CAT-01)"
+          },
+          "maxThreshold": {
+            "type": "number",
+            "example": 200,
+            "description": "Seuil maximum (CAT-11)"
+          },
+          "securityStock": {
+            "type": "number",
+            "example": 30,
+            "description": "Stock de sécurité (CAT-11)"
+          },
+          "storageLocation": {
+            "type": "string",
+            "example": "Rayon B - Étagère 2"
+          },
+          "requiresPrescription": {
+            "type": "boolean",
+            "example": false,
+            "description": "Exige une ordonnance médicale (CAT-02, RG-09)"
+          },
+          "isControlledSubstance": {
+            "type": "boolean",
+            "example": false,
+            "description": "Produit contrôlé / stupéfiant (CAT-02)"
+          },
+          "isColdChain": {
+            "type": "boolean",
+            "example": false,
+            "description": "Nécessite la chaîne du froid 2-8°C (CAT-02)"
+          },
+          "barcodes": {
+            "example": [
+              "3582910012345"
+            ],
+            "description": "Codes-barres associés EAN-13 (CAT-03)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "dci",
+          "sellingUnit",
+          "sellingPriceCdf",
+          "sellingPriceUsd",
+          "taxRate",
+          "minAlertThreshold",
+          "requiresPrescription",
+          "isControlledSubstance",
+          "isColdChain",
+          "barcodes"
+        ]
+      },
+      "UpdateProductPriceDto": {
+        "type": "object",
+        "properties": {
+          "newPriceCdf": {
+            "type": "number",
+            "example": 4000,
+            "description": "Nouveau prix de vente CDF"
+          },
+          "newPriceUsd": {
+            "type": "number",
+            "example": 1.4,
+            "description": "Nouveau prix de vente USD"
+          },
+          "reason": {
+            "type": "string",
+            "example": "Hausse tarif fournisseur Laborex",
+            "description": "Motif de révision (CAT-06)"
+          }
+        },
+        "required": [
+          "newPriceCdf",
+          "newPriceUsd",
+          "reason"
+        ]
+      },
+      "CreateLotDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "example": "prd-xxx",
+            "description": "ID du produit"
+          },
+          "lotNumber": {
+            "type": "string",
+            "example": "DLP-2418",
+            "description": "Numéro de lot imprimé sur l’emballage"
+          },
+          "expiryDate": {
+            "type": "string",
+            "example": "2027-12-31",
+            "description": "Date de péremption AAAA-MM-JJ"
+          },
+          "quantity": {
+            "type": "number",
+            "example": 240,
+            "description": "Quantité entrée"
+          },
+          "purchasePriceCdf": {
+            "type": "number",
+            "example": 1800,
+            "description": "Prix d’achat unitaire CDF"
+          },
+          "purchasePriceUsd": {
+            "type": "number",
+            "example": 0.63,
+            "description": "Prix d’achat unitaire USD"
+          }
+        },
+        "required": [
+          "productId",
+          "lotNumber",
+          "expiryDate",
+          "quantity",
+          "purchasePriceCdf",
+          "purchasePriceUsd"
+        ]
+      },
+      "RequestAdjustmentDto": {
+        "type": "object",
+        "properties": {
+          "lotId": {
+            "type": "string",
+            "example": "lot-xxx"
+          },
+          "variance": {
+            "type": "number",
+            "example": -2,
+            "description": "Écart constaté (+ ou -)"
+          },
+          "reason": {
+            "type": "string",
+            "example": "Écart constaté lors du rangement rayon"
+          }
+        },
+        "required": [
+          "lotId",
+          "variance",
+          "reason"
+        ]
+      },
+      "CreateMovementDto": {
+        "type": "object",
+        "properties": {
+          "lotId": {
+            "type": "string",
+            "example": "lot-xxx"
+          },
+          "type": {
+            "type": "string",
+            "example": "CASSE_PERTE",
+            "enum": [
+              "AJUSTEMENT_POSITIF",
+              "AJUSTEMENT_NEGATIF",
+              "PEREMPTION",
+              "CASSE_PERTE",
+              "DON",
+              "USAGE_INTERNE",
+              "RETOUR_FOURNISSEUR",
+              "RETOUR_CLIENT"
+            ]
+          },
+          "quantity": {
+            "type": "number",
+            "example": 4,
+            "description": "Quantité du mouvement"
+          },
+          "reason": {
+            "type": "string",
+            "example": "Boîte tombée et écrasée",
+            "description": "Motif obligatoire (RG-11)"
+          }
+        },
+        "required": [
+          "lotId",
+          "type",
+          "quantity",
+          "reason"
+        ]
+      },
+      "QuarantineLotDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "example": "Rappel sanitaire lot fabricant"
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "InventoryLineDto": {
+        "type": "object",
+        "properties": {
+          "lotId": {
+            "type": "string",
+            "example": "lot-xxx"
+          },
+          "countedQuantity": {
+            "type": "number",
+            "example": 238,
+            "description": "Quantité comptée physiquement"
+          }
+        },
+        "required": [
+          "lotId",
+          "countedQuantity"
+        ]
+      },
+      "CreateInventoryDto": {
+        "type": "object",
+        "properties": {
+          "reference": {
+            "type": "string",
+            "example": "INV-2026-10"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InventoryLineDto"
+            }
+          },
+          "notes": {
+            "type": "string",
+            "example": "Inventaire tournant rayon B"
+          }
+        },
+        "required": [
+          "reference",
+          "lines"
+        ]
+      },
+      "ValidateInventoryDto": {
+        "type": "object",
+        "properties": {
+          "validationComment": {
+            "type": "string",
+            "example": "Écarts vérifiés et conformes au comptage physique"
+          }
+        },
+        "required": [
+          "validationComment"
+        ]
+      },
+      "SaleItemRequestDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "example": "prd-xxx",
+            "description": "ID du produit"
+          },
+          "quantity": {
+            "type": "number",
+            "example": 2,
+            "description": "Quantité"
+          },
+          "unitPriceCdf": {
+            "type": "number",
+            "example": 3500,
+            "description": "Prix unitaire en CDF"
+          },
+          "discountCdf": {
+            "type": "number",
+            "example": 0,
+            "description": "Remise en CDF sur la ligne"
+          }
+        },
+        "required": [
+          "productId",
+          "quantity",
+          "unitPriceCdf"
+        ]
+      },
+      "PaymentItemDto": {
+        "type": "object",
+        "properties": {
+          "method": {
+            "type": "string",
+            "example": "ESPECES",
+            "enum": [
+              "ESPECES",
+              "MOBILE_MONEY",
+              "CARTE_BANCAIRE",
+              "VIREMENT",
+              "CREDIT_CLIENT"
+            ]
+          },
+          "amountPaid": {
+            "type": "number",
+            "example": 7000,
+            "description": "Montant versé"
+          },
+          "currency": {
+            "type": "string",
+            "example": "CDF",
+            "enum": [
+              "CDF",
+              "USD"
+            ]
+          },
+          "mobileMoneyProvider": {
+            "type": "string",
+            "example": "M-PESA",
+            "enum": [
+              "M-PESA",
+              "ORANGE_MONEY",
+              "AIRTEL_MONEY"
+            ]
+          },
+          "transactionReference": {
+            "type": "string",
+            "example": "MP261028-987654",
+            "description": "Référence de transaction"
+          }
+        },
+        "required": [
+          "method",
+          "amountPaid",
+          "currency"
+        ]
+      },
+      "CreateSaleRequestDto": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "example": "cli-001",
+            "description": "ID du client si identifié"
+          },
+          "prescriptionId": {
+            "type": "string",
+            "example": "ord-001",
+            "description": "ID de l’ordonnance liée (RG-09)"
+          },
+          "currency": {
+            "type": "string",
+            "example": "CDF",
+            "enum": [
+              "CDF",
+              "USD"
+            ],
+            "description": "Devise principale de facturation"
+          },
+          "items": {
+            "description": "Articles commandés",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SaleItemRequestDto"
+            }
+          },
+          "payments": {
+            "description": "Paiements effectués",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PaymentItemDto"
+            }
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "example": "idemp-uuid-12345",
+            "description": "Clé d’idempotence anti-double clic (RG-16)"
+          },
+          "supervisorPin": {
+            "type": "string",
+            "example": "1234",
+            "description": "Code PIN superviseur pour dérogation remise/crédit (AUT-08, RG-10)"
+          }
+        },
+        "required": [
+          "currency",
+          "items",
+          "payments",
+          "idempotencyKey"
+        ]
+      },
+      "CancelSaleDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "example": "Erreur de saisie caissier",
+            "description": "Motif obligatoire d’annulation (VTE-13)"
+          },
+          "restockItems": {
+            "type": "boolean",
+            "example": true,
+            "description": "Remise en stock des médicaments si non altérés"
+          }
+        },
+        "required": [
+          "reason",
+          "restockItems"
+        ]
+      },
+      "HoldCartDto": {
+        "type": "object",
+        "properties": {
+          "referenceName": {
+            "type": "string",
+            "example": "Client parti chercher son portefeuille"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SaleItemRequestDto"
+            }
+          }
+        },
+        "required": [
+          "referenceName",
+          "items"
+        ]
+      },
+      "CreateCustomerDto": {
+        "type": "object",
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "example": "Jean Mukendi"
+          },
+          "phone": {
+            "type": "string",
+            "example": "+243 81 234 56 78"
+          },
+          "email": {
+            "type": "string",
+            "example": "j.mukendi@email.cd"
+          },
+          "companyName": {
+            "type": "string",
+            "example": "Société Commerciale de Kinshasa"
+          },
+          "address": {
+            "type": "string",
+            "example": "Av. du 30 Juin, Gombe"
+          },
+          "customerType": {
+            "type": "string",
+            "example": "PARTICULIER",
+            "enum": [
+              "PARTICULIER",
+              "ENTREPRISE",
+              "ASSURANCE"
+            ]
+          },
+          "creditLimitCdf": {
+            "type": "number",
+            "example": 500000,
+            "description": "Plafond de crédit autorisé en CDF (RG-13)"
+          },
+          "medicalNotes": {
+            "type": "string",
+            "example": "Allergie sévère à la pénicilline (CLI-07)"
+          }
+        },
+        "required": [
+          "fullName",
+          "customerType",
+          "creditLimitCdf"
+        ]
+      },
+      "SettleDebtDto": {
+        "type": "object",
+        "properties": {
+          "amountPaidCdf": {
+            "type": "number",
+            "example": 50000,
+            "description": "Montant du règlement en CDF (CLI-04)"
+          },
+          "paymentMethod": {
+            "type": "string",
+            "example": "ESPECES",
+            "enum": [
+              "ESPECES",
+              "MOBILE_MONEY",
+              "VIREMENT"
+            ]
+          }
+        },
+        "required": [
+          "amountPaidCdf",
+          "paymentMethod"
+        ]
+      },
+      "CreatePrescriptionDto": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "example": "cli-001"
+          },
+          "prescriberName": {
+            "type": "string",
+            "example": "Dr. Ilunga"
+          },
+          "healthCenter": {
+            "type": "string",
+            "example": "Clinique Ngaliema"
+          },
+          "prescriptionDate": {
+            "type": "string",
+            "example": "2026-10-28",
+            "description": "Date de prescription AAAA-MM-JJ"
+          },
+          "storageFilePath": {
+            "type": "string",
+            "example": "prescriptions/cli-001/scan_20261028.jpg",
+            "description": "Chemin privé Supabase Storage (CLI-06)"
+          },
+          "prescriptionText": {
+            "type": "string",
+            "example": "Amoxicilline 500 mg 1 gélule 3x/jour pendant 7 jours"
+          }
+        },
+        "required": [
+          "customerId",
+          "prescriberName",
+          "prescriptionDate",
+          "storageFilePath"
+        ]
+      },
+      "UpdatePharmacySettingsDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Voici l’Homme Pharma"
+          },
+          "address": {
+            "type": "string",
+            "example": "Av. de l’Église, Q. Résidentiel, Commune de Limete, Kinshasa"
+          },
+          "phone": {
+            "type": "string",
+            "example": "+243 81 234 56 78"
+          },
+          "email": {
+            "type": "string",
+            "example": "contact@voicilhommepharma.cd"
+          },
+          "taxNumber": {
+            "type": "string",
+            "example": "CD/KIN/RCCM/14-B-2345"
+          },
+          "receiptFooterText": {
+            "type": "string",
+            "example": "Tout médicament vendu ne peut être repris ni échangé sans accord du pharmacien."
+          }
+        },
+        "required": [
+          "name",
+          "address",
+          "phone",
+          "receiptFooterText"
+        ]
+      },
+      "UpdateFinancialSettingsDto": {
+        "type": "object",
+        "properties": {
+          "defaultCurrency": {
+            "type": "string",
+            "example": "CDF",
+            "enum": [
+              "CDF",
+              "USD"
+            ]
+          },
+          "standardTaxRate": {
+            "type": "number",
+            "example": 16,
+            "description": "Taux TVA standard en %"
+          },
+          "cashierDiscountCapPercent": {
+            "type": "number",
+            "example": 5,
+            "description": "Plafond de remise max autorisé pour un Caissier (%)"
+          },
+          "pharmacistDiscountCapPercent": {
+            "type": "number",
+            "example": 15,
+            "description": "Plafond de remise max pour le Pharmacien (%)"
+          }
+        },
+        "required": [
+          "defaultCurrency",
+          "standardTaxRate",
+          "cashierDiscountCapPercent",
+          "pharmacistDiscountCapPercent"
+        ]
+      },
+      "UpdateAlertSettingsDto": {
+        "type": "object",
+        "properties": {
+          "expiryWarningDaysLevel1": {
+            "type": "number",
+            "example": 30,
+            "description": "Premier seuil alerte péremption en jours"
+          },
+          "expiryWarningDaysLevel2": {
+            "type": "number",
+            "example": 60,
+            "description": "Deuxième seuil alerte péremption en jours"
+          },
+          "expiryWarningDaysLevel3": {
+            "type": "number",
+            "example": 90,
+            "description": "Troisième seuil alerte péremption en jours"
+          },
+          "sessionInactivityTimeoutMinutes": {
+            "type": "number",
+            "example": 30,
+            "description": "Délai d’inactivité avant déconnexion automatique en minutes (AUT-03)"
+          }
+        },
+        "required": [
+          "expiryWarningDaysLevel1",
+          "expiryWarningDaysLevel2",
+          "expiryWarningDaysLevel3",
+          "sessionInactivityTimeoutMinutes"
+        ]
+      },
+      "OpenCashSessionDto": {
+        "type": "object",
+        "properties": {
+          "initialFloatCdf": {
+            "type": "number",
+            "example": 50000,
+            "description": "Fonds de caisse initial en Franc Congolais (CDF)"
+          },
+          "initialFloatUsd": {
+            "type": "number",
+            "example": 20,
+            "description": "Fonds de caisse initial en Dollars (USD)"
+          }
+        },
+        "required": [
+          "initialFloatCdf",
+          "initialFloatUsd"
+        ]
+      },
+      "CloseCashSessionDto": {
+        "type": "object",
+        "properties": {
+          "countedAmountCdf": {
+            "type": "number",
+            "example": 245000,
+            "description": "Montant réel physique compté en caisse (CDF)"
+          },
+          "countedAmountUsd": {
+            "type": "number",
+            "example": 95,
+            "description": "Montant réel physique compté en caisse (USD)"
+          },
+          "varianceReason": {
+            "type": "string",
+            "example": "Rendu monnaie de 500 CDF manquant",
+            "description": "Justification obligatoire si écart (FIN-02, RG-12)"
+          }
+        },
+        "required": [
+          "countedAmountCdf",
+          "countedAmountUsd"
+        ]
+      },
+      "SetExchangeRateDto": {
+        "type": "object",
+        "properties": {
+          "rate": {
+            "type": "number",
+            "example": 2850,
+            "description": "Taux officiel du jour : 1 USD = X CDF (FIN-04, RG-08)"
+          },
+          "notes": {
+            "type": "string",
+            "example": "Ajustement cours officiel Banque Centrale / Marché Limete"
+          }
+        },
+        "required": [
+          "rate"
+        ]
+      },
+      "CreateExpenseDto": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "example": "Facture SNEL électricité officine"
+          },
+          "category": {
+            "type": "string",
+            "example": "Électricité / Énergie"
+          },
+          "amountCdf": {
+            "type": "number",
+            "example": 75000,
+            "description": "Montant en CDF"
+          },
+          "amountUsd": {
+            "type": "number",
+            "example": 0,
+            "description": "Montant en USD"
+          },
+          "receiptPath": {
+            "type": "string",
+            "example": "recus/snel-octobre-2026.pdf"
+          }
+        },
+        "required": [
+          "description",
+          "category",
+          "amountCdf"
+        ]
+      },
+      "CreateSupplierDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Laborex RDC"
+          },
+          "contactName": {
+            "type": "string",
+            "example": "M. K. Kabongo"
+          },
+          "phone": {
+            "type": "string",
+            "example": "+243 81 100 20 30"
+          },
+          "email": {
+            "type": "string",
+            "example": "commandes@laborex.cd"
+          },
+          "address": {
+            "type": "string",
+            "example": "Av. de l’Échangeur, Limete, Kinshasa"
+          },
+          "paymentTerms": {
+            "type": "string",
+            "example": "Paiement à 30 jours, remise volume 5%"
+          },
+          "leadTimeDays": {
+            "type": "number",
+            "example": 2,
+            "description": "Délai moyen de livraison en jours"
+          }
+        },
+        "required": [
+          "name",
+          "leadTimeDays"
+        ]
+      },
+      "OrderItemDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "example": "prd-xxx"
+          },
+          "orderedQuantity": {
+            "type": "number",
+            "example": 100,
+            "description": "Quantité commandée"
+          },
+          "unitPriceCdf": {
+            "type": "number",
+            "example": 1800,
+            "description": "Prix d’achat unitaire estimé en CDF"
+          }
+        },
+        "required": [
+          "productId",
+          "orderedQuantity",
+          "unitPriceCdf"
+        ]
+      },
+      "CreatePurchaseOrderDto": {
+        "type": "object",
+        "properties": {
+          "supplierId": {
+            "type": "string",
+            "example": "sup-001"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderItemDto"
+            }
+          },
+          "notes": {
+            "type": "string",
+            "example": "Commande réapprovisionnement hebdomadaire"
+          }
+        },
+        "required": [
+          "supplierId",
+          "items"
+        ]
+      },
+      "ReceivedLineDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "example": "prd-xxx"
+          },
+          "lotNumber": {
+            "type": "string",
+            "example": "LOT-LBX-9081"
+          },
+          "expiryDate": {
+            "type": "string",
+            "example": "2028-06-30"
+          },
+          "receivedQuantity": {
+            "type": "number",
+            "example": 100
+          },
+          "actualPurchasePriceCdf": {
+            "type": "number",
+            "example": 1800
+          }
+        },
+        "required": [
+          "productId",
+          "lotNumber",
+          "expiryDate",
+          "receivedQuantity",
+          "actualPurchasePriceCdf"
+        ]
+      },
+      "ReceiveOrderDto": {
+        "type": "object",
+        "properties": {
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReceivedLineDto"
+            }
+          },
+          "supplierInvoiceNumber": {
+            "type": "string",
+            "example": "FAC-LBX-2026-9018",
+            "description": "Numéro de facture fournisseur liée"
+          }
+        },
+        "required": [
+          "lines"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,120 @@
+/* Voici l'Homme Pharma - Styles Globaux (VHP-CDC-001) */
+@use '@angular/material' as mat;
+
+:root {
+  --vhp-primary: #1e3a2f;
+  --vhp-primary-light: #2d5444;
+  --vhp-accent: #0f9d58;
+  --vhp-accent-light: #e6f4ea;
+  --vhp-warn: #c5221f;
+  --vhp-warn-light: #fce8e6;
+  --vhp-warning: #f2994a;
+  --vhp-warning-light: #fef4e8;
+  --vhp-bg: #f8f9fa;
+  --vhp-surface: #ffffff;
+  --vhp-border: #e0e0e0;
+  --vhp-text-primary: #202124;
+  --vhp-text-secondary: #5f6368;
+  --vhp-font: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --vhp-font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+  font-family: var(--vhp-font);
+  background-color: var(--vhp-bg);
+  color: var(--vhp-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Typographie & Utilitaires */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  color: var(--vhp-primary);
+}
+
+.text-muted {
+  color: var(--vhp-text-secondary);
+}
+
+.font-mono {
+  font-family: var(--vhp-font-mono);
+}
+
+/* Snackbars personnalisés pour la gestion globale d'erreurs */
+.snack-success {
+  --mdc-snackbar-container-color: #137333 !important;
+  --mdc-snackbar-supporting-text-color: #ffffff !important;
+  font-weight: 500;
+}
+
+.snack-error {
+  --mdc-snackbar-container-color: #c5221f !important;
+  --mdc-snackbar-supporting-text-color: #ffffff !important;
+  font-weight: 500;
+}
+
+.snack-warning {
+  --mdc-snackbar-container-color: #d97706 !important;
+  --mdc-snackbar-supporting-text-color: #ffffff !important;
+  font-weight: 500;
+}
+
+.snack-info {
+  --mdc-snackbar-container-color: #1a73e8 !important;
+  --mdc-snackbar-supporting-text-color: #ffffff !important;
+  font-weight: 500;
+}
+
+/* Badges de statuts et tags */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+
+  &.badge-success {
+    background-color: var(--vhp-accent-light);
+    color: #137333;
+  }
+
+  &.badge-danger {
+    background-color: var(--vhp-warn-light);
+    color: var(--vhp-warn);
+  }
+
+  &.badge-warning {
+    background-color: var(--vhp-warning-light);
+    color: #b45309;
+  }
+
+  &.badge-info {
+    background-color: #e8f0fe;
+    color: #1a73e8;
+  }
+}
+
+/* Règles responsive (ERG-02 : écran >= 1366x768 et tablette 10") */
+@media (max-width: 1024px) {
+  /* Tablette 10 pouces */
+  body {
+    font-size: 15px;
+  }
+
+  button, input, select {
+    min-height: 44px; /* Touch target minimum */
+  }
+}
+
