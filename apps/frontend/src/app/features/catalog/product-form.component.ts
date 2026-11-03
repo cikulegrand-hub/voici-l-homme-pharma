@@ -51,7 +51,7 @@ import { Product, ProductCategory } from '@vhp/shared';
           <div>
             <h2>{{ isEditMode() ? 'Modifier la fiche produit' : 'Nouveau produit au catalogue' }}</h2>
             <p class="subtitle text-muted">
-              {{ isEditMode() ? 'Mise à jour des informations cliniques, logistiques et tarifaires.' : 'Enregistrement complet d’une référence pharmaceutique (CAT-01 à CAT-04).' }}
+              {{ isEditMode() ? 'Mise à jour des informations cliniques, logistiques et tarifaires.' : 'Enregistrement complet d’une référence pharmaceutique.' }}
             </p>
           </div>
         </div>
@@ -76,7 +76,7 @@ import { Product, ProductCategory } from '@vhp/shared';
           <mat-card class="form-section-card">
             <mat-card-header>
               <mat-icon mat-card-avatar class="section-icon">medication</mat-icon>
-              <mat-card-title>1. Identification & Caractéristiques (CAT-01)</mat-card-title>
+              <mat-card-title>1. Identification et caractéristiques</mat-card-title>
               <mat-card-subtitle>Informations fondamentales de la molécule et du conditionnement</mat-card-subtitle>
             </mat-card-header>
 
@@ -94,7 +94,7 @@ import { Product, ProductCategory } from '@vhp/shared';
                   <mat-label>DCI (Molécule active) *</mat-label>
                   <input matInput formControlName="dci" placeholder="Ex: Paracétamol" />
                   @if (productForm.get('dci')?.hasError('required') && productForm.get('dci')?.touched) {
-                    <mat-error>La DCI est obligatoire (CAT-01).</mat-error>
+                    <mat-error>La DCI est obligatoire.</mat-error>
                   }
                 </mat-form-field>
               </div>
@@ -151,7 +151,7 @@ import { Product, ProductCategory } from '@vhp/shared';
           <mat-card class="form-section-card">
             <mat-card-header>
               <mat-icon mat-card-avatar class="section-icon">payments</mat-icon>
-              <mat-card-title>2. Tarification & Prix de vente (CAT-06)</mat-card-title>
+              <mat-card-title>2. Tarification et prix de vente</mat-card-title>
               <mat-card-subtitle>
                 @if (canEditPrice()) {
                   <span class="text-success">Vous êtes habilité à modifier les tarifs (prix.modifier).</span>
@@ -222,7 +222,7 @@ import { Product, ProductCategory } from '@vhp/shared';
           <mat-card class="form-section-card">
             <mat-card-header>
               <mat-icon mat-card-avatar class="section-icon">inventory_2</mat-icon>
-              <mat-card-title>3. Seuils de Stock & Emplacement (CAT-01, CAT-11)</mat-card-title>
+              <mat-card-title>3. Seuils de stock et emplacement</mat-card-title>
               <mat-card-subtitle>Gestion des seuils d'approvisionnement et localisation dans l'officine</mat-card-subtitle>
             </mat-card-header>
 
@@ -235,13 +235,13 @@ import { Product, ProductCategory } from '@vhp/shared';
                 </mat-form-field>
 
                 <mat-form-field appearance="outline" class="w-full">
-                  <mat-label>Stock de sécurité (CAT-11)</mat-label>
+                  <mat-label>Stock de sécurité</mat-label>
                   <input matInput type="number" min="0" formControlName="securityStock" />
                   <span matSuffix>unités</span>
                 </mat-form-field>
 
                 <mat-form-field appearance="outline" class="w-full">
-                  <mat-label>Seuil maximal (CAT-11)</mat-label>
+                  <mat-label>Seuil maximal</mat-label>
                   <input matInput type="number" min="0" formControlName="maxThreshold" />
                   <span matSuffix>unités</span>
                 </mat-form-field>
@@ -258,7 +258,7 @@ import { Product, ProductCategory } from '@vhp/shared';
           <mat-card class="form-section-card">
             <mat-card-header>
               <mat-icon mat-card-avatar class="section-icon">verified_user</mat-icon>
-              <mat-card-title>4. Statut Réglementaire & Traçabilité (CAT-02, RG-09)</mat-card-title>
+              <mat-card-title>4. Statut réglementaire et traçabilité</mat-card-title>
               <mat-card-subtitle>Contraintes légales de délivrance et de conservation</mat-card-subtitle>
             </mat-card-header>
 
@@ -267,7 +267,7 @@ import { Product, ProductCategory } from '@vhp/shared';
                 <mat-checkbox formControlName="requiresPrescription" color="primary">
                   <div class="checkbox-label">
                     <strong>Prescription médicale obligatoire (Rx)</strong>
-                    <span class="text-muted text-xs">Exige une ordonnance valide lors de la vente au comptoir (RG-09).</span>
+                    <span class="text-muted text-xs">Exige une ordonnance valide lors de la vente au comptoir.</span>
                   </div>
                 </mat-checkbox>
 
@@ -292,7 +292,7 @@ import { Product, ProductCategory } from '@vhp/shared';
           <mat-card class="form-section-card">
             <mat-card-header>
               <mat-icon mat-card-avatar class="section-icon">qr_code_scanner</mat-icon>
-              <mat-card-title>5. Codes-barres associés (CAT-03)</mat-card-title>
+              <mat-card-title>5. Codes-barres associés</mat-card-title>
               <mat-card-subtitle>Gestion multi-codes-barres EAN-13 par scan douchette</mat-card-subtitle>
             </mat-card-header>
 

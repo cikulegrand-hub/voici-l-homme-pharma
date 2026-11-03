@@ -42,7 +42,7 @@ import { Product, ProductCategory, PaginatedResult } from '@vhp/shared';
       <!-- EN-TÊTE DU CATALOGUE -->
       <header class="page-header">
         <div>
-          <h2>Catalogue Médicaments & Produits (CAT-01 à CAT-11)</h2>
+          <h2>Catalogue des médicaments et produits</h2>
           <p class="subtitle">
             Référentiel officiel de l'officine : DCI, dosages, formes galéniques, seuils et traçabilité réglementaire.
           </p>
@@ -224,7 +224,7 @@ import { Product, ProductCategory, PaginatedResult } from '@vhp/shared';
                     <td>
                       <div class="regulatory-badges-cell">
                         @if (prod.requiresPrescription) {
-                          <span class="badge badge-rx" matTooltip="Prescription médicale obligatoire (RG-09)">Rx</span>
+                          <span class="badge badge-rx" matTooltip="Prescription médicale obligatoire">Rx</span>
                         }
                         @if (prod.isControlledSubstance) {
                           <span class="badge badge-ctrl" matTooltip="Produit stupéfiant / contrôlé">Stup</span>
@@ -251,7 +251,7 @@ import { Product, ProductCategory, PaginatedResult } from '@vhp/shared';
                       <button
                         mat-icon-button
                         (click)="openPriceHistory(prod)"
-                        matTooltip="Historique des prix (CAT-06)"
+                        matTooltip="Historique des prix"
                       >
                         <mat-icon>history</mat-icon>
                       </button>
@@ -261,7 +261,7 @@ import { Product, ProductCategory, PaginatedResult } from '@vhp/shared';
                           mat-icon-button
                           color="warn"
                           (click)="confirmDeactivate(prod)"
-                          matTooltip="Désactiver le produit (CAT-08, RG-06)"
+                        matTooltip="Désactiver le produit"
                         >
                           <mat-icon>block</mat-icon>
                         </button>
@@ -725,7 +725,7 @@ export class CatalogComponent implements OnInit {
     const ref = this.dialog.open(ConfirmDialogComponent, {
       data: {
         title: 'Désactiver ce produit ?',
-        message: `Le produit "${product.name}" ne sera plus sélectionnable en vente au comptoir ni dans les réceptions. L’intégralité de son historique médical, comptable et de stock est préservée (RG-06).`,
+        message: `Le produit "${product.name}" ne sera plus sélectionnable en vente au comptoir ni dans les réceptions. Son historique est conservé.`,
         confirmText: 'Désactiver',
         cancelText: 'Annuler',
         color: 'warn',

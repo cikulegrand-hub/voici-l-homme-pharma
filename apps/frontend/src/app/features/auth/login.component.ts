@@ -122,7 +122,7 @@ import { I18N_FR } from '../../core/i18n/translations.fr';
 
         <!-- Pied de page officiel -->
         <footer class="login-footer">
-          <p>Conforme aux spécifications VHP-CDC-001 (AUT-01 à AUT-08, SEC-01 à SEC-03)</p>
+          <p>Accès sécurisé réservé au personnel autorisé de la pharmacie.</p>
           <p>Kinshasa, RDC · Version 1.0</p>
         </footer>
       </div>
@@ -351,7 +351,7 @@ export class LoginComponent implements OnInit {
         } else if (err.status === 401) {
           displayMsg = this.i18n.auth.loginFailed;
         } else if (err.status === 429) {
-          displayMsg = 'Trop de tentatives de connexion. Veuillez patienter une minute (SEC-03).';
+          displayMsg = 'Trop de tentatives de connexion. Veuillez patienter une minute.';
         } else {
           displayMsg = this.i18n.errors.network;
         }
