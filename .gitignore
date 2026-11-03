@@ -8,6 +8,7 @@ lerna-debug.log*
 
 node_modules
 .angular/cache
+**/.angular/
 dist
 dist-ssr
 *.local
