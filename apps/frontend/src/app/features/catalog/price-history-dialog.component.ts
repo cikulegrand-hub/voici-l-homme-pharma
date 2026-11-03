@@ -21,7 +21,7 @@ import { PriceHistoryEntry, Product } from '@vhp/shared';
     <div class="dialog-container">
       <div class="dialog-header">
         <div>
-          <h2 mat-dialog-title>Historique des révisions tarifaires (CAT-06)</h2>
+          <h2 mat-dialog-title>Historique des révisions tarifaires</h2>
           <p class="subtitle text-muted">
             Produit : <strong>{{ product.name }}</strong> ({{ product.dci }})
           </p>

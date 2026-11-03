@@ -31,7 +31,7 @@ export interface CreateInventoryDialogResult {
     ProductAutocompleteComponent,
   ],
   template: `
-    <h2 mat-dialog-title>Nouvel inventaire (STK-11)</h2>
+    <h2 mat-dialog-title>Nouvel inventaire</h2>
     <mat-dialog-content>
       <mat-radio-group [(ngModel)]="type" class="type-group">
         <mat-radio-button value="COMPLET">Complet (tous les lots)</mat-radio-button>

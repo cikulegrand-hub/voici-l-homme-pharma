@@ -81,7 +81,7 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
           case 504:
             alertService.error(
               displayMessage
-                ? `Erreur serveur : ${displayMessage}`
+                ? `Une erreur est survenue : ${displayMessage}`
                 : I18N_FR.errors.server,
             );
             break;

@@ -20,7 +20,7 @@ interface ReportCard { key: ReportKey; label: string; description: string; }
       <header class="page-header">
         <div>
           <h2>Rapports & clôtures comptables</h2>
-          <p class="subtitle">Données serveur filtrées, paginées et cohérentes avec le tableau de bord.</p>
+          <p class="subtitle">Rapports filtrés et présentés selon vos critères.</p>
         </div>
         <a mat-stroked-button routerLink="/reports" *ngIf="reportKey()">Tous les rapports</a>
       </header>
@@ -41,9 +41,9 @@ interface ReportCard { key: ReportKey; label: string; description: string; }
                 <option value="day">Aujourd’hui</option><option value="week">Cette semaine</option><option value="month">Ce mois</option>
               </select>
             </label>
-            <label>Utilisateur <input [ngModel]="userId()" (ngModelChange)="userId.set($event); reloadFromFilter()" placeholder="UUID" /></label>
-            <label>Catégorie <input [ngModel]="categoryId()" (ngModelChange)="categoryId.set($event); reloadFromFilter()" placeholder="UUID" /></label>
-            <label>Site <input [ngModel]="siteId()" (ngModelChange)="siteId.set($event); reloadFromFilter()" placeholder="UUID" /></label>
+            <label>Utilisateur <input [ngModel]="userId()" (ngModelChange)="userId.set($event); reloadFromFilter()" placeholder="Tous les utilisateurs" /></label>
+            <label>Catégorie <input [ngModel]="categoryId()" (ngModelChange)="categoryId.set($event); reloadFromFilter()" placeholder="Toutes les catégories" /></label>
+            <label>Site <input [ngModel]="siteId()" (ngModelChange)="siteId.set($event); reloadFromFilter()" placeholder="Tous les sites" /></label>
             <label>Tri <select [ngModel]="sortDirection()" (ngModelChange)="sortDirection.set($event); reloadFromFilter()"><option value="desc">Décroissant</option><option value="asc">Croissant</option></select></label>
             <span class="toolbar-status" *ngIf="result()">{{ result()!.totals.rowCount }} ligne(s)</span>
             <span class="exports" *ngIf="reportKey()">
@@ -100,7 +100,7 @@ export class ReportsComponent implements OnInit {
   readonly reports: ReportCard[] = [
     { key:'sales-journal', label:'Journal des ventes', description:'Ventes validées, avoirs et montants nets.' },
     { key:'stock-movements', label:'Mouvements de stock', description:'Entrées et sorties en quantités et valeurs.' },
-    { key:'valued-inventory', label:'Inventaire valorisé', description:'Lots disponibles × CUMP.' },
+    { key:'valued-inventory', label:'Inventaire valorisé', description:'Lots disponibles × coût moyen du stock.' },
     { key:'expiries', label:'Péremptions', description:'Lots proches de la péremption sous 90 jours.' },
     { key:'expenses', label:'Dépenses', description:'Dépenses par catégorie et devise.' },
     { key:'best-sellers', label:'Meilleures ventes', description:'Produits classés par quantités vendues.' },

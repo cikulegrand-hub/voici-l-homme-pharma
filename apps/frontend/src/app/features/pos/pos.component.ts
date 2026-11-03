@@ -56,14 +56,14 @@ export interface PaymentLine {
       @if (!cashSession()) {
         <div class="cash-required" role="alert">
           <h2>Caisse fermée</h2>
-          <p>Une session de caisse ouverte est obligatoire pour vendre et encaisser au comptoir (RG-12).</p>
+          <p>Vous devez ouvrir votre caisse pour vendre et encaisser au comptoir.</p>
           <a routerLink="/cash" class="btn-open-cash">Ouvrir ma session de caisse</a>
         </div>
       } @else {
         <!-- Barre supérieure d'état et raccourcis clavier -->
         <header class="pos-header">
           <div class="header-left">
-            <h2>Point de Vente (POS) · Caisse Comptoir</h2>
+            <h2>Point de vente · caisse comptoir</h2>
             <div class="header-badges">
               <span class="rate-badge">Taux du jour : 1 USD = {{ activeRate() | currencyFormat:'CDF' }}</span>
               <span class="currency-toggle">
@@ -111,7 +111,7 @@ export interface PaymentLine {
                 <div class="customer-info">
                   <span class="text-muted">Client : Comptoir (Anonyme)</span>
                   <button type="button" class="btn-customer-action" (click)="showCustomerSearch = !showCustomerSearch">Rechercher</button>
-                  <button type="button" class="btn-customer-action primary" (click)="showQuickCustomerModal = true">+ Création Rapide (CLI-02)</button>
+                  <button type="button" class="btn-customer-action primary" (click)="showQuickCustomerModal = true">+ Ajouter rapidement un client</button>
                 </div>
               </ng-template>
 
@@ -149,7 +149,7 @@ export interface PaymentLine {
               <thead>
                 <tr>
                   <th>Médicament (DCI)</th>
-                  <th>Lot FEFO & Péremption</th>
+                  <th>Lot et date de péremption</th>
                   <th style="width: 80px;">Qté</th>
                   <th style="width: 100px;">PU (CDF)</th>
                   <th style="width: 90px;">Remise</th>
@@ -164,7 +164,7 @@ export interface PaymentLine {
                       <strong>{{ item.product.name }}</strong>
                       <small class="dci-subtitle">{{ item.product.dci }}</small>
                       <div class="item-badges">
-                        <span *ngIf="item.requiresPrescription || item.product.requiresPrescription" class="badge-rx">Ordonnance (RG-09)</span>
+                        <span *ngIf="item.requiresPrescription || item.product.requiresPrescription" class="badge-rx">Ordonnance requise</span>
                         <span *ngIf="item.isControlled || item.product.isControlledSubstance" class="badge-controlled">Stupéfiant</span>
                         <span *ngIf="item.isNearExpiry" class="badge-expiry">Péremption &lt; 90j</span>
                         <span *ngIf="item.stockWarning" class="badge-stock-alert">Stock insuffisant !</span>
@@ -175,7 +175,7 @@ export interface PaymentLine {
                         {{ item.lotNumber }}
                         <small class="lot-date">({{ item.expiryDate }})</small>
                       </span>
-                      <span class="lot-pill auto" *ngIf="!item.lotNumber">Auto-FEFO</span>
+                      <span class="lot-pill auto" *ngIf="!item.lotNumber">Lot sélectionné automatiquement</span>
                     </td>
                     <td>
                       <input
@@ -218,7 +218,7 @@ export interface PaymentLine {
             <!-- Sélecteur d'ordonnance réutilisable si nécessaire (VTE-15, RG-09) -->
             <div class="prescription-box" *ngIf="requiresPrescription()">
               <div class="prescription-alert">
-                ⚠️ Ce panier contient des médicaments nécessitant une ordonnance médicale enregistrée (RG-09).
+                ⚠️ Ce panier contient des médicaments nécessitant une ordonnance médicale enregistrée.
               </div>
               <app-prescription-selector
                 [customerId]="selectedCustomer?.id"
@@ -248,7 +248,7 @@ export interface PaymentLine {
                 {{ selectedCurrency === 'CDF' ? ('≈ ' + (totalUsd() | currencyFormat:'USD')) : ('≈ ' + (totalCdf() | currencyFormat:'CDF')) }}
               </span>
             </div>
-            <div class="server-note">Calculs serveur certifiés (RG-07) · Arrondi et taxes inclus.</div>
+            <div class="server-note">Calculs vérifiés · Arrondi et taxes inclus.</div>
 
             <!-- Multi-paiements (VTE-07, VTE-08) -->
             <div class="payments-container">
@@ -373,7 +373,7 @@ export interface PaymentLine {
         <div class="modal-backdrop" *ngIf="showHeldCartsModal">
           <div class="modal-dialog held-carts-dialog">
             <div class="modal-title-bar">
-              <h3>Paniers en attente (VTE-11)</h3>
+              <h3>Paniers en attente</h3>
               <button type="button" class="btn-close-modal" (click)="showHeldCartsModal = false">✕</button>
             </div>
             <div class="held-carts-list">

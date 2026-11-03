@@ -28,7 +28,7 @@ import { PermissionService } from '../../core/permissions/permission.service';
     <div class="sales-history-container">
       <header class="page-header">
         <div>
-          <h2>Historique des Ventes & Avoirs (VTE)</h2>
+          <h2>Historique des ventes et avoirs</h2>
           <p class="subtitle">Journal des factures émises, réimpressions duplicatas et gestion des retours clients.</p>
         </div>
         <div class="header-actions">
@@ -92,7 +92,7 @@ import { PermissionService } from '../../core/permissions/permission.service';
                   <button mat-icon-button (click)="selectSale(sale)" title="Voir détail">
                     <mat-icon>visibility</mat-icon>
                   </button>
-                  <button mat-icon-button (click)="reprintDuplicate(sale.invoiceNumber)" title="Réimprimer DUPLICATA (VTE-16)">
+                  <button mat-icon-button (click)="reprintDuplicate(sale.invoiceNumber)" title="Réimprimer le duplicata">
                     <mat-icon>print</mat-icon>
                   </button>
                   <!-- Actions Annulation / Avoir -->
@@ -144,7 +144,7 @@ import { PermissionService } from '../../core/permissions/permission.service';
         </div>
 
         <!-- Lignes d'articles -->
-        <h4 style="margin-top: 16px;">Articles facturés & Lots alloués (STK/FEFO)</h4>
+        <h4 style="margin-top: 16px;">Articles facturés et lots utilisés</h4>
         <table class="detail-items-table">
           <thead>
             <tr>
@@ -182,14 +182,14 @@ import { PermissionService } from '../../core/permissions/permission.service';
       <div class="modal-backdrop" *ngIf="showCancelModal && saleToCancel">
         <div class="modal-dialog cancel-dialog">
           <div class="modal-header">
-            <h3>Émission d'un Avoir / Annulation (RG-04, VTE-14)</h3>
+            <h3>Émettre un avoir ou annuler la vente</h3>
             <button type="button" class="btn-close-modal" (click)="showCancelModal = false">✕</button>
           </div>
           <div class="modal-body">
             <p>Facture concernée : <strong>{{ saleToCancel.invoiceNumber }}</strong></p>
 
             <div class="form-group">
-              <label>Motif obligatoire de l'avoir / annulation (RG-04) :</label>
+              <label>Motif obligatoire de l'avoir ou de l'annulation :</label>
               <textarea
                 [(ngModel)]="cancelReason"
                 rows="3"

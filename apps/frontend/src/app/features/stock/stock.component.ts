@@ -62,7 +62,7 @@ import {
       <div class="page-header">
         <div class="header-titles">
           <h1>Gestion des Stocks & Lots (Module STK)</h1>
-          <p class="subtitle">Lots FEFO, inventaires physiques, traçabilité inaltérable, valorisation CUMP et alertes</p>
+          <p class="subtitle">Lots, inventaires, traçabilité, valorisation du stock et alertes</p>
         </div>
         <div class="header-actions">
           <a mat-stroked-button color="primary" routerLink="/reception">
@@ -125,7 +125,7 @@ import {
                         </div>
 
                         <div class="prod-col">
-                          <span class="col-label">CUMP unitaire</span>
+                          <span class="col-label">Coût moyen unitaire</span>
                           <span class="col-val">{{ prod.cumpCdf | number:'1.0-0' }} CDF</span>
                         </div>
 
@@ -178,10 +178,10 @@ import {
                                     <td>
                                       @if (lot.isQuarantined) {
                                         <span class="quarantine-badge">
-                                          <mat-icon>shield</mat-icon> En Quarantaine (STK-04)
+                                          <mat-icon>shield</mat-icon> En quarantaine
                                         </span>
                                       } @else {
-                                        <span class="available-badge">Disponible FEFO</span>
+                                        <span class="available-badge">Disponible selon la date de péremption</span>
                                       }
                                     </td>
                                     <td class="text-right">
@@ -307,7 +307,7 @@ import {
               <!-- Formulaire de sortie ou demande d'ajustement -->
               <mat-card class="form-card">
                 <mat-card-header>
-                  <mat-card-title>Déclarer une sortie ou un ajustement (RG-06, RG-11)</mat-card-title>
+                  <mat-card-title>Déclarer une sortie ou un ajustement</mat-card-title>
                 </mat-card-header>
                 <mat-card-content class="form-content">
                   <mat-form-field appearance="outline" class="w-full">
@@ -324,7 +324,7 @@ import {
                   <mat-form-field appearance="outline" class="w-full">
                     <mat-label>Type d'opération</mat-label>
                     <mat-select [(ngModel)]="adjType">
-                      <mat-option value="DEMANDE_AJUSTEMENT">Demande d'ajustement (soumis à validation pharmacien RG-11)</mat-option>
+                      <mat-option value="DEMANDE_AJUSTEMENT">Demande d'ajustement (soumise à validation du pharmacien)</mat-option>
                       <mat-option value="CASSE_PERTE">Casse ou Perte</mat-option>
                       <mat-option value="PEREMPTION">Mise au rebut pour péremption</mat-option>
                       <mat-option value="DON">Don caritatif</mat-option>
@@ -338,7 +338,7 @@ import {
                   </mat-form-field>
 
                   <mat-form-field appearance="outline" class="w-full">
-                    <mat-label>Motif obligatoire * (RG-06)</mat-label>
+                    <mat-label>Motif obligatoire *</mat-label>
                     <textarea matInput rows="2" [(ngModel)]="adjReason" placeholder="Expliquez la cause exacte du mouvement..." required></textarea>
                   </mat-form-field>
 
@@ -358,7 +358,7 @@ import {
 
               <!-- Section Pharmacien : Ajustements en attente de validation -->
               <div class="pending-section">
-                <h3>Ajustements en attente de validation pharmacien (RG-11)</h3>
+                <h3>Ajustements en attente de validation du pharmacien</h3>
                 @if (loadingPending()) {
                   <mat-spinner diameter="30"></mat-spinner>
                 } @else if (pendingAdjustments().length === 0) {
@@ -588,7 +588,7 @@ import {
         <mat-tab>
           <ng-template mat-tab-label>
             <mat-icon class="tab-icon">menu_book</mat-icon>
-            <span>Registre Stupéfiants (STK-14)</span>
+            <span>Registre des produits contrôlés</span>
           </ng-template>
 
           <div class="tab-body">
@@ -642,7 +642,7 @@ import {
         <mat-tab>
           <ng-template mat-tab-label>
             <mat-icon class="tab-icon">account_balance_wallet</mat-icon>
-            <span>Valorisation CUMP</span>
+            <span>Valorisation du stock</span>
           </ng-template>
 
           <div class="tab-body">
@@ -653,7 +653,7 @@ import {
                 <div class="val-card">
                   <span class="val-title">Valeur Totale du Stock (CDF)</span>
                   <span class="val-amount cdf">{{ valuationSummary()?.totalValuationCdf | number:'1.0-0' }} CDF</span>
-                  <span class="val-sub">Recalculée selon la méthode CUMP (RG-14)</span>
+                  <span class="val-sub">Recalculée selon le coût moyen du stock</span>
                 </div>
                 <div class="val-card">
                   <span class="val-title">Contre-valeur indicative (USD)</span>
@@ -673,7 +673,7 @@ import {
                     <tr>
                       <th>Produit</th>
                       <th>Stock Actuel</th>
-                      <th>CUMP Unitaire (CDF)</th>
+                      <th>Coût moyen unitaire (CDF)</th>
                       <th>Prix de Vente (CDF)</th>
                       <th>Valorisation Totale</th>
                       <th>Marge Estimée</th>
@@ -1234,7 +1234,7 @@ export class StockComponent implements OnInit {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    if (exp <= today) return 'Périmé (RG-03)';
+    if (exp <= today) return 'Périmé';
     const diff = Math.ceil((exp.getTime() - today.getTime()) / (1000 * 3600 * 24));
     if (diff < 30) return `< ${diff} j`;
     if (diff < 60) return `< 60 j`;
@@ -1246,7 +1246,7 @@ export class StockComponent implements OnInit {
     const confirm = this.dialog.open(ConfirmDialogComponent, {
       data: {
         title: `${action.toUpperCase()} le lot ${lot.lotNumber}`,
-        message: `Voulez-vous ${action} ce lot ? ${lot.isQuarantined ? 'Il sera à nouveau sélectionnable en vente/FEFO.' : 'Il sera exclu de toute vente (STK-04).'}`,
+        message: `Voulez-vous ${action} ce lot ? ${lot.isQuarantined ? 'Il sera à nouveau sélectionnable à la vente.' : 'Il sera exclu de toute vente.'}`,
       },
     });
 
@@ -1519,7 +1519,7 @@ export class StockComponent implements OnInit {
   cancelInventory(inv: InventorySession) {
     this.stockApi.cancelInventory(inv.id, 'Annulation par le pharmacien sans aucun mouvement').subscribe({
       next: () => {
-        this.alert.info(`Inventaire ${inv.reference} annulé (aucun mouvement généré, STK-12).`);
+        this.alert.info(`Inventaire ${inv.reference} annulé. Aucun mouvement n’a été généré.`);
         this.loadInventories();
       },
       error: (err) => this.alert.error(err.error?.message || "Erreur d'annulation."),

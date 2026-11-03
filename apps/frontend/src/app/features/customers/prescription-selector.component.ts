@@ -10,7 +10,7 @@ import { CustomersApiService } from '../../core/api/services/customers-api.servi
   template: `
     <div class="prescription-selector" *ngIf="customerId">
       <div class="selector-header">
-        <span class="title">📋 Ordonnances du patient (VTE-15)</span>
+        <span class="title">📋 Ordonnances du patient</span>
         <button type="button" class="btn-refresh" (click)="load()" [disabled]="loading">
           {{ loading ? 'Chargement...' : 'Actualiser' }}
         </button>
@@ -51,7 +51,7 @@ import { CustomersApiService } from '../../core/api/services/customers-api.servi
               <p class="timer-warning">⏳ Expire dans {{ remainingSeconds }} secondes. Ce document est strictement confidentiel.</p>
             </div>
             <div *ngIf="previewExpired" class="expired-alert">
-              ⚠️ Le lien temporaire sécurisé a expiré (RG-17). Veuillez relancer un aperçu.
+              ⚠️ Le lien sécurisé a expiré. Veuillez demander un nouvel accès.
             </div>
           </div>
           <div class="dialog-footer">

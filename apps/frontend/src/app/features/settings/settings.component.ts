@@ -203,7 +203,7 @@ import {
                 <form (ngSubmit)="saveFinancial()" class="tab-form">
                   <!-- Monnaies & Arrondis -->
                   <div class="section-block">
-                    <h3 class="section-title">Règles Monétaires & Arrondis (RG-07, RG-08)</h3>
+                    <h3 class="section-title">Règles monétaires et arrondis</h3>
                     
                     <div class="form-row">
                       <mat-form-field appearance="outline" class="col">
@@ -408,7 +408,7 @@ import {
                 <form (ngSubmit)="saveAlerts()" class="tab-form">
                   <div class="section-block">
                     <h3 class="section-title">{{ i18n.settings.expiryAlertsTitle }}</h3>
-                    <p class="section-desc">Paliers d'anticipation pour les alertes de péremption des médicaments (FEFO).</p>
+                    <p class="section-desc">Paliers d’anticipation pour les alertes de péremption des médicaments.</p>
 
                     <div class="form-row">
                       <mat-form-field appearance="outline" class="col">
@@ -953,7 +953,7 @@ export class SettingsComponent implements OnInit {
   readonly availablePaymentMethods = [
     { code: 'ESPECES', label: 'Espèces (CDF / USD)' },
     { code: 'MOBILE_MONEY', label: 'Mobile Money (M-Pesa, Orange, Airtel)' },
-    { code: 'CARTE_BANCAIRE', label: 'Carte Bancaire / Terminal POS' },
+    { code: 'CARTE_BANCAIRE', label: 'Carte bancaire' },
     { code: 'VIREMENT', label: 'Virement Bancaire' },
     { code: 'CREDIT_CLIENT', label: 'Crédit Client / Convention' },
   ];

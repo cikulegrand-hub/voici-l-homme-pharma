@@ -53,7 +53,7 @@ import { DashboardMetric, ReportFilters } from '@vhp/shared';
           <mat-card-header>
             <mat-icon mat-card-avatar class="kpi-icon rate">currency_exchange</mat-icon>
             <mat-card-title>Taux Officiel du Jour</mat-card-title>
-            <mat-card-subtitle>Section 2.3 & RG-08</mat-card-subtitle>
+            <mat-card-subtitle>Taux de change du jour</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             <div class="kpi-value font-mono">
@@ -68,7 +68,7 @@ import { DashboardMetric, ReportFilters } from '@vhp/shared';
           <mat-card-header>
             <mat-icon mat-card-avatar class="kpi-icon cash">point_of_sale</mat-icon>
             <mat-card-title>Session de Caisse</mat-card-title>
-            <mat-card-subtitle>FIN-01, FIN-02</mat-card-subtitle>
+            <mat-card-subtitle>Suivi de la caisse</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             <div class="kpi-value status-open">
@@ -83,14 +83,14 @@ import { DashboardMetric, ReportFilters } from '@vhp/shared';
           <mat-card-header>
             <mat-icon mat-card-avatar class="kpi-icon role">verified_user</mat-icon>
             <mat-card-title>Niveau d'Autorisation</mat-card-title>
-            <mat-card-subtitle>AUT-04, AUT-05</mat-card-subtitle>
+            <mat-card-subtitle>Gestion des accès</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             <div class="kpi-value role-name">
               {{ getRoleName(currentUser()?.role || '') }}
             </div>
             <p class="kpi-subtext">
-              {{ isSuperAdmin() ? 'Accès administrateur total (*)' : currentUser()?.permissions?.length + ' permissions accordées' }}
+              {{ isSuperAdmin() ? 'Accès complet' : currentUser()?.permissions?.length + ' droits accordés' }}
             </p>
           </mat-card-content>
         </mat-card>
@@ -99,8 +99,8 @@ import { DashboardMetric, ReportFilters } from '@vhp/shared';
       <section class="rpt-section">
         <div class="section-heading">
           <div>
-            <h3>Tableau de bord RPT</h3>
-            <p class="kpi-subtext">Les montants sont calculés côté serveur et chaque carte ouvre son rapport justificatif.</p>
+            <h3>Indicateurs de l’activité</h3>
+            <p class="kpi-subtext">Cliquez sur un indicateur pour voir le détail.</p>
           </div>
           <label class="period-filter">
             Période
@@ -110,9 +110,9 @@ import { DashboardMetric, ReportFilters } from '@vhp/shared';
               <option value="month">Ce mois</option>
             </select>
           </label>
-          <label class="period-filter">Utilisateur <input [ngModel]="rptUserId()" (ngModelChange)="rptUserId.set($event); loadRptDashboard()" placeholder="UUID" /></label>
-          <label class="period-filter">Catégorie <input [ngModel]="rptCategoryId()" (ngModelChange)="rptCategoryId.set($event); loadRptDashboard()" placeholder="UUID" /></label>
-          <label class="period-filter">Site <input [ngModel]="rptSiteId()" (ngModelChange)="rptSiteId.set($event); loadRptDashboard()" placeholder="UUID" /></label>
+          <label class="period-filter">Utilisateur <input [ngModel]="rptUserId()" (ngModelChange)="rptUserId.set($event); loadRptDashboard()" placeholder="Tous les utilisateurs" /></label>
+          <label class="period-filter">Catégorie <input [ngModel]="rptCategoryId()" (ngModelChange)="rptCategoryId.set($event); loadRptDashboard()" placeholder="Toutes les catégories" /></label>
+          <label class="period-filter">Site <input [ngModel]="rptSiteId()" (ngModelChange)="rptSiteId.set($event); loadRptDashboard()" placeholder="Tous les sites" /></label>
         </div>
 
         <p class="rpt-error" *ngIf="rptError()">{{ rptError() }}</p>
@@ -174,16 +174,16 @@ import { DashboardMetric, ReportFilters } from '@vhp/shared';
 
       <!-- Section d'actions sensibles soumises à PIN (Démonstration AUT-08) -->
       <section class="demo-actions-section">
-        <h3>Contrôles de sécurité (AUT-08, SEC-03)</h3>
+        <h3>Contrôles de sécurité</h3>
         <div class="demo-buttons">
           <button mat-flat-button color="accent" (click)="openPinReauthDemo()">
             <mat-icon>pin</mat-icon>
-            Tester Réautorisation par PIN Superviseur (AUT-08)
+            Tester la réautorisation par PIN superviseur
           </button>
 
           <button mat-stroked-button color="warn" (click)="openConfirmDialogDemo()">
             <mat-icon>warning</mat-icon>
-            Tester Dialogue de Confirmation Sécurisé
+            Tester la confirmation sécurisée
           </button>
         </div>
       </section>
@@ -384,7 +384,7 @@ export class DashboardComponent {
     this.rptError.set(null);
     this.reportsApi.getDashboard({ period: this.rptPeriod(), ...(this.rptUserId() ? { userId: this.rptUserId() } : {}), ...(this.rptCategoryId() ? { categoryId: this.rptCategoryId() } : {}), ...(this.rptSiteId() ? { siteId: this.rptSiteId() } : {}) } as Partial<ReportFilters>).subscribe({
       next: (snapshot) => { this.rptMetrics.set(snapshot.metrics); this.rptSalesChart.set(snapshot.charts?.sales || []); this.rptBestSellersChart.set(snapshot.charts?.bestSellers || []); this.rptLoading.set(false); },
-      error: () => { this.rptError.set('Les indicateurs RPT sont momentanément indisponibles.'); this.rptLoading.set(false); },
+      error: () => { this.rptError.set('Les indicateurs sont momentanément indisponibles.'); this.rptLoading.set(false); },
     });
   }
 
@@ -431,7 +431,7 @@ export class DashboardComponent {
 
     dialogRef.afterClosed().subscribe((res) => {
       if (res?.valid) {
-        this.alertService.success('Code PIN superviseur validé avec succès (AUT-08) !');
+        this.alertService.success('Code PIN superviseur validé avec succès !');
       }
     });
   }

@@ -49,9 +49,9 @@ interface ReceptionTableLine {
     <div class="page-container">
       <div class="page-header">
         <div class="header-titles">
-          <h1>Réception Fournisseur (ACH-04, STK-01)</h1>
+          <h1>Réception fournisseur</h1>
           <p class="subtitle">
-            Enregistrement des entrées de stock avec traçabilité des lots, calcul automatique du CUMP (RG-14) et protection d'idempotence.
+            Enregistrement des entrées de stock avec traçabilité des lots et calcul automatique du coût moyen du stock.
           </p>
         </div>
       </div>
@@ -62,8 +62,8 @@ interface ReceptionTableLine {
           <div class="mode-selector">
             <span class="mode-label">Type d'entrée :</span>
             <mat-radio-group [(ngModel)]="receptionMode" (change)="onModeChange()">
-              <mat-radio-button value="PO">Réception sur Bon de Commande (ACH-04)</mat-radio-button>
-              <mat-radio-button value="DIRECT">Réception Directe / Sans bon (STK-01)</mat-radio-button>
+              <mat-radio-button value="PO">Réception sur bon de commande</mat-radio-button>
+              <mat-radio-button value="DIRECT">Réception directe</mat-radio-button>
             </mat-radio-group>
           </div>
 
@@ -182,7 +182,7 @@ interface ReceptionTableLine {
                       />
                       <!-- Alerte visuelle de péremption -->
                       @if (getExpiryStatus(line.expiryDate) === 'EXPIRED') {
-                        <span class="expiry-badge expired" matTooltip="Attention : Le lot est déjà périmé ! Réception interdite (RG-03).">
+                        <span class="expiry-badge expired" matTooltip="Attention : le lot est déjà périmé. Réception interdite.">
                           <mat-icon>dangerous</mat-icon> Périmé
                         </span>
                       } @else if (getExpiryStatus(line.expiryDate) === 'WARNING') {
@@ -642,7 +642,7 @@ export class ReceptionComponent implements OnInit {
   checkExpiry(line: ReceptionTableLine) {
     if (this.getExpiryStatus(line.expiryDate) === 'EXPIRED') {
       this.alert.warning(
-        `Attention : La date de péremption du lot "${line.lotNumber || 'non renseigné'}" est déjà dépassée. La réception sera refusée (RG-03).`,
+            `Attention : la date de péremption du lot "${line.lotNumber || 'non renseigné'}" est déjà dépassée. La réception sera refusée.`,
       );
     }
   }
@@ -699,7 +699,7 @@ export class ReceptionComponent implements OnInit {
         next: (order) => {
           this.submitting.set(false);
           this.alert.success(
-            `Réception enregistrée avec succès. Bon de commande ${order.orderNumber} mis à jour (${order.status}). CUMP recalculé selon RG-14.`,
+            `Réception enregistrée avec succès. Bon de commande ${order.orderNumber} mis à jour (${order.status}). Coût moyen du stock recalculé.`,
           );
           this.resetForm();
           this.loadOpenOrders();
@@ -730,7 +730,7 @@ export class ReceptionComponent implements OnInit {
         next: (receipt) => {
           this.submitting.set(false);
           this.alert.success(
-            `Réception directe ${receipt.receiptNumber} validée avec succès. Lots créés et CUMP actualisé.`,
+            `Réception directe ${receipt.receiptNumber} validée avec succès. Lots créés et coût moyen du stock actualisé.`,
           );
           this.resetForm();
         },

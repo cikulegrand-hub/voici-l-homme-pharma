@@ -11,11 +11,11 @@ import { Product, CurrencyCode, PaymentMethod } from '@vhp/shared';
     <div class="pos-container">
       <header class="pos-header">
         <div>
-          <h2>Point de Vente (POS) · Comptoir</h2>
+          <h2>Point de vente · comptoir</h2>
           <span class="rate-badge">Taux du jour : 1 USD = {{ activeRate() }} CDF</span>
         </div>
         <div class="pos-actions">
-          <button (click)="holdCart()" class="btn-outline">Mettre en attente (VTE-11)</button>
+          <button (click)="holdCart()" class="btn-outline">Mettre en attente</button>
         </div>
       </header>
 
@@ -47,7 +47,7 @@ import { Product, CurrencyCode, PaymentMethod } from '@vhp/shared';
                 <td>
                   <strong>{{ item.product.name }}</strong>
                   <small>{{ item.product.dci }}</small>
-                  <span *ngIf="item.product.requiresPrescription" class="badge-rx">Ordonnance requise (RG-09)</span>
+                  <span *ngIf="item.product.requiresPrescription" class="badge-rx">Ordonnance requise</span>
                 </td>
                 <td>
                   <input
@@ -74,7 +74,7 @@ import { Product, CurrencyCode, PaymentMethod } from '@vhp/shared';
           </div>
 
           <div class="payment-method-selector">
-            <label>Mode de paiement (VTE-08)</label>
+            <label>Mode de paiement</label>
             <select [(ngModel)]="selectedPaymentMethod">
               <option value="ESPECES">Espèces (CDF / USD)</option>
               <option value="MOBILE_MONEY">Mobile Money (M-Pesa / Orange / Airtel)</option>
@@ -96,7 +96,7 @@ import { Product, CurrencyCode, PaymentMethod } from '@vhp/shared';
             [disabled]="cart().length === 0 || isProcessing()"
             (click)="validateSale()"
           >
-            {{ isProcessing() ? 'Validation en cours...' : 'Valider & Imprimer Ticket (REC-01)' }}
+            {{ isProcessing() ? 'Validation en cours...' : 'Valider et imprimer le ticket' }}
           </button>
         </aside>
       </div>

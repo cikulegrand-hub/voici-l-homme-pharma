@@ -214,13 +214,13 @@ interface ReceiptTicket {
                     <span>{{ selectedCustomer.companyName }}</span>
                   </div>
                   <div class="info-item">
-                    <label>Plafond autorisé (RG-13) :</label>
+                    <label>Plafond autorisé :</label>
                     <span>{{ selectedCustomer.creditLimitCdf | number }} CDF</span>
                   </div>
                 </div>
 
                 <div class="medical-notes-card mt-3">
-                  <h4>⚠️ Notes Médicales & Allergies (CLI-07)</h4>
+                  <h4>⚠️ Notes médicales et allergies</h4>
                   <p *ngIf="selectedCustomer.medicalNotes" class="medical-text">
                     {{ selectedCustomer.medicalNotes }}
                   </p>
@@ -263,7 +263,7 @@ interface ReceiptTicket {
               <!-- ================= ONGLET 3 : PAIEMENTS & ENCAISSEMENT ================= -->
               <div *ngIf="activeTab === 'paiements'" class="tab-pane">
                 <div class="section-actions">
-                  <h4>Règlements & Encaissement de créance (CLI-04)</h4>
+                  <h4>Règlements et encaissement de créance</h4>
                   <button
                     type="button"
                     class="btn btn-success"
@@ -381,7 +381,7 @@ interface ReceiptTicket {
                 <div class="statement-card printable-area">
                   <div class="statement-header">
                     <div>
-                      <h3>RELEVÉ DE COMPTE CLIENT (CLI-03)</h3>
+                      <h3>RELEVÉ DE COMPTE CLIENT</h3>
                       <p><strong>{{ selectedCustomer.fullName }}</strong> ({{ selectedCustomer.code }})</p>
                       <small>Édité le {{ statement?.generatedAt | date:'dd/MM/yyyy à HH:mm' }}</small>
                     </div>
@@ -446,7 +446,7 @@ interface ReceiptTicket {
 
                 <!-- Formulaire de saisie d'ordonnance -->
                 <div class="prescription-form-card" *ngIf="showPrescriptionUpload">
-                  <h5>Enregistrement d’une Ordonnance (CLI-05, CLI-06)</h5>
+                  <h5>Enregistrement d’une ordonnance</h5>
 
                   <!-- Mention d'information confidentialité (CLI-10) -->
                   <div class="privacy-notice-box" *ngIf="privacyNotice">
@@ -608,7 +608,7 @@ interface ReceiptTicket {
                 <input [(ngModel)]="newCustomerForm.address" name="address" class="form-control">
               </div>
               <div class="form-group">
-                <label>Notes médicales & allergies (CLI-07)</label>
+                <label>Notes médicales et allergies</label>
                 <textarea [(ngModel)]="newCustomerForm.medicalNotes" name="medicalNotes" class="form-control" rows="2" placeholder="Allergies connues, antécédents..."></textarea>
               </div>
               <div class="modal-footer">
@@ -683,7 +683,7 @@ interface ReceiptTicket {
               </div>
             </div>
             <div *ngIf="previewModalExpired" class="alert alert-danger mt-3">
-              ⚠️ <strong>Lien temporaire expiré (RG-17).</strong><br>
+              ⚠️ <strong>Le lien sécurisé a expiré.</strong><br>
               Pour préserver la confidentialité médicale, le lien signé a expiré. Veuillez cliquer à nouveau sur "Consulter" pour générer un nouvel accès journalisé.
             </div>
           </div>
@@ -1085,7 +1085,7 @@ export class CustomersComponent implements OnInit {
         this.openPrescriptionPreview(res.signedUrl, res.expiresAt);
       },
       error: (err) => {
-        this.errorMessage = err.error?.message || 'Accès à l’image refusé ou non autorisé (RG-17).';
+        this.errorMessage = err.error?.message || 'Accès à l’image refusé ou non autorisé.';
       },
     });
   }

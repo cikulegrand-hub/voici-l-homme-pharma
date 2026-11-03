@@ -42,7 +42,7 @@ interface OrderLineForm {
   template: `
     <div class="dialog-container">
       <div class="dialog-header">
-        <h2 mat-dialog-title>Nouveau Bon de Commande Fournisseur (ACH-02)</h2>
+        <h2 mat-dialog-title>Nouveau bon de commande fournisseur</h2>
         <button mat-icon-button mat-dialog-close class="close-btn">
           <mat-icon>close</mat-icon>
         </button>
