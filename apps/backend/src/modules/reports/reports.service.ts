@@ -19,13 +19,13 @@ export class ReportsService {
   assertAccess(role: string, reportKey?: string, exportRequested = false): void {
     const fullRoles = ['ADMIN', 'PHARMACIEN', 'COMPTABLE'];
     if (fullRoles.includes(role)) return;
-    if (exportRequested) throw new ForbiddenException('Les exports RPT sont réservés à l’administration, au pharmacien et à la comptabilité.');
+    if (exportRequested) throw new ForbiddenException('Les exports sont réservés à l’administration, au pharmacien et à la comptabilité.');
     if (!reportKey || reportKey === 'dashboard') return;
     const allowed: Record<string, string[]> = {
       CAISSIER: ['sales-journal', 'best-sellers'],
       STOCK: ['stock-movements', 'stock-entries-exits', 'valued-inventory', 'expiries', 'low-rotation'],
     };
-    if (!allowed[role]?.includes(reportKey)) throw new ForbiddenException('Ce rapport RPT n’est pas disponible pour votre rôle.');
+    if (!allowed[role]?.includes(reportKey)) throw new ForbiddenException('Ce rapport n’est pas disponible pour votre rôle.');
   }
 
   async getDetailedReport(reportKey: string, dto: ReportFilterDto = {}, pharmacyId?: string) {

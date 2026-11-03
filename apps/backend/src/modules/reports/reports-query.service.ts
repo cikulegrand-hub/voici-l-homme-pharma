@@ -151,7 +151,7 @@ export class ReportsQueryService {
 
   async getDetailedReport(reportKey: string, dto: ReportFilterDto = {}, pharmacyId = DEFAULT_PHARMACY_ID): Promise<ReportResult> {
     const definition = getReportDefinition(reportKey);
-    if (!definition) throw new BadRequestException(`Rapport RPT inconnu : ${reportKey}.`);
+    if (!definition) throw new BadRequestException('Le rapport demandé n’est pas disponible.');
 
     const filters = this.normalizeFilters(dto, pharmacyId);
     switch (reportKey as ReportKey) {

@@ -150,7 +150,7 @@ export class SalesService {
 
     if (totalCreditNeededCdf > 0) {
       if (!dto.customerId) {
-        throw new BadRequestException('Un client doit être identifié pour effectuer une vente à crédit ou avec solde restant (VTE-12, RG-13).');
+        throw new BadRequestException('Un client doit être identifié pour effectuer une vente à crédit ou avec un solde restant.');
       }
       try {
         await this.customersService.checkCreditAvailability(dto.customerId, totalCreditNeededCdf, pharmacyId);
@@ -388,13 +388,13 @@ export class SalesService {
       const raw = item.quantity * unitPriceCdf;
       const percent = raw ? (discountCdf / raw) * 100 : 0;
       if (percent > cap) {
-        if (!supervisorPin) throw new UnauthorizedException(`La remise de ${percent.toFixed(1)}% dépasse le plafond autorisé pour votre rôle (${cap}%). Code PIN superviseur requis (RG-10).`);
+        if (!supervisorPin) throw new UnauthorizedException(`La remise de ${percent.toFixed(1)}% dépasse le plafond autorisé pour votre rôle (${cap}%). Code PIN superviseur requis.`);
         await this.authService.verifySupervisorPin(supervisorPin);
       }
       if (item.lotId) {
         const isAuthorizedRole = ['PHARMACIEN', 'GESTIONNAIRE_STOCK', 'ADMIN'].includes(userRole);
         if (!isAuthorizedRole && !supervisorPin) {
-          throw new UnauthorizedException('Le changement manuel de lot est réservé aux profils habilités ou exige un code PIN superviseur (VTE-04).');
+          throw new UnauthorizedException('Le changement manuel de lot est réservé aux profils habilités ou exige un code PIN superviseur.');
         }
         if (!isAuthorizedRole && supervisorPin) {
           await this.authService.verifySupervisorPin(supervisorPin);

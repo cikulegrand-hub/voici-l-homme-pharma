@@ -58,7 +58,7 @@ export class SuppliersService implements OnModuleInit {
     });
     if (!rate || Number(rate.rate) <= 0) {
       throw new BadRequestException(
-        'Aucun taux de change USD/CDF en vigueur n’est configuré pour cette officine (FIN-04, RG-08).',
+        'Aucun taux de change USD/CDF en vigueur n’est configuré pour cette officine.',
       );
     }
     return Number(rate.rate);
@@ -375,7 +375,7 @@ export class SuppliersService implements OnModuleInit {
       const exp = new Date(line.expiryDate);
       if (exp <= today) {
         throw new BadRequestException(
-          `Impossible de réceptionner le lot ${line.lotNumber} : il est déjà périmé (RG-03).`,
+          `Impossible de réceptionner le lot ${line.lotNumber} : il est déjà périmé.`,
         );
       }
     }

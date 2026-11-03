@@ -477,7 +477,7 @@ import {
                   <h3>Suggestions de réapprovisionnement</h3>
                   <button mat-stroked-button color="primary" (click)="exportReorderCsv()">
                     <mat-icon>download</mat-icon>
-                    <span>Exporter CSV</span>
+                    <span>Exporter les données</span>
                   </button>
                 </div>
                 <table class="data-table">

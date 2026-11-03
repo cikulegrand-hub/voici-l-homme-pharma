@@ -13,6 +13,14 @@ export interface BackendErrorPayload {
   details?: Record<string, any> | string[];
 }
 
+function toUserMessage(message: string): string {
+  const cleaned = message.replace(/\s*\((?:[A-Z]{2,5}-\d+(?:,\s*)?)+\)/g, '').trim();
+  if (/\b(?:API|RPT|CSV|JSON|UUID|ISO|FEFO|CUMP|idempot(?:ence|ency)|token|jeton|JWT|endpoint|backend|frontend|HTTP|path|storage)\b/i.test(cleaned)) {
+    return I18N_FR.errors.generic;
+  }
+  return cleaned;
+}
+
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const alertService = inject(AlertService);
 
@@ -31,9 +39,9 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
         // Extraction message backend
         if (payload?.message) {
           if (Array.isArray(payload.message)) {
-            displayMessage = payload.message.join(' · ');
+            displayMessage = toUserMessage(payload.message.join(' · '));
           } else {
-            displayMessage = payload.message;
+            displayMessage = toUserMessage(payload.message);
           }
         }
 
@@ -62,15 +70,9 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
 
           case 422:
           case 400:
-            let validationDetails = '';
-            if (payload?.details && typeof payload.details === 'object') {
-              validationDetails = Object.entries(payload.details)
-                .map(([field, msg]) => `${field}: ${msg}`)
-                .join(', ');
-            }
             alertService.warning(
-              validationDetails
-                ? `Données invalides (${validationDetails})`
+              payload?.details && typeof payload.details === 'object'
+                ? I18N_FR.errors.validation
                 : (displayMessage || I18N_FR.errors.validation),
             );
             break;
@@ -79,11 +81,7 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
           case 502:
           case 503:
           case 504:
-            alertService.error(
-              displayMessage
-                ? `Une erreur est survenue : ${displayMessage}`
-                : I18N_FR.errors.server,
-            );
+            alertService.error(I18N_FR.errors.server);
             break;
 
           default:

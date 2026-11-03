@@ -161,7 +161,7 @@ export class StockService {
 
     const expiry = new Date(dto.expiryDate);
     if (expiry <= today) {
-      throw new BadRequestException('Impossible de réceptionner un lot déjà périmé (RG-03).');
+      throw new BadRequestException('Impossible de réceptionner un lot déjà périmé.');
     }
 
     const validUserId = await this.resolveValidUserId(userId);
@@ -277,7 +277,7 @@ export class StockService {
       const exp = new Date(line.expiryDate);
       if (exp <= today) {
         throw new BadRequestException(
-          `Impossible de réceptionner le lot ${line.lotNumber} : il est déjà périmé (RG-03).`,
+          `Impossible de réceptionner le lot ${line.lotNumber} : il est déjà périmé.`,
         );
       }
     }
@@ -1005,7 +1005,7 @@ export class StockService {
     const newQuantity = lot.current_quantity + variance;
     if (newQuantity < 0) {
       throw new BadRequestException(
-        `L’ajustement de ${variance} rendrait le stock négatif (stock actuel : ${lot.current_quantity}). RG-02 interdit tout stock négatif.`,
+        `Cet ajustement rendrait le stock négatif (stock actuel : ${lot.current_quantity}).`,
       );
     }
 
@@ -1327,7 +1327,7 @@ export class StockService {
     const variance = dto.countedQuantity - lot.current_quantity;
     if (this.isLargeInventoryVariance(lot.current_quantity, variance) && !dto.justification?.trim()) {
       throw new BadRequestException(
-        `Écart important sur le lot ${lot.lot_number} (${variance}). Une justification est obligatoire (UC-03).`,
+        `Écart important sur le lot ${lot.lot_number} (${variance}). Une justification est obligatoire.`,
       );
     }
 
@@ -1461,7 +1461,7 @@ export class StockService {
     for (const line of inv.inventory_count_lines) {
       if (this.isLargeInventoryVariance(line.system_quantity, line.variance) && !line.justification?.trim()) {
         throw new BadRequestException(
-          `Écart important sur un lot (${line.variance}). Une justification de ligne est obligatoire avant validation (UC-03).`,
+          `Écart important sur un lot (${line.variance}). Une justification est obligatoire avant validation.`,
         );
       }
     }

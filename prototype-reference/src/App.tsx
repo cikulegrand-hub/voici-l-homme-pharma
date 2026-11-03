@@ -404,7 +404,7 @@ function App() {
         </nav>
         <div className="nav-label nav-label-bottom">ADMINISTRATION</div>
         <nav className="main-nav">
-          <button className="nav-item" onClick={() => notify('La gestion des utilisateurs sera disponible dans la version connectée.')}><Users size={18} /><span>Utilisateurs</span></button>
+           <button className="nav-item" onClick={() => notify('La gestion des utilisateurs sera disponible dans la version complète.')}><Users size={18} /><span>Utilisateurs</span></button>
           <button className="nav-item" onClick={() => notify('Les paramètres sont prêts pour la configuration finale.')}><Settings size={18} /><span>Paramètres</span></button>
         </nav>
         <div className="sidebar-footer">
@@ -423,9 +423,9 @@ function App() {
         <div className="page-content">
           <div className="demo-session"><div className="demo-session-copy"><span className="demo-live-dot" /><div><strong>Session de démonstration active</strong><span>Les ventes ajoutées sont temporaires et s’effacent automatiquement.</span></div></div><div className="demo-session-actions"><strong>{formatDuration(sessionSeconds)}</strong><button onClick={resetDemo}>Réinitialiser</button></div></div>
           {activeView === 'dashboard' && <Dashboard salesData={demoSales} products={demoProducts} onNavigate={selectView} onNewSale={() => setShowSalePanel(true)} />}
-          {activeView === 'products' && <ProductsView products={filteredProducts} totalCount={demoProducts.length} alertCount={demoProducts.filter((p) => p.status !== 'En stock').length} searchTerm={searchTerm} setSearchTerm={setSearchTerm} onAdd={() => setShowProductForm(true)} onProductDetail={(name) => notify(`Détail du produit « ${name} » — disponible dans la version connectée.`)} onFilter={() => notify('Filtres avancés à venir dans la version connectée.')} onExport={() => notify('Export CSV généré pour la démonstration.')} />}
+          {activeView === 'products' && <ProductsView products={filteredProducts} totalCount={demoProducts.length} alertCount={demoProducts.filter((p) => p.status !== 'En stock').length} searchTerm={searchTerm} setSearchTerm={setSearchTerm} onAdd={() => setShowProductForm(true)} onProductDetail={(name) => notify(`Détail du produit « ${name} » — disponible dans la version complète.`)} onFilter={() => notify('Filtres avancés à venir dans la version complète.')} onExport={() => notify('Données exportées pour la démonstration.')} />}
           {activeView === 'stock' && <StockView movements={demoMovements} onAction={() => setShowMovementForm(true)} />}
-          {activeView === 'sales' && <SalesView salesData={demoSales} customers={demoCustomers} customerCount={demoCustomers.length} onNewSale={() => setShowSalePanel(true)} onSaleDetail={(invoice) => notify(`Détail de la facture ${invoice} — disponible dans la version connectée.`)} />}
+           {activeView === 'sales' && <SalesView salesData={demoSales} customers={demoCustomers} customerCount={demoCustomers.length} onNewSale={() => setShowSalePanel(true)} onSaleDetail={(invoice) => notify(`Détail de la facture ${invoice} — disponible dans la version complète.`)} />}
           {activeView === 'clients' && <ClientsView clients={demoClients} salesData={demoSales} onAdd={() => { setEditingCustomer(null); setShowCustomerForm(true); }} onEdit={startEditCustomer} onDetail={(id) => setSelectedCustomerId(id)} />}
           {activeView === 'suppliers' && <SuppliersView suppliers={demoSuppliers} orders={demoSupplierOrders} onAdd={() => { setEditingSupplier(null); setShowSupplierForm(true); }} onEdit={startEditSupplier} onDetail={(id) => setSelectedSupplierId(id)} onOrderStatus={updateOrderStatus} />}
           {activeView === 'reports' && <ReportsView salesData={demoSales} products={demoProducts} onExport={() => notify('Rapport exporté pour la démonstration.')} />}

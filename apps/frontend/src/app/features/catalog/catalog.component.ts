@@ -54,7 +54,7 @@ import { Product, ProductCategory, PaginatedResult } from '@vhp/shared';
           </button>
 
           <button mat-stroked-button (click)="exportCsv()" [disabled]="isExporting()">
-            <mat-icon>download</mat-icon> {{ isExporting() ? 'Exportation...' : 'Exporter CSV' }}
+            <mat-icon>download</mat-icon> {{ isExporting() ? 'Exportation...' : 'Exporter les données' }}
           </button>
 
           <button mat-stroked-button routerLink="/settings/import">
@@ -773,11 +773,11 @@ export class CatalogComponent implements OnInit {
         a.click();
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
-        this.alertService.success('Catalogue exporté en format CSV avec succès.');
+        this.alertService.success('Catalogue exporté avec succès.');
       },
       error: () => {
         this.isExporting.set(false);
-        this.alertService.error('Erreur lors du téléchargement du fichier CSV.');
+        this.alertService.error('Erreur lors du téléchargement du catalogue.');
       },
     });
   }

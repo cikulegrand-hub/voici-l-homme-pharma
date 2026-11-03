@@ -253,7 +253,7 @@ export class AuthService implements OnModuleInit {
         newValues: { username: dto.username, reason: 'Compte désactivé' },
         ipAddress,
       });
-      throw new UnauthorizedException('Ce compte utilisateur a été désactivé par l’administration (AUT-04).');
+      throw new UnauthorizedException('Ce compte a été désactivé par l’administration.');
     }
 
     // Contrôle du verrouillage temporaire (AUT-02)
@@ -397,7 +397,7 @@ export class AuthService implements OnModuleInit {
   // AUT-03 : Renouvellement de jeton court (Refresh token)
   async refreshToken(refreshTokenString: string): Promise<{ token: string; refreshToken: string }> {
     if (!refreshTokenString || !refreshTokenString.startsWith('jwt_refresh_')) {
-      throw new UnauthorizedException('Jeton de renouvellement invalide ou expiré (AUT-03).');
+      throw new UnauthorizedException('Votre session a expiré. Veuillez vous reconnecter.');
     }
     const parts = refreshTokenString.split('_');
     const userId = parts[2];
@@ -830,7 +830,7 @@ export class AuthService implements OnModuleInit {
     }
 
     if (!authorizedSupervisor) {
-      throw new UnauthorizedException('Code PIN de supervision incorrect ou non autorisé (AUT-08).');
+      throw new UnauthorizedException('Code PIN de supervision incorrect ou non autorisé.');
     }
 
     // Autorisation de 5 minutes

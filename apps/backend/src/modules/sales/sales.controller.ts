@@ -34,7 +34,7 @@ export class SalesController {
   @ApiOperation({ summary: 'Enregistrer une vente rapide au comptoir' })
   @ApiResponse({ status: 201, description: 'Vente validée et déstockage FEFO effectué' })
   async createSale(@Body() dto: CreateSaleRequestDto, @Headers('idempotency-key') key: string | undefined, @Req() req: any): Promise<Sale> {
-    if (!key?.trim()) throw new BadRequestException('L’en-tête Idempotency-Key est obligatoire (VTE-18, RG-16).');
+    if (!key?.trim()) throw new BadRequestException('Impossible de traiter cette demande. Veuillez réessayer.');
     const user = req?.user;
     return this.salesService.processSale(dto, user?.id || 'caissier-current-user', user?.role || 'CAISSIER', user?.pharmacyId || '11111111-1111-1111-1111-111111111111', key.trim(), dto.supervisorPin);
   }

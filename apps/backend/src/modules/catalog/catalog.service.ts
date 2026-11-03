@@ -1054,7 +1054,7 @@ export class CatalogService implements OnModuleInit {
   }> {
     const lines = csvContent.split('\n').filter((l) => l.trim().length > 0);
     if (lines.length <= 1) {
-      throw new BadRequestException('Fichier CSV vide ou dépourvu de lignes de données.');
+      throw new BadRequestException('Le fichier importé est vide ou ne contient aucune donnée.');
     }
 
     const rejectedRows: { rowNumber: number; data: any; reason: string }[] = [];

@@ -18,31 +18,31 @@ export class JwtAuthGuard implements CanActivate {
     const authHeader = request.headers['authorization'];
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new UnauthorizedException('Jeton d’authentification manquant ou invalide.');
+      throw new UnauthorizedException('Votre session est invalide. Veuillez vous reconnecter.');
     }
 
     const token = authHeader.substring(7).trim();
     if (!token) {
-      throw new UnauthorizedException('Jeton d’authentification vide.');
+      throw new UnauthorizedException('Votre session est invalide. Veuillez vous reconnecter.');
     }
 
     // Support des jetons au format VHP : jwt_access_{userId}_{timestamp}
     if (token.startsWith('jwt_access_')) {
       const parts = token.split('_');
       if (parts.length < 4) {
-        throw new UnauthorizedException('Format de jeton invalide.');
+        throw new UnauthorizedException('Votre session est invalide. Veuillez vous reconnecter.');
       }
 
       const userId = parts[2];
       const timestamp = parseInt(parts[3], 10);
 
       if (isNaN(timestamp)) {
-        throw new UnauthorizedException('Horodatage du jeton corrompu.');
+        throw new UnauthorizedException('Votre session est invalide. Veuillez vous reconnecter.');
       }
 
       // Contrôle d'expiration du jeton court (AUT-03)
       if (Date.now() - timestamp > this.TOKEN_LIFETIME_MS) {
-        throw new UnauthorizedException('Jeton d’accès court expiré. Veuillez le renouveler (AUT-03).');
+        throw new UnauthorizedException('Votre session a expiré. Veuillez vous reconnecter.');
       }
 
       const user = await this.prisma.users.findUnique({
@@ -66,7 +66,7 @@ export class JwtAuthGuard implements CanActivate {
 
       // Verrouillage de sécurité actif
       if (user.locked_until && user.locked_until > new Date()) {
-        throw new UnauthorizedException('Compte utilisateur temporairement verrouillé (AUT-02).');
+        throw new UnauthorizedException('Votre compte est temporairement verrouillé. Veuillez réessayer plus tard.');
       }
 
       const permissions: string[] = user.roles.role_permissions.map((rp) => rp.permissions.code);
@@ -88,7 +88,7 @@ export class JwtAuthGuard implements CanActivate {
       return true;
     }
 
-    throw new UnauthorizedException('Type de jeton non pris en charge.');
+    throw new UnauthorizedException('Votre session est invalide. Veuillez vous reconnecter.');
   }
 }
 

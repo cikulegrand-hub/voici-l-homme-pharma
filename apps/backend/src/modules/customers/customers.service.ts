@@ -65,7 +65,7 @@ export class CustomersService {
     if (!customer?.is_active) throw new NotFoundException('Client introuvable.');
     const balance = await this.calculateBalance(customerId, customer.pharmacy_id);
     if (balance + amountToBorrowCdf > Number(customer.credit_limit_cdf)) {
-      throw new BadRequestException(`Dépassement du plafond de crédit (RG-13) : solde ${balance} CDF, plafond ${Number(customer.credit_limit_cdf)} CDF.`);
+      throw new BadRequestException(`Le plafond de crédit est dépassé : solde ${balance} CDF, plafond ${Number(customer.credit_limit_cdf)} CDF.`);
     }
     return true;
   }

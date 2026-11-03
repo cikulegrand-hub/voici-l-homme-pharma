@@ -47,20 +47,20 @@ export class RolesGuard implements CanActivate {
 
       const token = authHeader.substring(7).trim();
       if (!token) {
-        throw new UnauthorizedException('Jeton d’authentification vide.');
+        throw new UnauthorizedException('Votre session est invalide. Veuillez vous reconnecter.');
       }
 
       if (token.startsWith('jwt_access_')) {
         const parts = token.split('_');
         if (parts.length < 4) {
-          throw new UnauthorizedException('Format de jeton invalide.');
+          throw new UnauthorizedException('Votre session est invalide. Veuillez vous reconnecter.');
         }
 
         const userId = parts[2];
         const timestamp = parseInt(parts[3], 10);
 
         if (isNaN(timestamp) || Date.now() - timestamp > this.TOKEN_LIFETIME_MS) {
-          throw new UnauthorizedException('Jeton de session court expiré (AUT-03).');
+          throw new UnauthorizedException('Votre session a expiré. Veuillez vous reconnecter.');
         }
 
         const dbUser = await this.prisma.users.findUnique({
@@ -100,7 +100,7 @@ export class RolesGuard implements CanActivate {
 
         request.user = user;
       } else {
-        throw new UnauthorizedException('Jeton d’authentification non reconnu.');
+      throw new UnauthorizedException('Votre session est invalide. Veuillez vous reconnecter.');
       }
     }
 

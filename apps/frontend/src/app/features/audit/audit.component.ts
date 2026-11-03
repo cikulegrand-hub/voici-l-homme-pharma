@@ -24,7 +24,7 @@ import { AuditApiService } from '../../core/api/services/audit-api.service';
           <input [(ngModel)]="action" placeholder="Action" (keyup.enter)="load()">
           <input [(ngModel)]="entityName" placeholder="Entité" (keyup.enter)="load()">
           <button mat-stroked-button (click)="load()">Rechercher</button>
-          <button mat-stroked-button (click)="exportCsv()">Exporter CSV</button>
+          <button mat-stroked-button (click)="exportCsv()">Exporter les données</button>
         </div>
         <app-data-table
           [columns]="columns"

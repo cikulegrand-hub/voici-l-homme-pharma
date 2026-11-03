@@ -68,7 +68,7 @@ export class PrescriptionStorageService {
       body: file.buffer as unknown as BodyInit,
     });
     if (!response.ok) {
-      throw new ServiceUnavailableException(`Échec du téléversement privé de l’ordonnance (${response.status}).`);
+      throw new ServiceUnavailableException('Impossible d’enregistrer l’image de l’ordonnance pour le moment.');
     }
     return path;
   }
@@ -77,7 +77,7 @@ export class PrescriptionStorageService {
     const { url, serviceKey, bucket } = this.config;
 
     if (!path) {
-      throw new BadRequestException('Prescription image path is missing.');
+      throw new BadRequestException('Le fichier image de l’ordonnance est introuvable.');
     }
 
     if (!this.isStorageConfigured()) {
@@ -121,15 +121,15 @@ export class PrescriptionStorageService {
 
   async readLocal(path: string): Promise<Buffer> {
     if (!this.usesLocalStorage()) {
-      throw new BadRequestException('Local storage is unavailable while remote storage is configured.');
+      throw new BadRequestException('Le fichier de l’ordonnance n’est pas disponible.');
     }
     const normalized = path.replace(/\\/g, '/');
     if (!normalized || normalized.startsWith('/') || normalized.includes('..')) {
-      throw new BadRequestException('Invalid prescription file path.');
+      throw new BadRequestException('Le fichier de l’ordonnance n’est pas valide.');
     }
     const target = resolve(this.localRoot, normalized);
     if (!target.startsWith(`${this.localRoot}\\`) && !target.startsWith(`${this.localRoot}/`)) {
-      throw new BadRequestException('Invalid prescription file path.');
+      throw new BadRequestException('Le fichier de l’ordonnance n’est pas valide.');
     }
     try {
       return await readFile(target);

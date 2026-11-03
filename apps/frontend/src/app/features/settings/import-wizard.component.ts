@@ -157,7 +157,7 @@ import { ImportType, ImportSimulationResult, ImportRejectedRow } from '@vhp/shar
               />
               <mat-icon class="upload-icon">cloud_upload</mat-icon>
               <div class="upload-text">
-                <strong>Cliquez ici pour choisir un fichier CSV</strong>
+                <strong>Cliquez ici pour choisir un fichier de données</strong>
                 <span>Format attendu : délimiteur virgule (,) ou point-virgule (;) encodage UTF-8</span>
               </div>
             </div>
@@ -639,7 +639,7 @@ export class ImportWizardComponent {
   private parseCsvContent(content: string): void {
     const lines = content.split(/\r?\n/).filter((l) => l.trim().length > 0);
     if (lines.length < 2) {
-      this.alert.error('Le fichier CSV est vide ou ne contient aucun en-tête.');
+      this.alert.error('Le fichier est vide ou ne contient aucun en-tête.');
       return;
     }
 
