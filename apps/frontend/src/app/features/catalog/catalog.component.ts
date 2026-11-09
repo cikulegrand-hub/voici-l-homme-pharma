@@ -49,12 +49,17 @@ import { Product, ProductCategory, PaginatedResult } from '@vhp/shared';
         </div>
 
         <div class="header-actions">
-          <button mat-stroked-button (click)="openCategoriesDialog()">
+          <button mat-stroked-button (click)="openCategoriesDialog($event)">
             <mat-icon>category</mat-icon> Catégories & Formes
           </button>
 
           <button mat-stroked-button (click)="exportCsv()" [disabled]="isExporting()">
-            <mat-icon>download</mat-icon> {{ isExporting() ? 'Exportation...' : 'Exporter les données' }}
+            <mat-icon>download</mat-icon>
+            @if (isExporting()) {
+              <span>Exportation en cours...</span>
+            } @else {
+              <span>Exporter les données</span>
+            }
           </button>
 
           <button mat-stroked-button routerLink="/settings/import">
@@ -250,7 +255,7 @@ import { Product, ProductCategory, PaginatedResult } from '@vhp/shared';
 
                       <button
                         mat-icon-button
-                        (click)="openPriceHistory(prod)"
+                        (click)="openPriceHistory(prod, $event)"
                         matTooltip="Historique des prix"
                       >
                         <mat-icon>history</mat-icon>
@@ -260,15 +265,15 @@ import { Product, ProductCategory, PaginatedResult } from '@vhp/shared';
                         <button
                           mat-icon-button
                           color="warn"
-                          (click)="confirmDeactivate(prod)"
-                        matTooltip="Désactiver le produit"
+                          (click)="confirmDeactivate(prod, $event)"
+                          matTooltip="Désactiver le produit"
                         >
                           <mat-icon>block</mat-icon>
                         </button>
                       } @else {
                         <button
                           mat-icon-button
-                          (click)="confirmActivate(prod)"
+                          (click)="confirmActivate(prod, $event)"
                           class="reactivate-btn"
                           matTooltip="Réactiver le produit"
                         >
@@ -376,9 +381,11 @@ import { Product, ProductCategory, PaginatedResult } from '@vhp/shared';
       .table-responsive {
         width: 100%;
         overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
       }
       .products-table {
         width: 100%;
+        min-width: 750px;
         border-collapse: collapse;
         text-align: left;
         font-size: 0.875rem;
@@ -566,6 +573,31 @@ import { Product, ProductCategory, PaginatedResult } from '@vhp/shared';
       .mt-3 {
         margin-top: 12px;
       }
+      @media (max-width: 768px) {
+        .page-header {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 12px;
+        }
+        .header-actions {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+        }
+      }
+      @media (max-width: 600px) {
+        .header-actions {
+          grid-template-columns: 1fr;
+        }
+        .header-actions button {
+          width: 100%;
+        }
+        .pagination-footer {
+          flex-direction: column;
+          gap: 10px;
+          align-items: center;
+        }
+      }
     `,
   ],
 })
@@ -706,30 +738,47 @@ export class CatalogComponent implements OnInit {
     return Math.min(this.currentPage() * this.pageSize, this.totalProducts());
   }
 
-  openCategoriesDialog() {
-    const ref = this.dialog.open(CategoriesDialogComponent, { width: '750px' });
+  openCategoriesDialog(event?: Event) {
+    if (event) {
+      (event.currentTarget as HTMLElement)?.blur();
+    }
+    const ref = this.dialog.open(CategoriesDialogComponent, {
+      width: '750px',
+      autoFocus: 'first-tabbable',
+      restoreFocus: true,
+    });
     ref.afterClosed().subscribe(() => {
       this.loadCategories();
       this.loadProducts();
     });
   }
 
-  openPriceHistory(product: Product) {
+  openPriceHistory(product: Product, event?: Event) {
+    if (event) {
+      (event.currentTarget as HTMLElement)?.blur();
+    }
     this.dialog.open(PriceHistoryDialogComponent, {
       data: { product },
       width: '750px',
+      autoFocus: 'first-tabbable',
+      restoreFocus: true,
     });
   }
 
-  confirmDeactivate(product: Product) {
+  confirmDeactivate(product: Product, event?: Event) {
+    if (event) {
+      (event.currentTarget as HTMLElement)?.blur();
+    }
     const ref = this.dialog.open(ConfirmDialogComponent, {
       data: {
         title: 'Désactiver ce produit ?',
         message: `Le produit "${product.name}" ne sera plus sélectionnable en vente au comptoir ni dans les réceptions. Son historique est conservé.`,
-        confirmText: 'Désactiver',
-        cancelText: 'Annuler',
-        color: 'warn',
+        confirmLabel: 'Désactiver',
+        cancelLabel: 'Annuler',
+        confirmColor: 'warn',
       },
+      autoFocus: 'first-tabbable',
+      restoreFocus: true,
     });
 
     ref.afterClosed().subscribe((confirmed) => {
@@ -747,7 +796,10 @@ export class CatalogComponent implements OnInit {
     });
   }
 
-  confirmActivate(product: Product) {
+  confirmActivate(product: Product, event?: Event) {
+    if (event) {
+      (event.currentTarget as HTMLElement)?.blur();
+    }
     this.catalogApi.activateProduct(product.id).subscribe({
       next: () => {
         this.alertService.success(`Le produit "${product.name}" a été réactivé avec succès.`);

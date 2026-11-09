@@ -201,6 +201,13 @@ function passwordPolicyValidator(control: AbstractControl): ValidationErrors | n
     .rule.valid mat-icon { color: #0f9d58; }
     .form-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
     .btn-spinner { display: inline-block; margin-right: 6px; }
+
+    @media (max-width: 600px) {
+      .profile-page { padding: 8px 4px; }
+      .info-grid { grid-template-columns: 1fr; }
+      .form-actions { justify-content: stretch; }
+      .form-actions button { width: 100%; }
+    }
   `],
 })
 export class ProfileComponent implements OnInit {

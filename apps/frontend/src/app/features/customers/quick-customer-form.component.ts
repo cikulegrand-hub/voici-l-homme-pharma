@@ -25,32 +25,23 @@ import { CustomersApiService } from '../../core/api/services/customers-api.servi
           <label for="qc-name">Nom complet *</label>
           <input id="qc-name" required [(ngModel)]="model.fullName" name="fullName" placeholder="Ex: M. Pierre Mukendi" class="form-control">
         </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label for="qc-type">Type de client</label>
-            <select id="qc-type" [(ngModel)]="model.customerType" name="customerType" class="form-control">
-              <option value="PARTICULIER">Particulier</option>
-              <option value="ENTREPRISE">Entreprise</option>
-              <option value="ASSURANCE">Assurance</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="qc-phone">Téléphone</label>
-            <input id="qc-phone" [(ngModel)]="model.phone" name="phone" placeholder="+243..." class="form-control">
-          </div>
-        </div>
+        <label class="consent-line"><input type="checkbox" required [(ngModel)]="model.consentementDonnees" name="consentementDonnees"> Le client consent à la collecte de ses données.</label>
 
         <div class="form-group">
-          <label for="qc-credit">Plafond de crédit autorisé (CDF)</label>
-          <input id="qc-credit" type="number" min="0" [(ngModel)]="model.creditLimitCdf" name="creditLimitCdf" class="form-control">
+          <label for="qc-phone">Téléphone <span class="optional">(facultatif)</span></label>
+          <input id="qc-phone" [(ngModel)]="model.phone" name="phone" placeholder="+243..." class="form-control">
+        </div>
+        <div class="quick-help">Ce formulaire est réservé aux particuliers qui paient directement au comptoir. Pour une Assurance ou une Entreprise, recherchez la fiche déjà enregistrée.</div>
+        <div class="form-group">
+          <label>Type de client</label>
+          <div class="fixed-type">Particulier</div>
         </div>
 
         <div class="form-actions">
           <button type="button" class="btn-cancel" (click)="cancelled.emit()">Annuler</button>
-          <button type="submit" class="btn-primary" [disabled]="saving || !model.fullName.trim()">
-            {{ saving ? 'Création...' : 'Créer et sélectionner' }}
+          <button type="submit" class="btn-primary" [disabled]="saving || !model.fullName.trim() || !model.consentementDonnees">
+            <span *ngIf="saving">Création en cours...</span>
+            <span *ngIf="!saving">Créer et sélectionner</span>
           </button>
         </div>
 
@@ -59,13 +50,16 @@ import { CustomersApiService } from '../../core/api/services/customers-api.servi
     </div>
   `,
   styles: [`
-    .quick-customer-dialog { background: #fff; border-radius: 8px; padding: 16px; border: 1px solid #d0d7d3; max-width: 440px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .quick-customer-dialog { background: #fff; border-radius: 8px; padding: 16px; border: 1px solid #d0d7d3; max-width: 440px; width: 100%; box-sizing: border-box; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
     .dialog-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
     .dialog-header h4 { margin: 0; color: #116149; font-size: 16px; font-weight: 600; }
     .close-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: #666; line-height: 1; }
     .privacy-banner { background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 8px; margin-bottom: 12px; color: #065f46; font-size: 11px; display: flex; gap: 6px; align-items: flex-start; }
     .form-group { margin-bottom: 12px; }
     .form-group label { display: block; font-size: 12px; font-weight: 500; margin-bottom: 4px; color: #374151; }
+    .optional { font-weight: 400; color: #6b7280; }
+    .quick-help { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; border-radius: 6px; padding: 8px; margin: 8px 0 12px; font-size: 11px; line-height: 1.4; }
+    .fixed-type { padding: 8px; background: #f3f4f6; border-radius: 4px; color: #374151; font-size: 13px; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .form-control { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #cbd5d0; border-radius: 4px; font-size: 13px; }
     .form-control:focus { outline: none; border-color: #116149; }
@@ -74,6 +68,10 @@ import { CustomersApiService } from '../../core/api/services/customers-api.servi
     .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
     .btn-cancel { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; padding: 7px 14px; border-radius: 4px; cursor: pointer; font-size: 13px; }
     .error-msg { color: #dc2626; font-size: 12px; margin-top: 8px; }
+    @media (max-width: 480px) {
+      .form-actions { flex-direction: column; }
+      .form-actions button { width: 100%; }
+    }
   `],
 })
 export class QuickCustomerFormComponent implements OnInit {
@@ -84,7 +82,7 @@ export class QuickCustomerFormComponent implements OnInit {
   saving = false;
   error = '';
   privacyNotice = '';
-  model = { fullName: '', phone: '', customerType: 'PARTICULIER', creditLimitCdf: 0 };
+  model = { fullName: '', phone: '', consentementDonnees: false };
 
   ngOnInit() {
     this.api.getPrivacyNotice().subscribe({
@@ -97,7 +95,7 @@ export class QuickCustomerFormComponent implements OnInit {
     if (!this.model.fullName.trim()) return;
     this.saving = true;
     this.error = '';
-    this.api.createCustomer(this.model as any).subscribe({
+    this.api.createQuickCustomer(this.model).subscribe({
       next: (customer) => {
         this.saving = false;
         this.created.emit(customer);

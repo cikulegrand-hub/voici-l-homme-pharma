@@ -174,5 +174,95 @@ export class HoldCartDto {
   @ApiProperty({ type: [SaleItemRequestDto] })
   @IsArray()
   items: SaleItemRequestDto[];
+
+  @ApiProperty({ example: 'cust-uuid', required: false })
+  @IsString()
+  @IsOptional()
+  customerId?: string;
+}
+
+export class OfflineSaleItemDto {
+  @IsString()
+  @IsNotEmpty()
+  productId: string;
+
+  @IsNumber()
+  @Min(1)
+  quantity: number;
+
+  @IsNumber()
+  @IsOptional()
+  unitPriceCdf?: number;
+
+  @IsNumber()
+  @IsOptional()
+  discountCdf?: number;
+
+  @IsString()
+  @IsOptional()
+  lotId?: string;
+}
+
+export class OfflineSaleDto {
+  @IsString()
+  @IsNotEmpty()
+  idempotencyKey: string;
+
+  @IsString()
+  @IsOptional()
+  userId?: string;
+
+  @IsString()
+  @IsOptional()
+  pharmacyId?: string;
+
+  @IsString()
+  @IsOptional()
+  cashSessionId?: string;
+
+  @IsString()
+  @IsOptional()
+  customerId?: string;
+
+  @IsEnum(['CDF', 'USD'])
+  currency: CurrencyCode;
+
+  @IsNumber()
+  offlineExchangeRate: number;
+
+  @IsString()
+  offlineCreatedAt: string;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => OfflineSaleItemDto)
+  items: OfflineSaleItemDto[];
+
+  @IsNumber()
+  amountPaid: number;
+
+  @IsNumber()
+  @IsOptional()
+  changeGivenCdf?: number;
+}
+
+export class OfflineSyncBatchDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => OfflineSaleDto)
+  sales: OfflineSaleDto[];
+}
+
+export class ResolveConflictRequestDto {
+  @IsEnum(['VALIDER_PARTIEL', 'ANNULER_VENTE', 'REMPLACER_PRODUIT', 'GENERER_AVOIR', 'MAINTENIR_EN_ATTENTE'])
+  action: 'VALIDER_PARTIEL' | 'ANNULER_VENTE' | 'REMPLACER_PRODUIT' | 'GENERER_AVOIR' | 'MAINTENIR_EN_ATTENTE';
+
+  @IsString()
+  @IsNotEmpty()
+  reason: string;
+
+  @IsArray()
+  @IsOptional()
+  adjustedItems?: { productId: string; lotId: string; quantity: number }[];
 }
 

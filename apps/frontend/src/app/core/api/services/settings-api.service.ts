@@ -8,7 +8,6 @@ import {
   PrintTemplates,
   ImportType,
   ImportSimulationResult,
-  BackupEntry,
 } from '@vhp/shared';
 
 @Injectable({
@@ -76,11 +75,4 @@ export class SettingsApiService {
     return this.client.post('/settings/import/execute', dto);
   }
 
-  createBackup(dto?: { description?: string }): Observable<{ success: boolean; backup: BackupEntry }> {
-    return this.client.post('/settings/backups', dto || {});
-  }
-
-  getBackups(): Observable<BackupEntry[]> {
-    return this.client.get('/settings/backups');
-  }
 }

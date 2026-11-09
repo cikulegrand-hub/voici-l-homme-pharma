@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -11,6 +12,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { SuppliersApiService } from '../../core/api/services/suppliers-api.service';
+import { CashApiService } from '../../core/api/services/cash-api.service';
 import { StockApiService, DirectReceptionLineDto } from '../../core/api/services/stock-api.service';
 import { AlertService } from '../../core/services/alert.service';
 import { ProductAutocompleteComponent } from '../../shared/components/product-autocomplete/product-autocomplete.component';
@@ -353,9 +355,12 @@ interface ReceptionTableLine {
       border: 1px solid #e2e8f0;
       border-radius: 8px;
       overflow: hidden;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
     }
     .reception-table {
       width: 100%;
+      min-width: 780px;
       border-collapse: collapse;
       font-size: 0.9rem;
     }
@@ -511,12 +516,43 @@ interface ReceptionTableLine {
       display: inline-block;
       margin-right: 8px;
     }
+    @media (max-width: 768px) {
+      .page-container {
+        padding: 12px 6px;
+      }
+      .po-selector-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+      .mode-selector {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      .summary-footer {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .summary-details {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .footer-actions {
+        flex-direction: column;
+      }
+      .footer-actions button {
+        width: 100%;
+      }
+    }
   `],
 })
 export class ReceptionComponent implements OnInit {
   private readonly suppliersApi = inject(SuppliersApiService);
+  private readonly cashApi = inject(CashApiService);
   private readonly stockApi = inject(StockApiService);
   private readonly alert = inject(AlertService);
+  private readonly route = inject(ActivatedRoute);
 
   readonly showRecap = signal(false);
   receptionMode: 'PO' | 'DIRECT' = 'PO';
@@ -532,10 +568,12 @@ export class ReceptionComponent implements OnInit {
   readonly totalValueCdf = signal<number>(0);
   readonly totalValueUsd = signal<number>(0);
   readonly submitting = signal<boolean>(false);
+  readonly exchangeRate = signal<number>(0);
 
   ngOnInit() {
     this.loadOpenOrders();
     this.loadSuppliers();
+    this.cashApi.getActiveRate().subscribe({ next: (rate) => { this.exchangeRate.set(Number(rate.rate)); this.onLineChange(); }, error: () => this.alert.error('Aucun taux de change actif. Saisissez le taux avant la réception.') });
   }
 
   loadOpenOrders() {
@@ -545,6 +583,14 @@ export class ReceptionComponent implements OnInit {
           (o) => o.status === 'ENVOYE' || o.status === 'PARTIELLEMENT_RECU',
         );
         this.openOrders.set(eligible);
+
+        // Si un identifiant de commande est passé en paramètre (navigation directe depuis le module Fournisseurs)
+        const urlOrderId = this.route.snapshot.queryParamMap.get('orderId');
+        if (urlOrderId && eligible.some((o) => o.id === urlOrderId)) {
+          this.receptionMode = 'PO';
+          this.selectedOrderId = urlOrderId;
+          this.onOrderSelected();
+        }
       },
     });
   }
@@ -578,7 +624,7 @@ export class ReceptionComponent implements OnInit {
         expiryDate: '',
         quantity: remaining,
         purchasePriceCdf: it.unitPriceCdf || 1000,
-        purchasePriceUsd: it.unitPriceUsd || Number(((it.unitPriceCdf || 1000) / 2850).toFixed(2)),
+        purchasePriceUsd: it.unitPriceUsd || this.toUsd(it.unitPriceCdf || 1000),
       };
     });
 
@@ -599,7 +645,7 @@ export class ReceptionComponent implements OnInit {
         expiryDate: '',
         quantity: 10,
         purchasePriceCdf: defaultPriceCdf,
-        purchasePriceUsd: Number((defaultPriceCdf / 2850).toFixed(2)),
+        purchasePriceUsd: this.toUsd(defaultPriceCdf),
       },
     ]);
     this.onLineChange();
@@ -618,11 +664,16 @@ export class ReceptionComponent implements OnInit {
     for (const l of this.lines()) {
       units += Number(l.quantity) || 0;
       totalCdf += (Number(l.quantity) || 0) * (Number(l.purchasePriceCdf) || 0);
-      l.purchasePriceUsd = Number(((Number(l.purchasePriceCdf) || 0) / 2850).toFixed(2));
+      l.purchasePriceUsd = this.toUsd(Number(l.purchasePriceCdf) || 0);
     }
     this.totalUnits.set(units);
     this.totalValueCdf.set(totalCdf);
-    this.totalValueUsd.set(Number((totalCdf / 2850).toFixed(2)));
+    this.totalValueUsd.set(this.toUsd(totalCdf));
+  }
+
+  private toUsd(amountCdf: number): number {
+    const rate = this.exchangeRate();
+    return rate > 0 ? Number((amountCdf / rate).toFixed(2)) : 0;
   }
 
   getExpiryStatus(dateStr: string): 'EXPIRED' | 'WARNING' | 'OK' | 'EMPTY' {
@@ -658,7 +709,7 @@ export class ReceptionComponent implements OnInit {
 
   canValidate(): boolean {
     const lines = this.lines();
-    if (lines.length === 0) return false;
+    if (lines.length === 0 || this.exchangeRate() <= 0) return false;
 
     // Toutes les lignes doivent avoir lotNumber, expiryDate non périmée, quantité >= 1, prix >= 0
     return lines.every((l) => {

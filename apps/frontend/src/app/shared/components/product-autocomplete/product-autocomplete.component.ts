@@ -281,6 +281,24 @@ import { ProductAutocompleteItem } from '@vhp/shared';
         background-color: #e0f2fe;
         color: #0369a1;
       }
+      @media (max-width: 500px) {
+        .result-item {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 8px;
+          padding: 8px 12px;
+        }
+        .item-meta {
+          width: 100%;
+          justify-content: space-between;
+          align-items: center;
+          gap: 8px;
+        }
+        .item-stock-and-badges {
+          align-items: flex-end;
+          min-width: auto;
+        }
+      }
     `,
   ],
 })

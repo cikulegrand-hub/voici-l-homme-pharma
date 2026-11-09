@@ -60,6 +60,7 @@ INSERT INTO permissions (code, category, description) VALUES
 ('taux.modifier', 'FINANCE', 'Saisir le taux de change quotidien officiel CDF/USD'),
 ('depense.creer', 'FINANCE', 'Enregistrer une dépense d''exploitation d''officine'),
 ('finances.consulter', 'FINANCE', 'Consulter la trésorerie et les mouvements de caisse'),
+('finances.mouvement', 'FINANCE', 'Enregistrer un apport ou un retrait de caisse'),
 
 -- Rapports & Tableaux de bord
 ('rapports.consulter', 'RAPPORTS', 'Consulter les rapports d''activité, chiffre d''affaires, marges et tableau de bord'),
@@ -90,7 +91,7 @@ WHERE code IN (
     'achats.consulter', 'achats.creer', 'achats.valider',
     'catalogue.consulter', 'catalogue.creer', 'prix.modifier',
     'client.consulter', 'client.creer', 'client.credit', 'client.paiement',
-    'caisse.ouvrir', 'caisse.cloturer', 'taux.modifier', 'depense.creer', 'finances.consulter',
+    'caisse.ouvrir', 'caisse.cloturer', 'taux.modifier', 'depense.creer', 'finances.consulter', 'finances.mouvement',
     'rapports.consulter', 'rapports.exporter'
 ) ON CONFLICT DO NOTHING;
 
@@ -103,7 +104,7 @@ WHERE code IN (
     'stock.consulter',
     'catalogue.consulter',
     'client.consulter', 'client.creer', 'client.paiement',
-    'caisse.ouvrir', 'caisse.cloturer'
+    'caisse.ouvrir', 'caisse.cloturer', 'finances.consulter', 'finances.mouvement'
 ) ON CONFLICT DO NOTHING;
 
 -- 3.4 STOCK : Gestionnaire logistique

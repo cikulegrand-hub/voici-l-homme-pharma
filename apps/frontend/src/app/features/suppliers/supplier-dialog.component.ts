@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { SuppliersApiService } from '../../core/api/services/suppliers-api.service';
 import { AlertService } from '../../core/services/alert.service';
@@ -22,13 +23,18 @@ import { Supplier } from '@vhp/shared';
     MatIconModule,
     MatFormFieldModule,
     MatInputModule,
+    MatSelectModule,
     MatProgressSpinnerModule,
   ],
   template: `
     <div class="dialog-container">
       <div class="dialog-header">
         <h2 mat-dialog-title>
-          {{ isEdit ? 'Modifier le Fournisseur' : 'Nouveau Fournisseur' }}
+          @if (isEdit) {
+            Modifier la fiche fournisseur
+          } @else {
+            Nouveau fournisseur
+          }
         </h2>
         <button mat-icon-button mat-dialog-close class="close-btn">
           <mat-icon>close</mat-icon>
@@ -115,6 +121,14 @@ import { Supplier } from '@vhp/shared';
               placeholder="Avenue du Commerce, Limete Industriel, Kinshasa"
             ></textarea>
           </mat-form-field>
+
+          <mat-form-field appearance="outline" class="w-full" *ngIf="isEdit">
+            <mat-label>Statut du compte fournisseur</mat-label>
+            <mat-select [(ngModel)]="isActive" name="isActive">
+              <mat-option [value]="true">Actif (autorisé pour les commandes)</mat-option>
+              <mat-option [value]="false">Inactif (archivé / suspendu)</mat-option>
+            </mat-select>
+          </mat-form-field>
         </form>
       </mat-dialog-content>
 
@@ -129,8 +143,10 @@ import { Supplier } from '@vhp/shared';
           @if (saving()) {
             <mat-spinner diameter="18" class="inline-spinner"></mat-spinner>
             <span>Enregistrement...</span>
+          } @else if (isEdit) {
+            <span>Mettre à jour</span>
           } @else {
-            <span>{{ isEdit ? 'Mettre à jour' : 'Créer le fournisseur' }}</span>
+            <span>Créer le fournisseur</span>
           }
         </button>
       </mat-dialog-actions>
@@ -138,8 +154,13 @@ import { Supplier } from '@vhp/shared';
   `,
   styles: [`
     .dialog-container {
-      min-width: 520px;
+      width: 100%;
       max-width: 600px;
+    }
+    @media (max-width: 600px) {
+      .form-row {
+        flex-direction: column;
+      }
     }
     .dialog-header {
       display: flex;
@@ -198,6 +219,7 @@ export class SupplierDialogComponent implements OnInit {
   address = '';
   paymentTerms = 'Comptant à la livraison';
   leadTimeDays = 3;
+  isActive = true;
 
   readonly saving = signal(false);
 
@@ -215,6 +237,7 @@ export class SupplierDialogComponent implements OnInit {
       this.address = s.address || '';
       this.paymentTerms = s.paymentTerms || '';
       this.leadTimeDays = s.leadTimeDays ?? 3;
+      this.isActive = s.isActive ?? true;
     }
   }
 
@@ -222,7 +245,7 @@ export class SupplierDialogComponent implements OnInit {
     if (!this.name.trim()) return;
 
     this.saving.set(true);
-    const payload = {
+    const payload: any = {
       name: this.name.trim(),
       contactName: this.contactName.trim() || undefined,
       phone: this.phone.trim() || undefined,
@@ -233,6 +256,7 @@ export class SupplierDialogComponent implements OnInit {
     };
 
     if (this.isEdit) {
+      payload.isActive = this.isActive;
       this.suppliersApi.updateSupplier(this.supplierId, payload).subscribe({
         next: (updated) => {
           this.saving.set(false);

@@ -66,14 +66,16 @@ describe('PosComponent (VTE-01..16, RG-07..10, REC-01)', () => {
       'resumeHeldCart',
       'getInvoiceDocument',
     ]);
-    mockCatalogApi = jasmine.createSpyObj('CatalogApiService', ['autocomplete', 'getProductById']);
-    mockCashApi = jasmine.createSpyObj('CashApiService', ['getActiveSession']);
+    mockCatalogApi = jasmine.createSpyObj('CatalogApiService', ['autocomplete', 'getProductById', 'getProducts']);
+    mockCashApi = jasmine.createSpyObj('CashApiService', ['getActiveSession', 'getActiveRate']);
     mockCustomersApi = jasmine.createSpyObj('CustomersApiService', ['getCustomers']);
 
     mockCashApi.getActiveSession.and.returnValue(of({ id: 'cs-001', status: 'OUVERTE' } as any));
+    mockCashApi.getActiveRate.and.returnValue(of({ rate: 2850 } as any));
     mockSalesApi.previewSale.and.returnValue(of(dummyPreview));
     mockCatalogApi.autocomplete.and.returnValue(of([{ id: 'prd-001', name: 'Paracétamol' } as any]));
     mockCatalogApi.getProductById.and.returnValue(of(dummyProduct));
+    mockCatalogApi.getProducts.and.returnValue(of({ data: [] } as any));
     mockSalesApi.listHeldCarts.and.returnValue(of([]));
 
     await TestBed.configureTestingModule({
@@ -152,10 +154,10 @@ describe('PosComponent (VTE-01..16, RG-07..10, REC-01)', () => {
   });
 
   it('7. doit gérer les raccourcis clavier F2, F4, F8, F9, F10 et Échap', () => {
-    const eventF4 = new KeyboardEvent('keydown', { key: 'F4' });
-    spyOn(eventF4, 'preventDefault');
-    component.handleShortcut(eventF4);
-    expect(eventF4.preventDefault).toHaveBeenCalled();
+    const eventF3 = new KeyboardEvent('keydown', { key: 'F3' });
+    spyOn(eventF3, 'preventDefault');
+    component.handleShortcut(eventF3);
+    expect(eventF3.preventDefault).toHaveBeenCalled();
     expect(component.showDiscountModal).toBeTrue();
 
     const eventEsc = new KeyboardEvent('keydown', { key: 'Escape' });

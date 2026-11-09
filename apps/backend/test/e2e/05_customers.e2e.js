@@ -81,12 +81,48 @@ module.exports = async function runCustomersTests(ctx) {
       email: `patient.${unique}@test.cd`,
       customerType: 'PARTICULIER',
       creditLimitCdf: 30000,
+      consentementDonnees: true,
       medicalNotes: 'Allergie connue aux sulfamides (CLI-07)',
     });
     assert('création client 201 ou 200', r.status === 201 || r.status === 200, `reçu ${r.status} – ${JSON.stringify(r.body)}`);
     assert('solde initial à 0 CDF', r.body?.currentBalanceCdf === 0, JSON.stringify(r.body));
     assert('plafond enregistré', r.body?.creditLimitCdf === 30000, JSON.stringify(r.body));
     if (r.body?.id) ctx.customerId = r.body.id;
+  });
+
+  // ── 3 bis. PROFIL ASSURANCE v1.1 (CLI-11 à CLI-21, REC-10) ──
+  await suite('3 bis. Profil Assurance, doublons et consentement (REC-10)', async () => {
+    const unique = Date.now().toString().slice(-6);
+    const complete = {
+      fullName: `Assuré E2E ${unique}`, nom: 'Assuré', prenom: `Test${unique}`, phone: `+243820${unique}`,
+      customerType: 'ASSURANCE', creditLimitCdf: 0, consentementDonnees: true,
+      addressDetails: { ville: 'Kinshasa', commune: 'Gombe', quartier: 'Centre' },
+      identityDocuments: [{ documentType: 'CARTE_IDENTITE', documentNumber: `ID-${unique}`, isPrimary: true }],
+      contacts: [{ name: 'Contact E2E', relationship: 'Garant', phone: `+243830${unique}` }],
+      insurance: { insurerName: 'SONAS', insuredCardNumber: `ASS-${unique}`, insuredStatus: 'ASSURE_PRINCIPAL', endDate: '2030-12-31' },
+    };
+    const created = await request('POST', '/customers', complete);
+    assert('création assurance complète acceptée', created.status === 201 || created.status === 200, JSON.stringify(created.body));
+    assert('numéro client lisible attribué', /^CLI-\d{6}$/.test(created.body?.code || ''), JSON.stringify(created.body));
+    assert('statut assurance valide exposé', created.body?.insuranceStatus === 'VALID', JSON.stringify(created.body));
+
+    const incomplete = await request('POST', '/customers', { ...complete, fullName: `Incomplet ${unique}`, phone: `+243840${unique}`, identityDocuments: [], addressDetails: undefined, contacts: [], insurance: undefined });
+    assert('assurance incomplète refusée avec HTTP 400', incomplete.status === 400, JSON.stringify(incomplete.body));
+
+    const duplicate = await request('POST', '/customers', { ...complete, fullName: `Doublon ${unique}`, phone: `+243850${unique}`, consentementDonnees: true });
+    assert('doublon de pièce refusé avec fiche existante', duplicate.status === 400 && !!duplicate.body?.existingCustomerId, JSON.stringify(duplicate.body));
+  });
+
+  await suite('3 ter. Création rapide réservée au particulier', async () => {
+    const unique = Date.now().toString().slice(-6);
+    const r = await request('POST', '/customers/quick', {
+      fullName: `Particulier comptoir ${unique}`,
+      consentementDonnees: true,
+      customerType: 'ASSURANCE',
+    });
+    assert('création rapide acceptée sans téléphone', r.status === 201 || r.status === 200, JSON.stringify(r.body));
+    assert('création rapide forcée en particulier', r.body?.customerType === 'PARTICULIER', JSON.stringify(r.body));
+    assert('création rapide sans plafond de crédit', r.body?.creditLimitCdf === 0, JSON.stringify(r.body));
   });
 
   // ── 4. LISTE & RECHERCHE AVEC SOLDE CALCULÉ SERVEUR (CLI-01) ─

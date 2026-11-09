@@ -447,7 +447,7 @@ export interface CumpValuationSummary {
   }[];
 }
 
-// 5. POINT DE VENTE & FACTURATION (VTE-01 à VTE-18, RG-04, RG-05)
+// 5. POINT DE VENTE & FACTURATION (VTE-01 à VTE-18, RG-04, RG-05, RÉVISION 2.0)
 export type PaymentMethod =
   | 'ESPECES'
   | 'MOBILE_MONEY'
@@ -455,17 +455,68 @@ export type PaymentMethod =
   | 'VIREMENT'
   | 'CREDIT_CLIENT';
 
-export type SaleStatus = 'VALIDEE' | 'ANNULEE' | 'AVOIR';
+export type SaleStatus =
+  | 'BROUILLON'
+  | 'EN_ATTENTE_PAIEMENT'
+  | 'VALIDEE'
+  | 'PARTIELLEMENT_PAYEE'
+  | 'ANNULEE'
+  | 'AVOIR'
+  | 'RETOURNEE'
+  | 'CONFLIT';
+
+export type SyncStatus =
+  | 'LOCAL'
+  | 'EN_ATTENTE'
+  | 'SYNCHRONISATION'
+  | 'SYNCHRONISE'
+  | 'CONFLIT'
+  | 'REJETE';
+
+export type HeldCartStatus =
+  | 'ACTIF'
+  | 'REPRIS'
+  | 'EXPIRE'
+  | 'ANNULE';
+
+export interface HeldCartItem {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPriceCdf: number;
+  discountCdf?: number;
+  lotId?: string;
+  lotNumber?: string;
+  expiryDate?: string;
+  requiresPrescription?: boolean;
+}
+
+export interface HeldCart {
+  id: string;
+  pharmacyId: string;
+  userId: string;
+  userName?: string;
+  referenceName: string;
+  items: HeldCartItem[];
+  customerId?: string;
+  customerName?: string;
+  savedAt: string;
+  expiresAt: string;
+  resumedAt?: string;
+  status: HeldCartStatus;
+}
 
 export interface SaleItemAllocation {
   id?: string;
   lotId: string;
   lotNumber: string;
+  productName?: string;
   expiryDate: string;
   quantity: number;
   unitPriceCdf: number;
   unitCostCumpCdf: number;
   discountCdf: number;
+  taxRate?: number;
   totalLineCdf: number;
 }
 
@@ -474,6 +525,7 @@ export interface SaleItemRequest {
   quantity: number;
   unitPriceCdf: number;
   discountCdf?: number;
+  lotId?: string;
 }
 
 export interface CreateSaleDto {
@@ -489,20 +541,197 @@ export interface CreateSaleDto {
     transactionReference?: string;
   }[];
   idempotencyKey: string;
+  supervisorPin?: string;
+  isOffline?: boolean;
+  offlineCreatedAt?: string;
+  offlineExchangeRate?: number;
+}
+
+export interface SalePaymentInfo {
+  method: PaymentMethod;
+  amountPaid: number;
+  amountCdf: number;
+  currency: CurrencyCode;
+  mobileMoneyProvider?: string;
+  transactionReference?: string;
 }
 
 export interface Sale {
   id: string;
   invoiceNumber: string; // FAC-YYYY-XXXXXX
   customerName?: string;
+  customerPhone?: string;
+  cashierName?: string;
+  cashSessionId?: string;
+  subtotalCdf?: number;
+  discountCdf?: number;
+  taxAmountCdf?: number;
   totalAmountCdf: number;
   totalAmountUsd: number;
   appliedExchangeRate: number;
   currency: CurrencyCode;
   status: SaleStatus;
+  syncStatus?: SyncStatus;
+  isOffline?: boolean;
   createdAt: string;
   items: SaleItemAllocation[];
+  payments?: SalePaymentInfo[];
+  conflictDetails?: OfflineConflictDetails;
 }
+
+// CONFLITS & SYNCHRONISATION HORS-LIGNE (RÉVISION 2.0)
+export interface OfflineConflictItem {
+  productId: string;
+  productName: string;
+  lotId: string;
+  lotNumber: string;
+  requestedQuantity: number;
+  availableStock: number;
+}
+
+export interface OfflineConflictDetails {
+  conflictingItems: OfflineConflictItem[];
+  offlineExchangeRate: number;
+  serverExchangeRate: number;
+  rateDifferenceCdf: number;
+  detectedAt: string;
+}
+
+export type ConflictResolutionAction =
+  | 'VALIDER_PARTIEL'
+  | 'ANNULER_VENTE'
+  | 'REMPLACER_PRODUIT'
+  | 'GENERER_AVOIR'
+  | 'MAINTENIR_EN_ATTENTE';
+
+export interface ResolveConflictDto {
+  action: ConflictResolutionAction;
+  reason: string;
+  adjustedItems?: { productId: string; lotId: string; quantity: number }[];
+}
+
+export interface OfflineSaleItem {
+  productId: string;
+  productName: string;
+  lotId?: string;
+  lotNumber?: string;
+  expiryDate?: string;
+  quantity: number;
+  unitPriceCdf: number;
+  discountCdf?: number;
+}
+
+export interface OfflineSalePayload {
+  idempotencyKey: string;
+  localCreatedAt: string;
+  userId: string;
+  pharmacyId: string;
+  cashSessionId: string;
+  customerId?: string;
+  currency: CurrencyCode;
+  exchangeRateIndicative: number;
+  items: OfflineSaleItem[];
+  paymentMethod: PaymentMethod;
+  amountPaid: number;
+  changeGivenCdf: number;
+  syncStatus: SyncStatus;
+}
+
+export interface OfflineSyncBatchRequest {
+  sales: {
+    idempotencyKey: string;
+    userId: string;
+    pharmacyId: string;
+    cashSessionId: string;
+    customerId?: string;
+    currency: CurrencyCode;
+    offlineExchangeRate: number;
+    offlineCreatedAt: string;
+    items: SaleItemRequest[];
+    amountPaid: number;
+    changeGivenCdf: number;
+  }[];
+}
+
+export interface OfflineSyncBatchResult {
+  totalSubmitted: number;
+  synchronizedCount: number;
+  conflictCount: number;
+  rejectedCount: number;
+  results: {
+    idempotencyKey: string;
+    status: SyncStatus;
+    invoiceNumber?: string;
+    saleId?: string;
+    appliedExchangeRate?: number;
+    conflictDetails?: OfflineConflictDetails;
+    errorMessage?: string;
+  }[];
+}
+
+// RACCOURCIS CLAVIER POS OBLIGATOIRES (RÉVISION 2.0)
+export const POS_SHORTCUTS = {
+  F1: { key: 'F1', code: 'F1', action: 'RECHERCHE_SCAN', label: 'Recherche / Scan produit' },
+  F2: { key: 'F2', code: 'F2', action: 'NOUVELLE_VENTE', label: 'Nouvelle vente / Vider panier' },
+  F3: { key: 'F3', code: 'F3', action: 'REMISE', label: 'Appliquer une remise' },
+  F4: { key: 'F4', code: 'F4', action: 'CLIENT', label: 'Sélectionner un client' },
+  F5: { key: 'F5', code: 'F5', action: 'ORDONNANCE', label: 'Ajouter une ordonnance' },
+  F6: { key: 'F6', code: 'F6', action: 'DEVISE', label: 'Changer la devise (CDF/USD)' },
+  F7: { key: 'F7', code: 'F7', action: 'STOCK_LOTS', label: 'Consulter stock et lots' },
+  F8: { key: 'F8', code: 'F8', action: 'ATTENTE', label: 'Mettre panier en attente' },
+  F9: { key: 'F9', code: 'F9', action: 'ENCAISSER', label: 'Encaisser la vente' },
+  F10: { key: 'F10', code: 'F10', action: 'TICKET', label: 'Imprimer dernier ticket' },
+  ESCAPE: { key: 'Escape', code: 'Escape', action: 'FERMER_ANNULER', label: 'Fermer / Annuler' },
+} as const;
+
+// CATALOGUE DES MESSAGES D'ERREUR MÉTIER GUIDÉS EN FRANÇAIS (RÉVISION 2.0)
+export const POS_ERROR_MESSAGES = {
+  STOCK_INSUFFICIENT: (productName: string, available: number) => ({
+    title: 'Stock insuffisant',
+    message: `Il reste seulement ${available} unité(s) pour "${productName}".`,
+    action: 'Ajustez la quantité ou proposez un équivalent disponible.',
+  }),
+  LOT_EXPIRED: (lotNumber: string) => ({
+    title: 'Lot périmé',
+    message: `Le lot ${lotNumber} est périmé et ne peut pas être vendu.`,
+    action: 'Le système propose automatiquement le lot disponible non périmé le plus proche de la péremption.',
+  }),
+  PRESCRIPTION_REQUIRED: (productName: string) => ({
+    title: 'Ordonnance obligatoire',
+    message: `Le médicament "${productName}" nécessite obligatoirement une ordonnance.`,
+    action: 'Ajoutez ou scannez l’ordonnance du client (touche F5) avant de valider la vente.',
+  }),
+  DISCOUNT_EXCEEDED: (userMax: number, requested: number) => ({
+    title: 'Plafond de remise dépassé',
+    message: `Votre remise demandée (${requested}%) dépasse votre autorisation (${userMax}%).`,
+    action: 'Demandez l’autorisation d’un superviseur ou pharmacien (saisie du code PIN).',
+  }),
+  CREDIT_LIMIT_EXCEEDED: (customerName: string, availableCredit: number) => ({
+    title: 'Plafond de crédit atteint',
+    message: `Le plafond de crédit du client "${customerName}" est atteint. Crédit disponible : ${availableCredit} CDF.`,
+    action: 'Enregistrez un paiement partiel ou demandez un règlement préalable de la créance.',
+  }),
+  OFFLINE_MODE_ACTIVE: () => ({
+    title: 'Mode hors-ligne actif',
+    message: 'Connexion réseau coupée. Seuls les paiements en espèces (CDF et USD) sont autorisés.',
+    action: 'Vente enregistrée localement. Elle sera synchronisée automatiquement dès le retour du réseau.',
+  }),
+  OFFLINE_FORBIDDEN_OPERATION: (operation: string) => ({
+    title: 'Opération interdite hors-ligne',
+    message: `L'opération "${operation}" nécessite impérativement une validation serveur en ligne.`,
+    action: 'Cette opération est bloquée en mode hors-ligne. Attendez le rétablissement de la connexion.',
+  }),
+  DUPLICATE_SUBMISSION: () => ({
+    title: 'Vente déjà enregistrée',
+    message: 'Cette vente a déjà été traitée par le système.',
+    action: 'Aucun doublon n’a été créé. Vous pouvez réimprimer le ticket ou commencer une nouvelle vente.',
+  }),
+  CONFLICT_DETECTED: (productName: string) => ({
+    title: 'Conflit de synchronisation détecté',
+    message: `Le stock du produit "${productName}" a changé sur le serveur pendant la coupure réseau.`,
+    action: 'La vente a été marquée "CONFLIT" et transmise au Pharmacien Responsable pour arbitrage.',
+  }),
+} as const;
 
 // 6. CLIENTS & ORDONNANCES (CLI-01 à CLI-10)
 export type CustomerType = 'PARTICULIER' | 'ENTREPRISE' | 'ASSURANCE';
@@ -518,6 +747,29 @@ export interface Customer {
   creditLimitCdf: number;
   currentBalanceCdf: number;
   medicalNotes?: string;
+  nom?: string;
+  postnom?: string;
+  prenom?: string;
+  sexe?: 'M' | 'F';
+  dateNaissance?: string;
+  nationalite?: string;
+  address?: { province?: string; ville?: string; commune?: string; quartier?: string; avenue_rue?: string; numero_parcelle?: string; point_de_repere?: string };
+  contacts?: Array<{ id?: string; name: string; relationship?: string; phone: string; address?: string }>;
+  identityDocuments?: Array<{ id: string; type: string; number?: string; fullNumber?: string; issueDate?: string; expirationDate?: string; hasScan: boolean; isPrimary: boolean }>;
+  insurance?: { insurerName?: string; insuredCardNumber?: string; status?: 'VALID' | 'EXPIRED' | 'INCOMPLETE'; endDate?: string };
+  insuranceStatus?: 'VALID' | 'EXPIRED' | 'INCOMPLETE';
+  enterprise?: {
+    legalName: string;
+    rccm?: string;
+    nationalId?: string;
+    taxId?: string;
+    representativeName: string;
+    representativeFunction?: string;
+    representativePhone: string;
+    representativeDocumentNumber?: string;
+  };
+  hasProfilePhoto?: boolean;
+  createdAt?: string;
 }
 
 export interface Prescription {
@@ -549,6 +801,18 @@ export interface CashSession {
   status: 'OUVERTE' | 'CLOTUREE';
 }
 
+export type CashMovementType = 'APPORT' | 'RETRAIT';
+
+export interface CashMovement {
+  id: string;
+  sessionId: string;
+  type: CashMovementType;
+  amountCdf: number;
+  amountUsd: number;
+  reason: string;
+  createdAt: string;
+}
+
 // 8. AUDIT (AUD-01 à AUD-05)
 export interface AuditLogEntry {
   id: string;
@@ -560,6 +824,7 @@ export interface AuditLogEntry {
   oldValues?: Record<string, unknown>;
   newValues?: Record<string, unknown>;
   ipAddress?: string;
+  userAgent?: string;
   createdAt: string;
 }
 
@@ -582,7 +847,15 @@ export interface PaginatedAuditLogs {
 }
 
 // 8 bis. NOTIFICATIONS (NOT-01, NOT-02)
-export type NotificationType = 'STOCK_BAS' | 'PEREMPTION' | 'CREANCE_RETARD' | 'ECART_CAISSE';
+export type NotificationType =
+  | 'STOCK_BAS'
+  | 'STOCK_RUPTURE'
+  | 'PEREMPTION'
+  | 'CREANCE_RETARD'
+  | 'ECART_CAISSE'
+  | 'CONFLIT_STOCK_OFFLINE'
+  | 'COMMANDE_FOURNISSEUR'
+  | 'SYSTEME';
 export type NotificationSeverity = 'INFO' | 'WARNING' | 'DANGER';
 
 export interface NotificationItem {
@@ -593,7 +866,7 @@ export interface NotificationItem {
   message: string;
   severity: NotificationSeverity;
   targetRole?: RoleName;
-  entityType?: 'PRODUCT_LOT' | 'CUSTOMER' | 'CASH_SESSION';
+  entityType?: 'PRODUCT_LOT' | 'CUSTOMER' | 'CASH_SESSION' | 'SALE' | 'PURCHASE_ORDER' | string;
   entityId?: string;
   metadata?: Record<string, unknown>;
   isRead: boolean;
@@ -672,11 +945,3 @@ export interface ImportSimulationResult {
   sampleValid?: Record<string, any>[];
 }
 
-export interface BackupEntry {
-  id: string;
-  fileName: string;
-  fileSize: number;
-  status: 'SUCCES' | 'ECHEC';
-  createdAt: string;
-  createdByName?: string;
-}

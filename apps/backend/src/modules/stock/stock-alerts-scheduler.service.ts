@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { StockService } from './stock.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class StockAlertsSchedulerService {
@@ -10,6 +11,7 @@ export class StockAlertsSchedulerService {
   constructor(
     private readonly stockService: StockService,
     private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_6AM)
@@ -36,6 +38,7 @@ export class StockAlertsSchedulerService {
       try {
         const summary = await this.stockService.getAlerts(pharmacy.id);
         await this.stockService.persistGeneratedNotifications(pharmacy.id, summary);
+        await this.notificationsService.syncAlerts(pharmacy.id);
         totals.lowStockCount += summary.lowStock.length;
         totals.outOfStockCount += summary.outOfStock.length;
         totals.expiringIn30DaysCount += summary.expiringIn30Days.length;

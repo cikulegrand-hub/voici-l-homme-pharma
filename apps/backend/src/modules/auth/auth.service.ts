@@ -7,6 +7,8 @@ import {
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import * as argon2 from 'argon2';
 import * as crypto from 'crypto';
 import { UserProfile, RoleName, AuthSession } from '@vhp/shared';
@@ -21,16 +23,6 @@ import {
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 
-export interface LoginHistoryEntry {
-  id: string;
-  username: string;
-  ipAddress: string;
-  userAgent?: string;
-  success: boolean;
-  failureReason?: string;
-  attemptedAt: string;
-}
-
 export interface PinAuthorizationResponse {
   valid: boolean;
   action: string;
@@ -41,14 +33,29 @@ export interface PinAuthorizationResponse {
 
 @Injectable()
 export class AuthService implements OnModuleInit {
-  private loginHistory: LoginHistoryEntry[] = [];
   // Gestion du débit (SEC-03) : compteur de requêtes de connexion par IP (max 10 par minute)
   private ipRateLimits = new Map<string, { count: number; firstAttempt: number }>();
+  private readonly jwtSecret: string;
+  private readonly jwtExpiresIn: string;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
-  ) {}
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+  ) {
+    const configuredSecret =
+      this.configService.get<string>('JWT_SECRET') || process.env.JWT_SECRET;
+    if (!configuredSecret && process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'CRITIQUE SÉCURITÉ : La variable JWT_SECRET est obligatoire en production (VHP-SEC-01).',
+      );
+    }
+    this.jwtSecret =
+      configuredSecret || 'vhp_super_secret_jwt_key_kinshasa_2026_officine';
+    this.jwtExpiresIn =
+      this.configService.get<string>('JWT_EXPIRES_IN') || '15m';
+  }
 
   async onModuleInit() {
     await this.ensureDefaultAdminUser();
@@ -58,14 +65,25 @@ export class AuthService implements OnModuleInit {
   private async ensureRolePermissions() {
     try {
       const allPermissions = [
+        { code: 'pos.access', category: 'VENTES', description: 'Accéder à l’interface Point de Vente / Comptoir' },
+        { code: 'vente.creer', category: 'VENTES', description: 'Effectuer une vente au comptoir' },
+        { code: 'vente.consulter', category: 'VENTES', description: 'Consulter l’historique des ventes' },
+        { code: 'vente.remise', category: 'VENTES', description: 'Appliquer une remise standard' },
+        { code: 'vente.remise_plafond', category: 'VENTES', description: 'Appliquer une remise au-delà du plafond' },
+        { code: 'vente.annuler', category: 'VENTES', description: 'Annuler une vente et émettre un avoir' },
+        { code: 'vente.demande_annulation', category: 'VENTES', description: 'Transmettre une demande d’annulation de vente' },
         { code: 'ordonnance.creer', category: 'ORDONNANCES', description: 'Enregistrer une ordonnance médicale' },
         { code: 'ordonnance.consulter', category: 'ORDONNANCES', description: 'Consulter une ordonnance médicale' },
         { code: 'ordonnance.valider', category: 'ORDONNANCES', description: 'Valider la délivrance d’une ordonnance' },
         { code: 'client.consulter', category: 'CLIENTS', description: 'Consulter les fiches clients et encours de crédit' },
+        { code: 'clients.consulter', category: 'CLIENTS', description: 'Consulter la liste complète des clients' },
         { code: 'client.creer', category: 'CLIENTS', description: 'Créer ou modifier une fiche client' },
         { code: 'client.credit', category: 'CLIENTS', description: 'Autoriser un dépassement de plafond de crédit client' },
         { code: 'client.paiement', category: 'CLIENTS', description: 'Enregistrer un règlement de créance client' },
-        { code: 'vente.demande_annulation', category: 'VENTES', description: 'Transmettre une demande d’annulation de vente' },
+        { code: 'caisse.ouvrir', category: 'FINANCE', description: 'Ouvrir une session de caisse' },
+        { code: 'caisse.cloturer', category: 'FINANCE', description: 'Clôturer sa session de caisse avec arrêté d’écart' },
+        { code: 'finances.consulter', category: 'FINANCE', description: 'Consulter les mouvements de caisse et dépenses' },
+        { code: 'finances.mouvement', category: 'FINANCE', description: 'Enregistrer un apport ou un retrait de caisse' },
         { code: 'rapports.consulter', category: 'RAPPORTS', description: 'Consulter le tableau de bord et les rapports' },
         { code: 'rapports.dashboard', category: 'RAPPORTS', description: 'Consulter le tableau de bord RPT partiel' },
         { code: 'rapports.exporter', category: 'RAPPORTS', description: 'Exporter les rapports en CSV, Excel ou PDF' },
@@ -82,9 +100,10 @@ export class AuthService implements OnModuleInit {
       const cashierRole = await this.prisma.roles.findFirst({ where: { name: 'CAISSIER' } });
       if (cashierRole) {
         const cashierCodes = [
-          'vente.creer', 'vente.consulter', 'vente.remise', 'vente.demande_annulation',
+          'pos.access', 'vente.creer', 'vente.consulter', 'vente.remise', 'vente.demande_annulation',
           'ordonnance.creer', 'ordonnance.consulter', 'stock.consulter', 'catalogue.consulter',
-          'client.consulter', 'client.creer', 'client.paiement', 'caisse.ouvrir', 'caisse.cloturer',
+          'client.consulter', 'clients.consulter', 'client.creer', 'client.paiement',
+          'caisse.ouvrir', 'caisse.cloturer', 'finances.consulter', 'finances.mouvement',
           'rapports.dashboard',
         ];
         const perms = await this.prisma.permissions.findMany({ where: { code: { in: cashierCodes } } });
@@ -121,14 +140,14 @@ export class AuthService implements OnModuleInit {
       const pharmacistRole = await this.prisma.roles.findFirst({ where: { name: 'PHARMACIEN' } });
       if (pharmacistRole) {
         const pharmaCodes = [
-          'vente.creer', 'vente.consulter', 'vente.remise', 'vente.remise_plafond', 'vente.annuler',
+          'pos.access', 'vente.creer', 'vente.consulter', 'vente.remise', 'vente.remise_plafond', 'vente.annuler',
           'ordonnance.creer', 'ordonnance.consulter', 'ordonnance.valider',
           'stock.consulter', 'stock.recevoir', 'stock.valider_ajustement', 'stock.inventaire',
           'achats.consulter', 'achats.creer', 'achats.valider',
           'catalogue.consulter', 'catalogue.creer', 'prix.modifier',
-          'client.consulter', 'client.creer', 'client.credit', 'client.paiement',
-          'caisse.ouvrir', 'caisse.cloturer', 'taux.modifier', 'depense.creer', 'finances.consulter',
-          'rapports.consulter', 'rapports.exporter',
+          'client.consulter', 'clients.consulter', 'client.creer', 'client.credit', 'client.paiement',
+          'caisse.ouvrir', 'caisse.cloturer', 'taux.modifier', 'depense.creer', 'finances.consulter', 'finances.mouvement',
+          'rapports.consulter', 'rapports.dashboard', 'rapports.exporter',
         ];
         const perms = await this.prisma.permissions.findMany({ where: { code: { in: pharmaCodes } } });
         for (const p of perms) {
@@ -150,7 +169,7 @@ export class AuthService implements OnModuleInit {
 
       const accountantRole = await this.prisma.roles.findFirst({ where: { name: 'COMPTABLE' } });
       if (accountantRole) {
-        const accountantCodes = ['rapports.consulter', 'rapports.exporter', 'finances.consulter'];
+        const accountantCodes = ['rapports.consulter', 'rapports.dashboard', 'rapports.exporter', 'finances.consulter'];
         const perms = await this.prisma.permissions.findMany({ where: { code: { in: accountantCodes } } });
         for (const p of perms) {
           await this.prisma.role_permissions.upsert({
@@ -231,20 +250,20 @@ export class AuthService implements OnModuleInit {
     });
 
     if (!user) {
-      this.recordLoginAttempt(dto.username, ipAddress, userAgent, false, 'Identifiant inconnu');
-      this.auditService.logAction({
+      await this.auditService.logAction({
         action: 'LOGIN_ECHEC',
         entityName: 'USER',
         entityId: 'inconnu',
         newValues: { username: dto.username, reason: 'Identifiant inconnu' },
         ipAddress,
+        userAgent,
       });
       throw new UnauthorizedException('Identifiants incorrects.');
     }
 
     if (!user.is_active) {
-      this.recordLoginAttempt(dto.username, ipAddress, userAgent, false, 'Compte désactivé');
-      this.auditService.logAction({
+      await this.auditService.logAction({
+        pharmacyId: user.pharmacy_id,
         userId: user.id,
         userName: user.full_name,
         action: 'LOGIN_ECHEC',
@@ -252,6 +271,7 @@ export class AuthService implements OnModuleInit {
         entityId: user.id,
         newValues: { username: dto.username, reason: 'Compte désactivé' },
         ipAddress,
+        userAgent,
       });
       throw new UnauthorizedException('Ce compte a été désactivé par l’administration.');
     }
@@ -259,7 +279,6 @@ export class AuthService implements OnModuleInit {
     // Contrôle du verrouillage temporaire (AUT-02)
     if (user.locked_until && user.locked_until > new Date()) {
       const minutesRemaining = Math.ceil((user.locked_until.getTime() - Date.now()) / 60000);
-      this.recordLoginAttempt(dto.username, ipAddress, userAgent, false, 'Compte verrouillé');
       throw new UnauthorizedException(
         `Compte temporairement verrouillé suite à 5 échecs consécutifs. Réessayez dans ${minutesRemaining} minute(s) (AUT-02).`,
       );
@@ -301,10 +320,10 @@ export class AuthService implements OnModuleInit {
         },
       });
 
-      this.recordLoginAttempt(dto.username, ipAddress, userAgent, false, 'Mot de passe erroné');
 
       if (newAttempts >= 5) {
-        this.auditService.logAction({
+        await this.auditService.logAction({
+          pharmacyId: user.pharmacy_id,
           userId: user.id,
           userName: user.full_name,
           action: 'COMPTE_VERROUILLE',
@@ -312,13 +331,15 @@ export class AuthService implements OnModuleInit {
           entityId: user.id,
           newValues: { failedAttempts: newAttempts, lockedUntil },
           ipAddress,
+          userAgent,
         });
         throw new UnauthorizedException(
           'Compte temporairement verrouillé pour 15 minutes suite à 5 tentatives infructueuses (AUT-02).',
         );
       }
 
-      this.auditService.logAction({
+      await this.auditService.logAction({
+        pharmacyId: user.pharmacy_id,
         userId: user.id,
         userName: user.full_name,
         action: 'LOGIN_ECHEC',
@@ -327,6 +348,7 @@ export class AuthService implements OnModuleInit {
         oldValues: { failedAttempts: user.failed_login_attempts },
         newValues: { failedAttempts: newAttempts, reason: 'Mot de passe erroné' },
         ipAddress,
+        userAgent,
       });
 
       throw new UnauthorizedException(
@@ -344,16 +366,17 @@ export class AuthService implements OnModuleInit {
       },
     });
 
-    this.recordLoginAttempt(dto.username, ipAddress, userAgent, true);
 
     // Journalisation de la connexion réussie (AUD-01)
-    this.auditService.logAction({
+    await this.auditService.logAction({
+      pharmacyId: user.pharmacy_id,
       userId: user.id,
       userName: user.full_name,
       action: 'LOGIN_SUCCES',
       entityName: 'USER',
       entityId: user.id,
       ipAddress,
+      userAgent,
     });
 
     // Récupération des permissions du rôle
@@ -364,13 +387,40 @@ export class AuthService implements OnModuleInit {
 
     // Récupération du taux de change actif
     const latestRate = await this.prisma.exchange_rates.findFirst({
-      where: { pharmacy_id: user.pharmacy_id },
-      orderBy: { effective_date: 'desc' },
+      where: { pharmacy_id: user.pharmacy_id, base_currency: 'USD', target_currency: 'CDF', effective_date: { lte: new Date() } },
+      orderBy: [{ effective_date: 'desc' }, { id: 'desc' }],
+    });
+
+    // Génération du token d'accès JWT cryptographique signé (HMAC-SHA256)
+    const tokenPayload = {
+      sub: user.id,
+      username: user.username,
+      role: user.roles.name,
+      pharmacyId: user.pharmacy_id,
+    };
+
+    const token = await this.jwtService.signAsync(tokenPayload, {
+      secret: this.jwtSecret,
+      expiresIn: this.jwtExpiresIn as any,
+    });
+
+    // Génération d'un Refresh Token aléatoire cryptographiquement fort (AUT-03)
+    const rawRefreshToken = `vhp_rf_${crypto.randomBytes(32).toString('hex')}`;
+    const tokenHash = crypto.createHash('sha256').update(rawRefreshToken).digest('hex');
+    const refreshExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 jours
+
+    await this.prisma.refresh_tokens.create({
+      data: {
+        user_id: user.id,
+        token_hash: tokenHash,
+        expires_at: refreshExpiresAt,
+        is_revoked: false,
+      },
     });
 
     return {
-      token: `jwt_access_${user.id}_${Date.now()}`,
-      refreshToken: `jwt_refresh_${user.id}_${Date.now()}`,
+      token,
+      refreshToken: rawRefreshToken,
       user: {
         id: user.id,
         pharmacyId: user.pharmacy_id,
@@ -394,25 +444,74 @@ export class AuthService implements OnModuleInit {
     };
   }
 
-  // AUT-03 : Renouvellement de jeton court (Refresh token)
+  // AUT-03 : Renouvellement de jeton court (Refresh token) avec rotation et contrôle de révocation
   async refreshToken(refreshTokenString: string): Promise<{ token: string; refreshToken: string }> {
-    if (!refreshTokenString || !refreshTokenString.startsWith('jwt_refresh_')) {
+    if (!refreshTokenString || typeof refreshTokenString !== 'string') {
       throw new UnauthorizedException('Votre session a expiré. Veuillez vous reconnecter.');
     }
-    const parts = refreshTokenString.split('_');
-    const userId = parts[2];
 
-    const foundUser = await this.prisma.users.findUnique({
-      where: { id: userId },
+    const tokenHash = crypto.createHash('sha256').update(refreshTokenString).digest('hex');
+    const foundToken = await this.prisma.refresh_tokens.findUnique({
+      where: { token_hash: tokenHash },
+      include: {
+        users: {
+          include: {
+            roles: {
+              include: {
+                role_permissions: {
+                  include: {
+                    permissions: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     });
+
+    if (!foundToken || foundToken.is_revoked || foundToken.expires_at < new Date()) {
+      throw new UnauthorizedException('Votre session a expiré. Veuillez vous reconnecter.');
+    }
+
+    // Révocation de l'ancien jeton de rafraîchissement (Principe de rotation cryptographique)
+    await this.prisma.refresh_tokens.update({
+      where: { id: foundToken.id },
+      data: { is_revoked: true },
+    });
+
+    const foundUser: any = foundToken.users;
 
     if (!foundUser || !foundUser.is_active) {
       throw new UnauthorizedException('Utilisateur inactif ou introuvable.');
     }
 
+    const tokenPayload = {
+      sub: foundUser.id,
+      username: foundUser.username,
+      role: foundUser.roles.name,
+      pharmacyId: foundUser.pharmacy_id,
+    };
+
+    const newAccessToken = await this.jwtService.signAsync(tokenPayload, {
+      secret: this.jwtSecret,
+      expiresIn: this.jwtExpiresIn as any,
+    });
+
+    const newRefreshToken = `vhp_rf_${crypto.randomBytes(32).toString('hex')}`;
+    const newHash = crypto.createHash('sha256').update(newRefreshToken).digest('hex');
+    await this.prisma.refresh_tokens.create({
+      data: {
+        user_id: foundUser.id,
+        token_hash: newHash,
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        is_revoked: false,
+      },
+    });
+
     return {
-      token: `jwt_access_${foundUser.id}_${Date.now()}`,
-      refreshToken: `jwt_refresh_${foundUser.id}_${Date.now()}`,
+      token: newAccessToken,
+      refreshToken: newRefreshToken,
     };
   }
 
@@ -443,8 +542,8 @@ export class AuthService implements OnModuleInit {
     }
 
     const latestRate = await this.prisma.exchange_rates.findFirst({
-      where: { pharmacy_id: user.pharmacy_id },
-      orderBy: { effective_date: 'desc' },
+      where: { pharmacy_id: user.pharmacy_id, base_currency: 'USD', target_currency: 'CDF', effective_date: { lte: new Date() } },
+      orderBy: [{ effective_date: 'desc' }, { id: 'desc' }],
     });
 
     return {
@@ -585,7 +684,7 @@ export class AuthService implements OnModuleInit {
       },
     });
 
-    this.auditService.logAction({
+    await this.auditService.logAction({
       userId: authorId || 'admin-authorizer',
       userName: 'Administrateur',
       action: 'UTILISATEUR_CREE',
@@ -642,7 +741,7 @@ export class AuthService implements OnModuleInit {
       data: updateData,
     });
 
-    this.auditService.logAction({
+    await this.auditService.logAction({
       userId: authorId || 'admin-authorizer',
       userName: 'Administrateur',
       action: 'UTILISATEUR_MODIFIE',
@@ -671,7 +770,7 @@ export class AuthService implements OnModuleInit {
       data: { is_active: false },
     });
 
-    this.auditService.logAction({
+    await this.auditService.logAction({
       userId: authorId || 'admin-authorizer',
       userName: 'Administrateur',
       action: 'UTILISATEUR_DESACTIVE',
@@ -698,7 +797,7 @@ export class AuthService implements OnModuleInit {
       },
     });
 
-    this.auditService.logAction({
+    await this.auditService.logAction({
       userId: authorId || 'admin-authorizer',
       userName: 'Administrateur',
       action: 'UTILISATEUR_ACTIVE',
@@ -725,7 +824,7 @@ export class AuthService implements OnModuleInit {
       },
     });
 
-    this.auditService.logAction({
+    await this.auditService.logAction({
       userId: adminId,
       userName: 'Administrateur',
       action: 'REINITIALISATION_MDP_ADMIN',
@@ -751,7 +850,7 @@ export class AuthService implements OnModuleInit {
       data: { password_hash: newHash },
     });
 
-    this.auditService.logAction({
+    await this.auditService.logAction({
       userId,
       userName: user.full_name,
       action: 'MODIFICATION_MOT_DE_PASSE_PROFIL',
@@ -787,7 +886,7 @@ export class AuthService implements OnModuleInit {
       data: { pin_code_hash: hashedPin },
     });
 
-    this.auditService.logAction({
+    await this.auditService.logAction({
       userId,
       userName: user.full_name,
       action: 'MODIFICATION_PIN_PROFIL',
@@ -818,7 +917,14 @@ export class AuthService implements OnModuleInit {
         if (supervisor.pin_code_hash.startsWith('$argon2')) {
           isValid = await argon2.verify(supervisor.pin_code_hash, pin);
         } else {
-          isValid = supervisor.pin_code_hash === pin || pin === '9999';
+          isValid = supervisor.pin_code_hash === pin;
+          if (isValid) {
+            const newHash = await argon2.hash(pin, { type: argon2.argon2id });
+            await this.prisma.users.update({
+              where: { id: supervisor.id },
+              data: { pin_code_hash: newHash },
+            });
+          }
         }
       } catch {
         isValid = false;
@@ -830,6 +936,12 @@ export class AuthService implements OnModuleInit {
     }
 
     if (!authorizedSupervisor) {
+      await this.auditService.logAction({
+        action: 'PIN_SUPERVISEUR_ECHEC',
+        entityName: 'SUPERVISION',
+        entityId: action,
+        newValues: { action, reason: 'Tentative avec code PIN incorrect' },
+      });
       throw new UnauthorizedException('Code PIN de supervision incorrect ou non autorisé.');
     }
 
@@ -837,7 +949,7 @@ export class AuthService implements OnModuleInit {
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
     const authorizationToken = `pin_auth_${crypto.randomUUID()}_${Date.now()}`;
 
-    this.auditService.logAction({
+    await this.auditService.logAction({
       userId: authorizedSupervisor.id,
       userName: authorizedSupervisor.full_name,
       action: 'AUTORISATION_PIN_ACCORDEE',
@@ -855,41 +967,14 @@ export class AuthService implements OnModuleInit {
     };
   }
 
-  // AUT-07 : Consultation de l'historique des connexions (combiné audit_logs & mémoire)
-  async getLoginHistory(): Promise<LoginHistoryEntry[]> {
-    try {
-      const logs = await this.prisma.audit_logs.findMany({
-        where: {
-          action: {
-            in: ['LOGIN_SUCCES', 'LOGIN_ECHEC', 'COMPTE_VERROUILLE'],
-          },
-        },
-        orderBy: { created_at: 'desc' },
-        take: 100,
-        include: { users: true },
-      });
-
-      if (logs.length > 0) {
-        return logs.map((log) => ({
-          id: log.id,
-          username: log.users?.username || (log.new_values as any)?.username || 'Inconnu',
-          ipAddress: log.ip_address || '127.0.0.1',
-          userAgent: log.user_agent || undefined,
-          success: log.action === 'LOGIN_SUCCES',
-          failureReason: log.action !== 'LOGIN_SUCCES' ? (log.new_values as any)?.reason || log.action : undefined,
-          attemptedAt: log.created_at.toISOString(),
-        }));
-      }
-    } catch {
-      // Fallback sur le tableau mémoire
-    }
-
-    return [...this.loginHistory].reverse();
-  }
-
   async logout(userId?: string, userName?: string): Promise<void> {
     if (userId) {
-      this.auditService.logAction({
+      await this.prisma.refresh_tokens.updateMany({
+        where: { user_id: userId, is_revoked: false },
+        data: { is_revoked: true },
+      }).catch(() => {});
+
+      await this.auditService.logAction({
         userId,
         userName: userName || 'Utilisateur',
         action: 'LOGOUT',
@@ -899,21 +984,4 @@ export class AuthService implements OnModuleInit {
     }
   }
 
-  private recordLoginAttempt(
-    username: string,
-    ipAddress: string,
-    userAgent?: string,
-    success: boolean = true,
-    failureReason?: string,
-  ) {
-    this.loginHistory.push({
-      id: `log-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      username,
-      ipAddress,
-      userAgent,
-      success,
-      failureReason,
-      attemptedAt: new Date().toISOString(),
-    });
-  }
 }

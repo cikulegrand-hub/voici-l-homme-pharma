@@ -64,9 +64,6 @@ import {
           <a mat-stroked-button color="accent" routerLink="/settings/import">
             <mat-icon>upload_file</mat-icon> Assistant d'import
           </a>
-          <a mat-stroked-button routerLink="/settings/backups">
-            <mat-icon>backup</mat-icon> Sauvegardes
-          </a>
         </div>
       </header>
 
@@ -277,6 +274,7 @@ import {
                       </button>
                     </div>
 
+                    <div class="table-container">
                     <table mat-table [dataSource]="financial.taxes" class="taxes-table">
                       <ng-container matColumnDef="code">
                         <th mat-header-cell *matHeaderCellDef>{{ i18n.settings.taxCode }}</th>
@@ -335,6 +333,7 @@ import {
                       <tr mat-header-row *matHeaderRowDef="taxColumns"></tr>
                       <tr mat-row *matRowDef="let row; columns: taxColumns;"></tr>
                     </table>
+                    </div>
                   </div>
 
                   <mat-divider></mat-divider>
@@ -749,8 +748,14 @@ import {
       gap: 20px;
       flex-wrap: wrap;
     }
+    .table-container {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      width: 100%;
+    }
     .taxes-table {
       width: 100%;
+      min-width: 500px;
       border: 1px solid #e0e0e0;
       border-radius: 8px;
     }
@@ -886,6 +891,33 @@ import {
       padding: 60px;
       gap: 12px;
       color: #5f6368;
+    }
+    @media (max-width: 768px) {
+      .page-header {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .header-shortcuts {
+        width: 100%;
+        display: flex;
+      }
+      .header-shortcuts a {
+        flex: 1;
+        text-align: center;
+      }
+      .tab-content {
+        padding: 14px 8px;
+      }
+      .form-row {
+        flex-direction: column;
+      }
+      .col {
+        width: 100%;
+        min-width: 0;
+      }
+      .tab-actions button {
+        width: 100%;
+      }
     }
   `],
 })

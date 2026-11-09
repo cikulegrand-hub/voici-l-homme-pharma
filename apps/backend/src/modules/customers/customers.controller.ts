@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res, UnauthorizedException, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res, UnauthorizedException, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -6,7 +6,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { RequirePermission } from '../auth/decorators/auth.decorators';
 import { CustomersService } from './customers.service';
-import { CreateCustomerDto, CreatePrescriptionDto, CustomerQueryDto, SettleDebtDto } from './dto/customers.dto';
+import { CreateCustomerDto, CreatePrescriptionDto, CustomerQueryDto, SettleDebtDto, UpdateCustomerDto, CreateQuickCustomerDto } from './dto/customers.dto';
 
 @ApiTags('Fichier Clients & Ordonnances (CLI)')
 @ApiBearerAuth()
@@ -28,12 +28,62 @@ export class CustomersController {
     return this.customersService.createCustomer(dto, this.actor(req));
   }
 
+  @Post('quick')
+  @RequirePermission('client.creer', 'clients.creer', 'client.consulter', 'clients.consulter')
+  @ApiOperation({ summary: 'Créer un particulier au comptoir avec une fiche minimale' })
+  createQuickCustomer(@Body() dto: CreateQuickCustomerDto, @Req() req: any) {
+    return this.customersService.createQuickCustomer(dto, this.actor(req));
+  }
+
   @Get()
   @RequirePermission('client.consulter', 'clients.consulter')
   @ApiOperation({ summary: 'Lister/rechercher les clients avec solde calculé (CLI-01)' })
   listCustomers(@Query() query: CustomerQueryDto, @Req() req: any) {
     return this.customersService.listCustomers(this.actor(req), query);
   }
+
+  @Get('insurers')
+  @RequirePermission('client.consulter', 'clients.consulter')
+  listInsurers(@Req() req: any) { return this.customersService.listInsurers(this.actor(req)); }
+
+  @Get('identity-documents/:documentId/number')
+  @RequirePermission('client.consulter', 'clients.consulter')
+  revealIdentityNumber(@Param('documentId', ParseUUIDPipe) documentId: string, @Req() req: any) { return this.customersService.revealIdentityNumber(documentId, this.actor(req)); }
+
+  @Get('identity-documents/:documentId/signed-url')
+  @RequirePermission('client.consulter', 'clients.consulter')
+  identityScanSignedUrl(@Param('documentId', ParseUUIDPipe) documentId: string, @Req() req: any) { return this.customersService.getIdentityScan(documentId, this.actor(req)); }
+
+  @Get('identity-documents/:documentId/file')
+  @RequirePermission('client.consulter', 'clients.consulter')
+  @ApiOperation({ summary: 'Lire le fichier scan d’une pièce d’identité locale via une requête authentifiée' })
+  async identityScanFile(@Param('documentId', ParseUUIDPipe) documentId: string, @Req() req: any, @Res() response: Response) {
+    const result = await this.customersService.getIdentityDocumentFile(documentId, this.actor(req));
+    const extension = result.storageFilePath.split('.').pop()?.toLowerCase();
+    response.type(extension === 'png' ? 'image/png' : extension === 'webp' ? 'image/webp' : 'image/jpeg').send(result.file);
+  }
+
+  @Post(':id/photo')
+  @RequirePermission('client.modifier', 'clients.modifier', 'client.creer', 'clients.creer')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 8 * 1024 * 1024, files: 1 } }))
+  @ApiConsumes('multipart/form-data')
+  uploadProfilePhoto(@Param('id', ParseUUIDPipe) id: string, @UploadedFile() file: Express.Multer.File, @Req() req: any) { return this.customersService.uploadProfilePhoto(id, file, this.actor(req)); }
+
+  @Get(':id/photo/signed-url')
+  @RequirePermission('client.consulter', 'clients.consulter')
+  profilePhotoSignedUrl(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) { return this.customersService.getProfilePhoto(id, this.actor(req)); }
+
+  @Get(':id/photo/file')
+  @RequirePermission('client.consulter', 'clients.consulter')
+  async profilePhotoFile(@Param('id', ParseUUIDPipe) id: string, @Req() req: any, @Res() response: Response) {
+    const result = await this.customersService.getProfilePhotoFile(id, this.actor(req));
+    const extension = result.storageFilePath.split('.').pop()?.toLowerCase();
+    response.type(extension === 'png' ? 'image/png' : extension === 'webp' ? 'image/webp' : 'image/jpeg').send(result.file);
+  }
+
+  @Delete(':id/photo')
+  @RequirePermission('client.modifier', 'clients.modifier', 'client.creer', 'clients.creer')
+  removeProfilePhoto(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) { return this.customersService.removeProfilePhoto(id, this.actor(req)); }
 
   @Get('privacy-notice')
   @RequirePermission('client.consulter', 'clients.consulter')
@@ -80,6 +130,14 @@ export class CustomersController {
   history(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
     return this.customersService.getCustomerHistory(id, this.actor(req));
   }
+
+  @Patch(':id')
+  @RequirePermission('client.modifier', 'clients.modifier', 'client.creer', 'clients.creer')
+  updateCustomer(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateCustomerDto, @Req() req: any) { return this.customersService.updateCustomer(id, dto, this.actor(req)); }
+
+  @Patch(':id/deactivate')
+  @RequirePermission('client.modifier', 'clients.modifier', 'client.creer', 'clients.creer')
+  deactivateCustomer(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) { return this.customersService.deactivateCustomer(id, this.actor(req)); }
 
   @Get(':id/statement')
   @RequirePermission('client.consulter', 'clients.consulter')

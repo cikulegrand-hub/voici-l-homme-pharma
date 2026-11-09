@@ -49,16 +49,19 @@ import { Product, ProductCategory } from '@vhp/shared';
             <mat-icon>arrow_back</mat-icon>
           </button>
           <div>
-            <h2>{{ isEditMode() ? 'Modifier la fiche produit' : 'Nouveau produit au catalogue' }}</h2>
-            <p class="subtitle text-muted">
-              {{ isEditMode() ? 'Mise à jour des informations cliniques, logistiques et tarifaires.' : 'Enregistrement complet d’une référence pharmaceutique.' }}
-            </p>
+            @if (isEditMode()) {
+              <h2>Modifier la fiche produit</h2>
+              <p class="subtitle text-muted">Mise à jour des informations cliniques, logistiques et tarifaires.</p>
+            } @else {
+              <h2>Nouveau produit au catalogue</h2>
+              <p class="subtitle text-muted">Enregistrement complet d'une référence pharmaceutique.</p>
+            }
           </div>
         </div>
 
         @if (isEditMode() && existingProduct()) {
           <div class="header-actions">
-            <button mat-stroked-button color="primary" type="button" (click)="openPriceHistory()">
+            <button mat-stroked-button color="primary" type="button" (click)="openPriceHistory($event)">
               <mat-icon>history</mat-icon> Historique des prix
             </button>
           </div>
@@ -363,8 +366,12 @@ import { Product, ProductCategory } from '@vhp/shared';
             >
               @if (isSubmitting()) {
                 <mat-spinner diameter="20" class="mr-2"></mat-spinner>
+                <span>Enregistrement...</span>
+              } @else if (isEditMode()) {
+                <span>Mettre à jour le produit</span>
+              } @else {
+                <span>Créer la fiche produit</span>
               }
-              {{ isEditMode() ? 'Mettre à jour le produit' : 'Créer la fiche produit' }}
             </button>
           </div>
         </form>
@@ -560,6 +567,46 @@ import { Product, ProductCategory } from '@vhp/shared';
       .italic {
         font-style: italic;
       }
+      @media (max-width: 960px) {
+        .row-4 {
+          grid-template-columns: 1fr 1fr;
+        }
+        .row-3 {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      @media (max-width: 600px) {
+        .row-2,
+        .row-3,
+        .row-4 {
+          grid-template-columns: 1fr;
+        }
+        .page-header {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 12px;
+        }
+        .header-left {
+          width: 100%;
+        }
+        .header-actions,
+        .form-actions {
+          flex-direction: column;
+          width: 100%;
+        }
+        .header-actions button,
+        .form-actions button {
+          width: 100%;
+        }
+        .barcode-input-row {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .add-barcode-btn {
+          width: 100%;
+          margin-bottom: 0;
+        }
+      }
     `,
   ],
 })
@@ -689,12 +736,17 @@ export class ProductFormComponent implements OnInit {
     this.barcodesList.update((list) => list.filter((b) => b !== barcode));
   }
 
-  openPriceHistory() {
+  openPriceHistory(event?: Event) {
+    if (event) {
+      (event.currentTarget as HTMLElement)?.blur();
+    }
     const prod = this.existingProduct();
     if (!prod) return;
     this.dialog.open(PriceHistoryDialogComponent, {
       data: { product: prod },
       width: '750px',
+      autoFocus: 'first-tabbable',
+      restoreFocus: true,
     });
   }
 
@@ -740,39 +792,48 @@ export class ProductFormComponent implements OnInit {
     this.isSubmitting.set(true);
 
     if (this.isEditMode() && this.productId) {
-      // Si le prix a changé et que l'utilisateur est habilité
+      const prodId = this.productId;
       const oldProd = this.existingProduct();
       const priceChanged =
         oldProd &&
         (oldProd.sellingPriceCdf !== payload.sellingPriceCdf || oldProd.sellingPriceUsd !== payload.sellingPriceUsd);
 
+      const doUpdateProduct = (prodPayload: typeof payload) => {
+        this.catalogApi.updateProduct(prodId, prodPayload).subscribe({
+          next: () => {
+            this.isSubmitting.set(false);
+            this.alertService.success('Fiche produit mise à jour avec succès.');
+            this.router.navigate(['/catalog']);
+          },
+          error: (err) => {
+            this.isSubmitting.set(false);
+            this.alertService.error(err.error?.message || 'Erreur lors de la mise à jour du produit.');
+          },
+        });
+      };
+
       if (priceChanged && this.canEditPrice()) {
         const reason = formVal.priceChangeReason?.trim() || 'Mise à jour tarifaire sur fiche produit';
-        // Utiliser updatePrice pour consigner le motif
         this.catalogApi
-          .updatePrice(this.productId, {
+          .updatePrice(prodId, {
             newPriceCdf: payload.sellingPriceCdf,
             newPriceUsd: payload.sellingPriceUsd,
             reason,
           })
           .subscribe({
+            next: () => {
+              // Prix et motif enregistrés dans l'historique; mettre à jour les métadonnées sans redéclencher d'historique de prix
+              const { sellingPriceCdf, sellingPriceUsd, ...otherFields } = payload;
+              doUpdateProduct(otherFields as typeof payload);
+            },
             error: (err) => {
+              this.isSubmitting.set(false);
               this.alertService.error(err.error?.message || 'Erreur lors de la mise à jour du prix.');
             },
           });
+      } else {
+        doUpdateProduct(payload);
       }
-
-      this.catalogApi.updateProduct(this.productId, payload).subscribe({
-        next: () => {
-          this.isSubmitting.set(false);
-          this.alertService.success('Fiche produit mise à jour avec succès.');
-          this.router.navigate(['/catalog']);
-        },
-        error: (err) => {
-          this.isSubmitting.set(false);
-          this.alertService.error(err.error?.message || 'Erreur lors de la mise à jour du produit.');
-        },
-      });
     } else {
       this.catalogApi.createProduct(payload).subscribe({
         next: () => {

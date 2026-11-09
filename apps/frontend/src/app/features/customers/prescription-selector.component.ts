@@ -88,6 +88,20 @@ import { CustomersApiService } from '../../core/api/services/customers-api.servi
     .expired-alert { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; padding: 12px; border-radius: 6px; font-size: 13px; }
     .dialog-footer { padding: 8px 16px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; }
     .btn-secondary { background: #e5e7eb; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+    @media (max-width: 480px) {
+      .prescription-list li {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+      .item-actions {
+        width: 100%;
+        display: flex;
+      }
+      .item-actions button {
+        flex: 1;
+      }
+    }
   `],
 })
 export class PrescriptionSelectorComponent implements OnChanges {
@@ -128,28 +142,27 @@ export class PrescriptionSelectorComponent implements OnChanges {
   }
 
   select(item: { id: string; prescriberName: string; healthCenter?: string; prescriptionDate: string }) {
-    this.selectedPrescriptionId = item.id;
-    this.selected.emit(item);
+    if (this.selectedPrescriptionId === item.id) {
+      this.selectedPrescriptionId = undefined;
+      this.selected.emit(undefined as any);
+    } else {
+      this.selectedPrescriptionId = item.id;
+      this.selected.emit(item);
+    }
   }
 
   preview(id: string) {
     this.closePreview();
     this.api.getPrescriptionPreview(id).subscribe({
       next: (res) => {
-        this.previewUrl = res.signedUrl;
-        this.previewExpired = false;
-        const expiresAt = new Date(res.expiresAt).getTime();
-        this.remainingSeconds = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
-
-        clearInterval(this.timerHandle);
-        this.timerHandle = setInterval(() => {
-          this.remainingSeconds--;
-          if (this.remainingSeconds <= 0) {
-            clearInterval(this.timerHandle);
-            this.previewUrl = '';
-            this.previewExpired = true;
-          }
-        }, 1000);
+        if (res.storageMode === 'local') {
+          this.api.getPrescriptionImage(id).subscribe({
+            next: (image) => this.openPreviewUrl(URL.createObjectURL(image), res.expiresAt),
+            error: (err) => (this.error = err.error?.message || 'Image locale de l’ordonnance introuvable.'),
+          });
+          return;
+        }
+        this.openPreviewUrl(res.signedUrl, res.expiresAt);
       },
       error: (e) => {
         this.error = e.error?.message || 'Impossible de charger l’aperçu de l’ordonnance.';
@@ -157,7 +170,26 @@ export class PrescriptionSelectorComponent implements OnChanges {
     });
   }
 
+  private openPreviewUrl(url: string, expiresAt: string) {
+    this.previewUrl = url;
+    this.previewExpired = false;
+    const expiresAtTime = new Date(expiresAt).getTime();
+    this.remainingSeconds = Math.max(0, Math.floor((expiresAtTime - Date.now()) / 1000));
+
+    clearInterval(this.timerHandle);
+    this.timerHandle = setInterval(() => {
+      this.remainingSeconds--;
+      if (this.remainingSeconds <= 0) {
+        clearInterval(this.timerHandle);
+        if (this.previewUrl.startsWith('blob:')) URL.revokeObjectURL(this.previewUrl);
+        this.previewUrl = '';
+        this.previewExpired = true;
+      }
+    }, 1000);
+  }
+
   closePreview() {
+    if (this.previewUrl.startsWith('blob:')) URL.revokeObjectURL(this.previewUrl);
     this.previewUrl = '';
     this.previewExpired = false;
     clearInterval(this.timerHandle);

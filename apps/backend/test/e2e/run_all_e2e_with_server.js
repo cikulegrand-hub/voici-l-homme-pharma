@@ -32,7 +32,7 @@ function pingServer(url, timeoutMs = 1500) {
   });
 }
 
-async function waitForServer(maxAttempts = 30, intervalMs = 1000) {
+async function waitForServer(maxAttempts = 60, intervalMs = 1000) {
   console.log('[E2E Runner] Attente du démarrage du serveur NestJS...');
   for (let i = 1; i <= maxAttempts; i++) {
     const up = await pingServer(HEALTH_URL);

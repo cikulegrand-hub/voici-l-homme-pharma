@@ -61,7 +61,7 @@ import {
       <!-- En-tête -->
       <div class="page-header">
         <div class="header-titles">
-          <h1>Gestion des Stocks & Lots (Module STK)</h1>
+          <h1>Gestion des Stocks & Lots</h1>
           <p class="subtitle">Lots, inventaires, traçabilité, valorisation du stock et alertes</p>
         </div>
         <div class="header-actions">
@@ -441,7 +441,7 @@ import {
 
               <div class="table-card mt-4">
                 <div class="card-header-bar">
-                  <h3>Lots proches de la péremption (UC-07)</h3>
+                  <h3>Lots proches de la péremption</h3>
                 </div>
                 <table class="data-table">
                   <thead>
@@ -753,6 +753,8 @@ import {
       border-radius: 8px;
       border: 1px solid #e2e8f0;
       overflow: hidden;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
     }
     .products-accordion {
       display: flex;
@@ -822,6 +824,7 @@ import {
     }
     .lots-table {
       width: 100%;
+      min-width: 650px;
       border-collapse: collapse;
       font-size: 0.85rem;
     }
@@ -887,6 +890,7 @@ import {
     }
     .data-table {
       width: 100%;
+      min-width: 650px;
       border-collapse: collapse;
       font-size: 0.9rem;
     }
@@ -1094,6 +1098,55 @@ import {
       flex-direction: column;
       align-items: center;
       gap: 8px;
+    }
+    @media (max-width: 1024px) {
+      .alerts-summary-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      .valuation-cards-grid {
+        grid-template-columns: 1fr;
+      }
+      .adjustments-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 768px) {
+      .page-container {
+        padding: 12px 6px;
+      }
+      .page-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+      }
+      .header-actions a {
+        width: 100%;
+        text-align: center;
+      }
+      .toolbar-card {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .filter-select {
+        width: 100%;
+      }
+      .product-stock-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+      .prod-col.main {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .alerts-summary-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    @media (max-width: 480px) {
+      .alerts-summary-grid {
+        grid-template-columns: 1fr;
+      }
     }
   `],
 })

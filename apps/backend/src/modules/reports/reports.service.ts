@@ -33,7 +33,18 @@ export class ReportsService {
   }
 
   async exportReport(reportKey: string, dto: ReportFilterDto = {}, pharmacyId?: string) {
-    const result = await this.getDetailedReport(reportKey, { ...dto, page: 1, limit: 500 }, pharmacyId);
+    const limit = 500;
+    let page = 1;
+    let result = await this.getDetailedReport(reportKey, { ...dto, page, limit }, pharmacyId);
+    const allRows = [...(result.data || [])];
+    while ((result.data || []).length === limit && page < 200) {
+      page += 1;
+      const next = await this.getDetailedReport(reportKey, { ...dto, page, limit }, pharmacyId);
+      allRows.push(...(next.data || []));
+      result = { ...result, data: allRows };
+      if ((next.data || []).length < limit) break;
+    }
+    result = { ...result, data: allRows };
     return this.reportsExportService.export(result, dto.format || 'csv');
   }
 

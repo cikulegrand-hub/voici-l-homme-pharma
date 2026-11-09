@@ -21,6 +21,7 @@ module.exports = async function runCashTests(ctx) {
   await suite('POST /cash/exchange-rates', async () => {
     const r = await request('POST', '/cash/exchange-rates', {
       rate: 2900,
+      effectiveDate: new Date().toISOString(),
       notes: 'Ajustement cours officiel E2E',
     });
     assert(
@@ -89,6 +90,16 @@ module.exports = async function runCashTests(ctx) {
   await suite('GET /cash/receivables-aging', async () => {
     const r = await request('GET', '/cash/receivables-aging');
     assert('status 200', r.status === 200, `reçu ${r.status}`);
+  });
+
+  await suite('POST /cash/sessions/:id/movements', async () => {
+    if (!ctx.cashSessionId) return assert('session requise', false, '');
+    const r = await request('POST', `/cash/sessions/${ctx.cashSessionId}/movements`, {
+      type: 'APPORT', amountCdf: 1000, amountUsd: 0, reason: 'Apport E2E',
+    });
+    assert('mouvement accepté', r.status === 201 || r.status === 200, `reçu ${r.status} – ${JSON.stringify(r.body)}`);
+    const list = await request('GET', `/cash/sessions/${ctx.cashSessionId}/movements`);
+    assert('mouvements listés', list.status === 200 && Array.isArray(list.body), `reçu ${list.status}`);
   });
 
   // ── CLÔTURER LA SESSION DE CAISSE ─────────────────────

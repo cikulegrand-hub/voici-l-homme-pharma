@@ -36,72 +36,10 @@ export class RolesGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest();
-    let user = request.user;
+    const user = request.user;
 
-    // Si l'utilisateur n'est pas encore attaché, extraire depuis le Bearer token
     if (!user) {
-      const authHeader = request.headers['authorization'];
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        throw new UnauthorizedException('Authentification requise pour cette ressource.');
-      }
-
-      const token = authHeader.substring(7).trim();
-      if (!token) {
-        throw new UnauthorizedException('Votre session est invalide. Veuillez vous reconnecter.');
-      }
-
-      if (token.startsWith('jwt_access_')) {
-        const parts = token.split('_');
-        if (parts.length < 4) {
-          throw new UnauthorizedException('Votre session est invalide. Veuillez vous reconnecter.');
-        }
-
-        const userId = parts[2];
-        const timestamp = parseInt(parts[3], 10);
-
-        if (isNaN(timestamp) || Date.now() - timestamp > this.TOKEN_LIFETIME_MS) {
-          throw new UnauthorizedException('Votre session a expiré. Veuillez vous reconnecter.');
-        }
-
-        const dbUser = await this.prisma.users.findUnique({
-          where: { id: userId },
-          include: {
-            roles: {
-              include: {
-                role_permissions: {
-                  include: {
-                    permissions: true,
-                  },
-                },
-              },
-            },
-          },
-        });
-
-        if (!dbUser || !dbUser.is_active) {
-          throw new UnauthorizedException('Utilisateur inactif ou introuvable.');
-        }
-
-        const permissions: string[] = dbUser.roles.role_permissions.map((rp) => rp.permissions.code);
-        if (dbUser.roles.name === 'ADMIN') {
-          permissions.push('*');
-        }
-
-        user = {
-          id: dbUser.id,
-          pharmacyId: dbUser.pharmacy_id,
-          username: dbUser.username,
-          fullName: dbUser.full_name,
-          role: dbUser.roles.name as RoleName,
-          email: dbUser.email,
-          permissions,
-          isActive: dbUser.is_active,
-        };
-
-        request.user = user;
-      } else {
-      throw new UnauthorizedException('Votre session est invalide. Veuillez vous reconnecter.');
-      }
+      throw new UnauthorizedException('Authentification requise pour cette ressource.');
     }
 
     // Administrateur racine : plein pouvoir absolu (wildcard)

@@ -16,6 +16,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { AlertService } from '../../core/services/alert.service';
 import { I18N_FR } from '../../core/i18n/translations.fr';
 import { ExchangeRate } from '@vhp/shared';
+import { SetExchangeRateDto } from '../../core/api/generated/models';
 
 @Component({
   selector: 'app-exchange-rates',
@@ -156,7 +157,7 @@ import { ExchangeRate } from '@vhp/shared';
               <table mat-table [dataSource]="rates()" class="rates-table">
                 <!-- Date -->
                 <ng-container matColumnDef="date">
-                  <th mat-header-cell *matHeaderCellDef>{{ i18n.loginHistory.date }}</th>
+                  <th mat-header-cell *matHeaderCellDef>Date & Heure</th>
                   <td mat-cell *matCellDef="let row">
                     {{ row.effectiveDate | date:'dd/MM/yyyy HH:mm' }}
                   </td>
@@ -289,9 +290,12 @@ import { ExchangeRate } from '@vhp/shared';
     .table-container {
       margin-top: 16px;
       overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      width: 100%;
     }
     .rates-table {
       width: 100%;
+      min-width: 500px;
     }
     .rate-cell {
       color: #0f9d58;
@@ -319,6 +323,19 @@ import { ExchangeRate } from '@vhp/shared';
       padding: 40px;
       color: #5f6368;
       gap: 12px;
+    }
+
+    @media (max-width: 600px) {
+      .form-row {
+        flex-direction: column;
+      }
+      .form-actions {
+        width: 100%;
+      }
+      .submit-button {
+        width: 100%;
+        justify-content: center;
+      }
     }
     .empty-icon {
       font-size: 40px;
@@ -382,15 +399,13 @@ export class ExchangeRatesComponent implements OnInit {
     }
 
     this.isSubmitting.set(true);
-    const dto = {
-      baseCurrency: this.baseCurrency as 'USD',
-      targetCurrency: this.targetCurrency as 'CDF',
+    const dto: SetExchangeRateDto = {
       rate: Number(this.rateValue),
       effectiveDate: new Date(this.effectiveDate).toISOString(),
       notes: this.notes ? this.notes.trim() : undefined,
     };
 
-    this.cashApi.setExchangeRate(dto as any).subscribe({
+    this.cashApi.setExchangeRate(dto).subscribe({
       next: (newRate) => {
         this.isSubmitting.set(false);
         this.authService.setActiveRate(newRate);

@@ -61,6 +61,16 @@ export interface CreateCategoryDto {
   description?: string;
 }
 
+export interface UpdateCategoryDto {
+  name?: string;
+  description?: string;
+}
+
+export interface CreateGalenicFormDto {
+  name: string;
+  description?: string;
+}
+
 export interface CreateProductDto {
   name: string;
   dci: string;
@@ -93,6 +103,27 @@ export interface CreateProductDto {
   barcodes: string[];
 }
 
+export interface UpdateProductDto {
+  name?: string;
+  dci?: string;
+  dosage?: string;
+  galenicForm?: string;
+  sellingUnit?: string;
+  laboratory?: string;
+  categoryId?: string;
+  sellingPriceCdf?: number;
+  sellingPriceUsd?: number;
+  taxRate?: number;
+  minAlertThreshold?: number;
+  maxThreshold?: number;
+  securityStock?: number;
+  storageLocation?: string;
+  requiresPrescription?: boolean;
+  isControlledSubstance?: boolean;
+  isColdChain?: boolean;
+  barcodes?: string[];
+}
+
 export interface UpdateProductPriceDto {
   /** Nouveau prix de vente CDF */
   newPriceCdf: number;
@@ -100,6 +131,62 @@ export interface UpdateProductPriceDto {
   newPriceUsd: number;
   /** Motif de révision (CAT-06) */
   reason: string;
+}
+
+export interface AddBarcodeDto {
+  /** Code-barres à associer (CAT-03) */
+  barcode: string;
+  isPrimary?: boolean;
+}
+
+export interface OpenCashSessionDto {
+  /** Fonds de caisse initial en Franc Congolais (CDF) */
+  initialFloatCdf: number;
+  /** Fonds de caisse initial en Dollars (USD) */
+  initialFloatUsd: number;
+}
+
+export interface CreateCashMovementDto {
+  type: 'APPORT' | 'RETRAIT';
+  amountCdf?: number;
+  amountUsd?: number;
+  reason: string;
+}
+
+export interface CloseCashSessionDto {
+  /** Montant réel physique compté en caisse (CDF) */
+  countedAmountCdf: number;
+  /** Montant réel physique compté en caisse (USD) */
+  countedAmountUsd: number;
+  /** Justification obligatoire si écart (FIN-02, RG-12) */
+  varianceReason?: string;
+}
+
+export interface SetExchangeRateDto {
+  /** Taux officiel du jour : 1 USD = X CDF (FIN-04, RG-08) */
+  rate: number;
+  /** Date/heure ISO à partir de laquelle le taux devient applicable. */
+  effectiveDate: string;
+  notes?: string;
+}
+
+export interface CreateExpenseDto {
+  description: string;
+  category: string;
+  /** Montant en CDF */
+  amountCdf: number;
+  /** Montant en USD */
+  amountUsd?: number;
+  receiptPath?: string;
+}
+
+export interface ReverseExpenseDto {
+  /** Motif obligatoire de la contre-passation */
+  reason: string;
+}
+
+export interface CreateExpenseCategoryDto {
+  name: string;
 }
 
 export interface CreateLotDto {
@@ -111,17 +198,51 @@ export interface CreateLotDto {
   expiryDate: string;
   /** Quantité entrée */
   quantity: number;
+  initialQuantity?: number;
   /** Prix d’achat unitaire CDF */
   purchasePriceCdf: number;
   /** Prix d’achat unitaire USD */
-  purchasePriceUsd: number;
+  purchasePriceUsd?: number;
+  storageLocation?: string;
+}
+
+export interface DirectReceptionLineDto {
+  productId: string;
+  lotNumber: string;
+  expiryDate: string;
+  quantity: number;
+  purchasePriceCdf: number;
+  purchasePriceUsd?: number;
+  storageLocation?: string;
+}
+
+export interface DirectReceptionDto {
+  /** Clé d’idempotence unique (évite doubles écritures) */
+  idempotencyKey?: string;
+  supplierId?: string;
+  supplierInvoiceNumber?: string;
+  notes?: string;
+  lines: DirectReceptionLineDto[];
 }
 
 export interface RequestAdjustmentDto {
   lotId: string;
   /** Écart constaté (+ ou -) */
-  variance: number;
+  variance?: number;
+  /** Différence de quantité */
+  quantityDifference?: number;
+  /** Motif obligatoire */
   reason: string;
+}
+
+export interface ApproveAdjustmentDto {
+  /** Valider (true) ou Rejeter (false) */
+  approved?: boolean;
+  action?: string;
+  rejectionReason?: string;
+  pharmacistComment?: string;
+  /** Code PIN pharmacien si exigé */
+  pinCode?: string;
 }
 
 export interface CreateMovementDto {
@@ -135,22 +256,40 @@ export interface CreateMovementDto {
 
 export interface QuarantineLotDto {
   reason: string;
+  /** true = quarantaine, false = déblocage (PATCH) */
+  quarantined?: boolean;
+}
+
+export interface UnquarantineLotDto {
+  reason: string;
 }
 
 export interface InventoryLineDto {
   lotId: string;
   /** Quantité comptée physiquement */
   countedQuantity: number;
+  justification?: string;
 }
 
 export interface CreateInventoryDto {
-  reference: string;
-  lines: InventoryLineDto[];
+  reference?: string;
+  type?: 'COMPLET' | 'TOURNANT';
+  /** IDs produits pour un inventaire tournant */
+  productIds?: string[];
+  lines?: InventoryLineDto[];
   notes?: string;
 }
 
+export interface RecordInventoryCountDto {
+  lotId: string;
+  countedQuantity: number;
+  justification?: string;
+}
+
 export interface ValidateInventoryDto {
-  validationComment: string;
+  validationComment?: string;
+  justification?: string;
+  pinCode?: string;
 }
 
 export interface SaleItemRequestDto {
@@ -159,9 +298,11 @@ export interface SaleItemRequestDto {
   /** Quantité */
   quantity: number;
   /** Prix unitaire en CDF */
-  unitPriceCdf?: number;
+  unitPriceCdf: number;
   /** Remise en CDF sur la ligne */
   discountCdf?: number;
+  /** ID du lot sélectionné manuellement (profil habilité ou PIN superviseur VTE-04) */
+  lotId?: string;
 }
 
 export interface PaymentItemDto {
@@ -186,9 +327,30 @@ export interface CreateSaleRequestDto {
   /** Paiements effectués */
   payments: PaymentItemDto[];
   /** Clé d’idempotence anti-double clic (RG-16) */
-  idempotencyKey?: string;
+  idempotencyKey: string;
   /** Code PIN superviseur pour dérogation remise/crédit (AUT-08, RG-10) */
   supervisorPin?: string;
+}
+
+export interface OfflineSyncBatchDto {
+}
+
+export interface ResolveConflictRequestDto {
+}
+
+export interface HoldCartDto {
+  referenceName: string;
+  items: SaleItemRequestDto[];
+  customerId?: string;
+}
+
+export interface CreateCancellationRequestDto {
+  /** Motif de la demande d’annulation transmise au pharmacien */
+  reason: string;
+  /** Demande de réintégration en stock */
+  restockItems: boolean;
+  /** Lignes et quantités concernées pour un avoir partiel */
+  items?: string[];
 }
 
 export interface CancelSaleDto {
@@ -196,12 +358,10 @@ export interface CancelSaleDto {
   reason: string;
   /** Remise en stock des médicaments si non altérés */
   restockItems: boolean;
-  items?: Array<{ saleItemId: string; quantity: number; restock?: boolean }>;
-}
-
-export interface HoldCartDto {
-  referenceName: string;
-  items: SaleItemRequestDto[];
+  /** Lignes et quantités retournées pour un avoir partiel. */
+  items?: string[];
+  /** Code PIN superviseur pour dérogation d’annulation par caissier */
+  supervisorPin?: string;
 }
 
 export interface CreateCustomerDto {
@@ -216,10 +376,11 @@ export interface CreateCustomerDto {
   medicalNotes?: string;
 }
 
-export interface SettleDebtDto {
-  /** Montant du règlement en CDF (CLI-04) */
-  amountPaidCdf: number;
-  paymentMethod: 'ESPECES' | 'MOBILE_MONEY' | 'VIREMENT';
+export interface CreateQuickCustomerDto {
+  fullName: string;
+  phone?: string;
+  /** Consentement recueilli au comptoir */
+  consentementDonnees: boolean;
 }
 
 export interface CreatePrescriptionDto {
@@ -228,71 +389,101 @@ export interface CreatePrescriptionDto {
   healthCenter?: string;
   /** Date de prescription AAAA-MM-JJ */
   prescriptionDate: string;
-  /** Chemin privé Supabase Storage (CLI-06) */
+  /** Private path already created by a storage integration */
   storageFilePath?: string;
   prescriptionText?: string;
 }
 
-export interface UpdatePharmacySettingsDto {
+export interface UpdateCustomerDto {
+  fullName: string;
+  phone?: string;
+  email?: string;
+  companyName?: string;
+  address?: string;
+  customerType: 'PARTICULIER' | 'ENTREPRISE' | 'ASSURANCE';
+  /** Plafond de crédit autorisé en CDF (RG-13) */
+  creditLimitCdf: number;
+  medicalNotes?: string;
+}
+
+export interface SettleDebtDto {
+  /** Montant du règlement en CDF (CLI-04) */
+  amountPaidCdf: number;
+  paymentMethod: 'ESPECES' | 'MOBILE_MONEY' | 'CARTE_BANCAIRE' | 'VIREMENT';
+  currency: 'CDF' | 'USD';
+  idempotencyKey: string;
+  cashSessionId?: string;
+  notes?: string;
+}
+
+export interface UpdatePharmacyIdentityDto {
   name: string;
   address: string;
   phone: string;
   email?: string;
-  taxNumber?: string;
+  /** Numéro RCCM (RDC) */
+  rccm: string;
+  /** Identification Nationale (RDC) */
+  idNat: string;
+  /** Numéro Impôt / NIF */
+  taxNumber: string;
+  logoUrl?: string;
   receiptFooterText: string;
+  invoiceLegalNotice?: string;
 }
 
-export interface UpdateFinancialSettingsDto {
+export interface TaxItemDto {
+  code: string;
+  name: string;
+  rate: number;
+  isActive: boolean;
+}
+
+export interface UpdateFinancialRulesDto {
   defaultCurrency: 'CDF' | 'USD';
-  /** Taux TVA standard en % */
-  standardTaxRate: number;
-  /** Plafond de remise max autorisé pour un Caissier (%) */
+  activeCurrencies: string[];
+  /** Décimales pour le Franc Congolais (toujours 0 par défaut) */
+  cdfDecimals: number;
+  /** Décimales pour le Dollar USD */
+  usdDecimals: number;
+  cdfRoundingRule: 'ENTIER' | 'CINQUANTE' | 'CENT';
+  usdRoundingRule: 'DECIMAL_2';
+  activePaymentMethods: string[];
+  taxes: TaxItemDto[];
+  /** Plafond remise caissier en % */
   cashierDiscountCapPercent: number;
-  /** Plafond de remise max pour le Pharmacien (%) */
+  /** Plafond remise pharmacien en % */
   pharmacistDiscountCapPercent: number;
 }
 
-export interface UpdateAlertSettingsDto {
-  /** Premier seuil alerte péremption en jours */
+export interface UpdateAlertThresholdsDto {
+  /** Seuil alerte péremption niveau 1 (jours) */
   expiryWarningDaysLevel1: number;
-  /** Deuxième seuil alerte péremption en jours */
+  /** Seuil alerte péremption niveau 2 (jours) */
   expiryWarningDaysLevel2: number;
-  /** Troisième seuil alerte péremption en jours */
+  /** Seuil alerte péremption niveau 3 (jours) */
   expiryWarningDaysLevel3: number;
-  /** Délai d’inactivité avant déconnexion automatique en minutes (AUT-03) */
+  /** Délai d’inactivité de session en minutes (AUT-03) */
   sessionInactivityTimeoutMinutes: number;
 }
 
-export interface OpenCashSessionDto {
-  /** Fonds de caisse initial en Franc Congolais (CDF) */
-  initialFloatCdf: number;
-  /** Fonds de caisse initial en Dollars (USD) */
-  initialFloatUsd: number;
+export interface UpdatePrintTemplatesDto {
+  ticketHeader: string;
+  ticketFooter: string;
+  showLogoOnTicket: boolean;
+  invoiceLegalNotice: string;
 }
 
-export interface CloseCashSessionDto {
-  /** Montant réel physique compté en caisse (CDF) */
-  countedAmountCdf: number;
-  /** Montant réel physique compté en caisse (USD) */
-  countedAmountUsd: number;
-  /** Justification obligatoire si écart (FIN-02, RG-12) */
-  varianceReason?: string;
+export interface SimulateImportDto {
+  type: 'products' | 'stock' | 'suppliers' | 'customers';
+  /** Lignes extraites du fichier Excel/CSV */
+  rows: string[];
 }
 
-export interface SetExchangeRateDto {
-  /** Taux officiel du jour : 1 USD = X CDF (FIN-04, RG-08) */
-  rate: number;
-  notes?: string;
-}
-
-export interface CreateExpenseDto {
-  description: string;
-  category: string;
-  /** Montant en CDF */
-  amountCdf: number;
-  /** Montant en USD */
-  amountUsd?: number;
-  receiptPath?: string;
+export interface ExecuteImportDto {
+  type: 'products' | 'stock' | 'suppliers' | 'customers';
+  /** Lignes validées à insérer définitivement */
+  rows: string[];
 }
 
 export interface CreateSupplierDto {
@@ -312,11 +503,14 @@ export interface OrderItemDto {
   orderedQuantity: number;
   /** Prix d’achat unitaire estimé en CDF */
   unitPriceCdf: number;
+  /** Prix d’achat unitaire estimé en USD */
+  unitPriceUsd?: number;
 }
 
 export interface CreatePurchaseOrderDto {
   supplierId: string;
   items: OrderItemDto[];
+  expectedDeliveryDate?: string;
   notes?: string;
 }
 
@@ -326,11 +520,31 @@ export interface ReceivedLineDto {
   expiryDate: string;
   receivedQuantity: number;
   actualPurchasePriceCdf: number;
+  actualPurchasePriceUsd?: number;
+  storageLocation?: string;
+  purchaseOrderItemId?: string;
 }
 
 export interface ReceiveOrderDto {
+  /** Clé d’idempotence unique pour éviter les doublons */
+  idempotencyKey?: string;
   lines: ReceivedLineDto[];
   /** Numéro de facture fournisseur liée */
   supplierInvoiceNumber?: string;
+  notes?: string;
+}
+
+export interface UpdatePurchaseOrderStatusDto {
+  status: 'BROUILLON' | 'ENVOYE' | 'ANNULE';
+}
+
+export interface UpdateSupplierDto {
+  name?: string;
+  contactName?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  paymentTerms?: string;
+  leadTimeDays?: number;
 }
 

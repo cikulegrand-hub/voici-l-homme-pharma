@@ -481,9 +481,12 @@ import { ImportType, ImportSimulationResult, ImportRejectedRow } from '@vhp/shar
     .table-scroll {
       max-height: 250px;
       overflow-y: auto;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
     }
     .rejections-table {
       width: 100%;
+      min-width: 500px;
       background: transparent;
     }
     .error-pill {
@@ -516,6 +519,7 @@ import { ImportType, ImportSimulationResult, ImportRejectedRow } from '@vhp/shar
       display: flex;
       flex-direction: column;
       gap: 6px;
+      overflow-x: auto;
     }
     .sample-item {
       display: flex;
@@ -523,6 +527,7 @@ import { ImportType, ImportSimulationResult, ImportRejectedRow } from '@vhp/shar
       gap: 8px;
       font-size: 12px;
       color: #202124;
+      word-break: break-word;
     }
     .step-nav {
       display: flex;
@@ -552,6 +557,61 @@ import { ImportType, ImportSimulationResult, ImportRejectedRow } from '@vhp/shar
     }
     .success-actions {
       margin-top: 20px;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+
+    @media (max-width: 768px) {
+      .wizard-card {
+        padding: 16px;
+      }
+      .stats-cards-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+      .upload-dropzone {
+        padding: 24px 16px;
+      }
+      .rejected-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .rejected-header button {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .type-cards-grid {
+        grid-template-columns: 1fr;
+      }
+      .stats-cards-grid {
+        grid-template-columns: 1fr;
+      }
+      .step-nav {
+        flex-direction: column-reverse;
+        gap: 10px;
+        align-items: stretch;
+      }
+      .step-nav button {
+        width: 100%;
+        justify-content: center;
+      }
+      .step-nav .spacer {
+        display: none;
+      }
+      .file-loaded-info {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .success-container {
+        padding: 20px 12px;
+      }
+      .success-actions button {
+        width: 100%;
+      }
     }
   `],
 })
@@ -692,8 +752,9 @@ export class ImportWizardComponent {
       data: {
         title: this.i18n.importWizard.executeConfirmTitle,
         message: `${this.i18n.importWizard.executeConfirmMessage} (${sim.validCount} enregistrements)`,
-        confirmText: this.i18n.actions.confirm,
-        cancelText: this.i18n.actions.cancel,
+        confirmLabel: this.i18n.actions.confirm,
+        cancelLabel: this.i18n.actions.cancel,
+        confirmColor: 'primary',
       },
     });
 

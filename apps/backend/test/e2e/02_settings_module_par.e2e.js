@@ -43,6 +43,7 @@ async function run() {
       '/cash/exchange-rates',
       {
         rate: 2875.5,
+        effectiveDate: nowIso,
         notes: 'Taux officiel Banque Centrale du jour',
       },
       { Authorization: `Bearer ${adminToken}` },

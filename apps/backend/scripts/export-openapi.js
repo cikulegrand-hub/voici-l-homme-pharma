@@ -7,7 +7,11 @@ dotenv.config();
 
 const { NestFactory } = require('@nestjs/core');
 const { SwaggerModule, DocumentBuilder } = require('@nestjs/swagger');
-const { AppModule } = require('../dist/apps/backend/src/app.module');
+// Nest's workspace build emits apps/backend/dist/app.module.js. Keep the
+// previous monorepo path as a compatibility fallback for older build layouts.
+const compiledAppModule = path.join(__dirname, '..', 'dist', 'app.module.js');
+const legacyCompiledAppModule = path.join(__dirname, '..', 'dist', 'apps', 'backend', 'src', 'app.module.js');
+const { AppModule } = require(fs.existsSync(compiledAppModule) ? compiledAppModule : legacyCompiledAppModule);
 
 async function exportOpenApi() {
   try {

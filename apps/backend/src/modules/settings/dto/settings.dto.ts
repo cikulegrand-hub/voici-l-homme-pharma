@@ -9,25 +9,26 @@ import {
   IsBoolean,
   IsEnum,
   ValidateNested,
+  IsObject,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdatePharmacyIdentityDto {
-  @ApiProperty({ example: 'Voici l’Homme Pharma' })
+  @ApiProperty({ example: "Voici l'Homme Pharma" })
   @IsString()
-  @IsNotEmpty({ message: 'Le nom de l’officine est obligatoire.' })
+  @IsNotEmpty({ message: "Le nom de l'officine est obligatoire." })
   name: string;
 
-  @ApiProperty({ example: 'Av. de l’Église, Q. Résidentiel, Commune de Limete, Kinshasa, RDC' })
+  @ApiProperty({ example: "Av. de l'Église, Q. Résidentiel, Commune de Limete, Kinshasa, RDC" })
   @IsString()
-  @IsNotEmpty({ message: 'L’adresse de l’officine est obligatoire.' })
-  address: string;
+  @IsOptional()
+  address?: string;
 
   @ApiProperty({ example: '+243 81 234 56 78' })
   @IsString()
-  @IsNotEmpty({ message: 'Le numéro de téléphone est obligatoire.' })
-  phone: string;
+  @IsOptional()
+  phone?: string;
 
   @ApiProperty({ example: 'contact@voicilhommepharma.cd', required: false })
   @IsString()
@@ -47,6 +48,11 @@ export class UpdatePharmacyIdentityDto {
   @ApiProperty({ example: 'A0912345B', description: 'Numéro Impôt / NIF' })
   @IsString()
   @IsOptional()
+  nif?: string;
+
+  @ApiProperty({ required: false, description: 'Alias rétrocompatible pour nif' })
+  @IsString()
+  @IsOptional()
   taxNumber?: string;
 
   @ApiProperty({ example: 'https://storage.supabase.co/vhp/logo.png', required: false })
@@ -55,19 +61,30 @@ export class UpdatePharmacyIdentityDto {
   logoUrl?: string;
 
   @ApiProperty({
-    example: 'Tout médicament vendu ne peut être repris ni échangé sans accord préalable du pharmacien.',
-  })
-  @IsString()
-  @IsOptional()
-  receiptFooterText?: string;
-
-  @ApiProperty({
-    example: 'Facture conforme aux dispositions de la DGI / RDC. Exonération sous réserve d’homologation.',
+    example: 'Facture conforme aux dispositions de la DGI / RDC.',
     required: false,
   })
   @IsString()
   @IsOptional()
+  legalNotice?: string;
+
+  @ApiProperty({ required: false, description: 'Alias rétrocompatible pour legalNotice' })
+  @IsString()
+  @IsOptional()
   invoiceLegalNotice?: string;
+
+  @ApiProperty({
+    example: 'Marchandises vendues ne sont ni reprises ni échangées.',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  invoiceFooter?: string;
+
+  @ApiProperty({ required: false, description: 'Alias rétrocompatible pour invoiceFooter' })
+  @IsString()
+  @IsOptional()
+  receiptFooterText?: string;
 }
 
 export class TaxItemDto {
@@ -76,10 +93,15 @@ export class TaxItemDto {
   @IsNotEmpty()
   code: string;
 
-  @ApiProperty({ example: 'TVA Standard 16%' })
+  @ApiProperty({ example: 'TVA Standard 16%', required: false })
   @IsString()
-  @IsNotEmpty()
-  name: string;
+  @IsOptional()
+  label?: string;
+
+  @ApiProperty({ example: 'TVA Standard 16%', required: false })
+  @IsString()
+  @IsOptional()
+  name?: string;
 
   @ApiProperty({ example: 16.0 })
   @IsNumber()
@@ -87,9 +109,15 @@ export class TaxItemDto {
   @Max(100)
   rate: number;
 
-  @ApiProperty({ example: true })
+  @ApiProperty({ example: true, required: false })
   @IsBoolean()
-  isActive: boolean;
+  @IsOptional()
+  isDefault?: boolean;
+
+  @ApiProperty({ example: true, required: false })
+  @IsBoolean()
+  @IsOptional()
+  isActive?: boolean;
 }
 
 export type RoundingRule = 'ENTIER' | 'CINQUANTE' | 'CENT' | 'DECIMAL_2';
@@ -101,19 +129,22 @@ export class UpdateFinancialRulesDto {
 
   @ApiProperty({ example: ['CDF', 'USD'] })
   @IsArray()
-  activeCurrencies: ('CDF' | 'USD')[];
+  @IsOptional()
+  activeCurrencies?: ('CDF' | 'USD')[];
 
   @ApiProperty({ example: 0, description: 'Décimales pour le Franc Congolais (toujours 0 par défaut)' })
   @IsNumber()
   @Min(0)
   @Max(2)
-  cdfDecimals: number;
+  @IsOptional()
+  cdfDecimals?: number;
 
   @ApiProperty({ example: 2, description: 'Décimales pour le Dollar USD' })
   @IsNumber()
   @Min(0)
   @Max(2)
-  usdDecimals: number;
+  @IsOptional()
+  usdDecimals?: number;
 
   @ApiProperty({ example: 'ENTIER', enum: ['ENTIER', 'CINQUANTE', 'CENT'] })
   @IsString()
@@ -125,7 +156,8 @@ export class UpdateFinancialRulesDto {
 
   @ApiProperty({ example: ['ESPECES', 'MOBILE_MONEY', 'CARTE_BANCAIRE', 'VIREMENT', 'CREDIT_CLIENT'] })
   @IsArray()
-  activePaymentMethods: string[];
+  @IsOptional()
+  activePaymentMethods?: string[];
 
   @ApiProperty({ type: [TaxItemDto] })
   @IsArray()
@@ -133,44 +165,45 @@ export class UpdateFinancialRulesDto {
   @Type(() => TaxItemDto)
   taxes: TaxItemDto[];
 
-  @ApiProperty({ example: 5.0, description: 'Plafond remise caissier en %' })
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  cashierDiscountCapPercent: number;
+  @ApiProperty({
+    example: { ADMIN: 100, PHARMACIEN: 10, CAISSIER: 5, STOCK: 0, COMPTABLE: 0 },
+    description: 'Plafonds de remise par rôle en pourcentage',
+  })
+  @IsObject()
+  @IsOptional()
+  discountCapsByRole?: Record<string, number>;
 
-  @ApiProperty({ example: 15.0, description: 'Plafond remise pharmacien en %' })
+  @ApiProperty({ example: 5, required: false, description: 'Alias rétrocompatible' })
   @IsNumber()
-  @Min(0)
-  @Max(100)
-  pharmacistDiscountCapPercent: number;
+  @IsOptional()
+  cashierDiscountCapPercent?: number;
+
+  @ApiProperty({ example: 10, required: false, description: 'Alias rétrocompatible' })
+  @IsNumber()
+  @IsOptional()
+  pharmacistDiscountCapPercent?: number;
 }
 
 export class UpdateAlertThresholdsDto {
-  @ApiProperty({ example: 30, description: 'Seuil alerte péremption niveau 1 (jours)' })
-  @IsNumber()
-  @Min(1)
-  expiryWarningDaysLevel1: number;
+  @ApiProperty({ example: [30, 60, 90], description: "Seuils d'alerte de péremption en jours" })
+  @IsArray()
+  expiryWarningDays: number[];
 
-  @ApiProperty({ example: 60, description: 'Seuil alerte péremption niveau 2 (jours)' })
-  @IsNumber()
-  @Min(1)
-  expiryWarningDaysLevel2: number;
-
-  @ApiProperty({ example: 90, description: 'Seuil alerte péremption niveau 3 (jours)' })
-  @IsNumber()
-  @Min(1)
-  expiryWarningDaysLevel3: number;
-
-  @ApiProperty({ example: 15, description: 'Délai d’inactivité de session en minutes (AUT-03)' })
+  @ApiProperty({ example: 15, description: "Délai d'inactivité de session en minutes (AUT-03)" })
   @IsNumber()
   @Min(1)
   @Max(120)
-  sessionInactivityTimeoutMinutes: number;
+  inactivityTimeoutMinutes: number;
+
+  @ApiProperty({ example: 10, description: 'Seuil par défaut du stock faible en unités' })
+  @IsNumber()
+  @Min(1)
+  @IsOptional()
+  lowStockDefaultThreshold?: number;
 }
 
 export class UpdatePrintTemplatesDto {
-  @ApiProperty({ example: 'PHARMACIE VOICI L’HOMME\nKinshasa - Limete' })
+  @ApiProperty({ example: "PHARMACIE VOICI L'HOMME\nKinshasa - Limete" })
   @IsString()
   @IsOptional()
   ticketHeader?: string;
@@ -185,27 +218,38 @@ export class UpdatePrintTemplatesDto {
   @IsOptional()
   showLogoOnTicket?: boolean;
 
-  @ApiProperty({ example: 'Facture soumise à la TVA selon ordonnance fiscale en vigueur en RDC.' })
+  @ApiProperty({ example: "Facture d'achat - Client Officine" })
   @IsString()
   @IsOptional()
-  invoiceLegalNotice?: string;
-}
+  invoiceHeader?: string;
 
-export class ImportSimulationRowDto {
-  @ApiProperty({ example: 1 })
-  rowNumber: number;
+  @ApiProperty({ example: 'Merci pour votre confiance.' })
+  @IsString()
+  @IsOptional()
+  invoiceFooter?: string;
 
-  @ApiProperty()
-  data: any;
-
-  @ApiProperty({ example: 'Le prix de vente CDF doit être supérieur à 0' })
-  reason?: string;
+  @ApiProperty({ example: true })
+  @IsBoolean()
+  @IsOptional()
+  showLogoOnInvoice?: boolean;
 }
 
 export class SimulateImportDto {
-  @ApiProperty({ example: 'products', enum: ['products', 'stock', 'suppliers', 'customers'] })
-  @IsEnum(['products', 'stock', 'suppliers', 'customers'])
-  type: 'products' | 'stock' | 'suppliers' | 'customers';
+  @ApiProperty({
+    example: 'PRODUITS',
+    required: false,
+    description: 'Type de données à importer (PRODUITS, STOCK, FOURNISSEURS, CLIENTS)',
+  })
+  @IsOptional()
+  importType?: string;
+
+  @ApiProperty({
+    example: 'products',
+    required: false,
+    description: 'Type hérité (products, stock, suppliers, customers)',
+  })
+  @IsOptional()
+  type?: string;
 
   @ApiProperty({ description: 'Lignes extraites du fichier Excel/CSV' })
   @IsArray()
@@ -213,22 +257,30 @@ export class SimulateImportDto {
 }
 
 export class ExecuteImportDto {
-  @ApiProperty({ example: 'products', enum: ['products', 'stock', 'suppliers', 'customers'] })
-  @IsEnum(['products', 'stock', 'suppliers', 'customers'])
-  type: 'products' | 'stock' | 'suppliers' | 'customers';
+  @ApiProperty({
+    example: 'PRODUITS',
+    required: false,
+    description: 'Type de données à importer (PRODUITS, STOCK, FOURNISSEURS, CLIENTS)',
+  })
+  @IsOptional()
+  importType?: string;
+
+  @ApiProperty({
+    example: 'products',
+    required: false,
+    description: 'Type hérité (products, stock, suppliers, customers)',
+  })
+  @IsOptional()
+  type?: string;
 
   @ApiProperty({ description: 'Lignes validées à insérer définitivement' })
   @IsArray()
   rows: any[];
 }
 
-export class BackupDto {
-  id: string;
-  filename: string;
-  sizeBytes: number;
-  sizeFormatted: string;
-  createdAt: string;
-  createdBy: string;
-  status: 'SUCCES' | 'EN_COURS' | 'ECHEC';
-  tableCounts?: Record<string, number>;
+export class UploadLogoDto {
+  @ApiProperty({ description: "URL ou chaîne base64 data:image/... du logo de l'officine" })
+  @IsString()
+  @IsNotEmpty({ message: 'Le logo est obligatoire.' })
+  logoUrl: string;
 }

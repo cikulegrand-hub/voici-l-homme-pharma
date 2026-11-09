@@ -8,6 +8,7 @@ import { CustomersModule } from '../customers/customers.module';
 import { SettingsModule } from '../settings/settings.module';
 import { AuditModule } from '../audit/audit.module';
 import { AuthModule } from '../auth/auth.module';
+import { CashModule } from '../cash/cash.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { AuthModule } from '../auth/auth.module';
     SettingsModule,
     AuditModule,
     AuthModule,
+    CashModule,
   ],
   controllers: [SalesController],
   providers: [SalesService, InvoiceNumberService],

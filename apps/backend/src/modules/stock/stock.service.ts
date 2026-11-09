@@ -32,6 +32,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CumpService } from './cump.service';
 import { AuthService } from '../auth/auth.service';
 import { Prisma } from '@prisma/client';
+import { ExchangeRateResolver } from '../cash/exchange-rate.resolver';
 
 @Injectable()
 export class StockService {
@@ -42,6 +43,7 @@ export class StockService {
     private readonly auditService: AuditService,
     private readonly cumpService: CumpService,
     private readonly authService: AuthService,
+    private readonly exchangeRateResolver: ExchangeRateResolver,
   ) {}
 
   private async getExpiryThresholds(pharmacyId: string): Promise<{ d1: number; d2: number; d3: number }> {
@@ -49,10 +51,11 @@ export class StockService {
       where: { pharmacy_id_key: { pharmacy_id: pharmacyId, key: 'alert_thresholds' } },
     });
     const val = (rec?.value as any) || {};
+    const days = Array.isArray(val.expiryWarningDays) ? val.expiryWarningDays : [];
     return {
-      d1: Number(val.expiryWarningDaysLevel1) || 30,
-      d2: Number(val.expiryWarningDaysLevel2) || 60,
-      d3: Number(val.expiryWarningDaysLevel3) || 90,
+      d1: Number(days[0] ?? val.expiryWarningDaysLevel1) || 30,
+      d2: Number(days[1] ?? val.expiryWarningDaysLevel2) || 60,
+      d3: Number(days[2] ?? val.expiryWarningDaysLevel3) || 90,
     };
   }
 
@@ -147,6 +150,10 @@ export class StockService {
     if (isUuid) {
       const user = await this.prisma.users.findUnique({ where: { id: userId } });
       if (user) return user.id;
+    }
+    if (userId) {
+      const userByName = await this.prisma.users.findFirst({ where: { username: userId } });
+      if (userByName) return userByName.id;
     }
     throw new UnauthorizedException('Utilisateur authentifié valide requis pour une opération de stock.');
   }
@@ -379,7 +386,7 @@ export class StockService {
         createdLots.push(lot);
       }
 
-      this.auditService.logAction({
+      await this.auditService.logAction({
         userId: validUserId,
         userName: 'Magasinier',
         action: 'RECEPTION_MARCHANDISE',
@@ -619,7 +626,7 @@ export class StockService {
     return {
       totalStockUnits,
       totalValuationCdf: Math.round(totalValuationCdf * 100) / 100,
-      totalValuationUsd: Math.round((totalValuationCdf / 2850) * 100) / 100,
+      totalValuationUsd: Math.round((totalValuationCdf / Number((await this.exchangeRateResolver.getRateAt(pharmacyId)).rate)) * 100) / 100,
       productsCount: products.length,
       lotsCount: totalLotsCount,
       products: items.filter((p) => p.totalStock > 0),
@@ -770,7 +777,7 @@ export class StockService {
       { timeout: 15000 },
     );
 
-    this.auditService.logAction({
+    await this.auditService.logAction({
       userId: validUserId,
       userName: 'Pharmacien',
       action: `MOUVEMENT_STOCK_${dto.type}`,
@@ -888,7 +895,7 @@ export class StockService {
       },
     });
 
-    this.auditService.logAction({
+    await this.auditService.logAction({
       userId: validUserId,
       userName: 'Pharmacien',
       action: 'LOT_MIS_EN_QUARANTAINE',
@@ -923,7 +930,7 @@ export class StockService {
       },
     });
 
-    this.auditService.logAction({
+    await this.auditService.logAction({
       userId: validUserId,
       userName: 'Pharmacien',
       action: 'LOT_DEBLOQUE_QUARANTAINE',
@@ -939,20 +946,7 @@ export class StockService {
   // STK-05 & RG-11 : WORKFLOW D'AJUSTEMENT PERSISTANT
   // ==========================================
 
-  private async getStoredAdjustments(pharmacyId: string): Promise<PendingAdjustment[]> {
-    const setting = await this.prisma.settings.findUnique({
-      where: { pharmacy_id_key: { pharmacy_id: pharmacyId, key: 'stock_pending_adjustments' } },
-    });
-    return (setting?.value as any[]) || [];
-  }
 
-  private async saveStoredAdjustments(pharmacyId: string, adjustments: PendingAdjustment[]): Promise<void> {
-    await this.prisma.settings.upsert({
-      where: { pharmacy_id_key: { pharmacy_id: pharmacyId, key: 'stock_pending_adjustments' } },
-      update: { value: adjustments as any, updated_at: new Date() },
-      create: { pharmacy_id: pharmacyId, key: 'stock_pending_adjustments', value: adjustments as any },
-    });
-  }
 
   private mapAdjustment(row: any): PendingAdjustment {
     return {
@@ -1027,7 +1021,7 @@ export class StockService {
     const adjustment = this.mapAdjustment(row);
     const id = adjustment.id;
 
-    this.auditService.logAction({
+    await this.auditService.logAction({
       userId: validUserId,
       userName: adjustment.requestedByName || 'Gestionnaire de stock',
       action: 'DEMANDE_AJUSTEMENT_STOCK',
@@ -1101,7 +1095,7 @@ export class StockService {
         },
       });
 
-      this.auditService.logAction({
+      await this.auditService.logAction({
         userId: validPharmacienId,
         userName: adj.approvedByName,
         action: 'AJUSTEMENT_STOCK_REJETE',
@@ -1172,7 +1166,7 @@ export class StockService {
         },
       });
 
-      this.auditService.logAction({
+      await this.auditService.logAction({
         userId: validPharmacienId,
         userName: adj.approvedByName,
         action: 'AJUSTEMENT_STOCK_VALIDE',
@@ -1277,7 +1271,7 @@ export class StockService {
         });
       }
 
-      this.auditService.logAction({
+      await this.auditService.logAction({
         userId: validUserId,
         userName: 'Magasinier',
         action: 'INVENTAIRE_CREE',
@@ -1512,7 +1506,7 @@ export class StockService {
         });
       }
 
-      this.auditService.logAction({
+      await this.auditService.logAction({
         userId: validPharmacienId,
         userName: 'Pharmacien',
         action: 'INVENTAIRE_VALIDE',
@@ -1546,7 +1540,7 @@ export class StockService {
       },
     });
 
-    this.auditService.logAction({
+    await this.auditService.logAction({
       userId: validPharmacienId,
       userName: 'Pharmacien',
       action: 'INVENTAIRE_ANNULE',

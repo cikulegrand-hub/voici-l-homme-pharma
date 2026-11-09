@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { BaseApiClient } from '../generated/base-api-client';
-import { AuditLogEntry } from '@vhp/shared';
+import { AuditLogFilters, PaginatedAuditLogs } from '@vhp/shared';
 
 @Injectable({
   providedIn: 'root',
@@ -9,13 +9,20 @@ import { AuditLogEntry } from '@vhp/shared';
 export class AuditApiService {
   private readonly client = inject(BaseApiClient);
 
-  getAuditLogs(params?: { entityName?: string; action?: string; userId?: string; from?: string; to?: string; page?: number; limit?: number }): Observable<any> {
-    return this.client.get<any>('/audit/logs', { params });
+  getAuditLogs(params?: AuditLogFilters): Observable<PaginatedAuditLogs> {
+    return this.client.get<PaginatedAuditLogs>('/audit/logs', { params: this.cleanParams(params) });
   }
 
-  exportAuditLogs(params?: Record<string, string>): Observable<Blob> {
-    const query = params ? '?' + new URLSearchParams(params).toString() : '';
+  exportAuditLogs(params?: AuditLogFilters): Observable<Blob> {
+    const queryParams = Object.entries(this.cleanParams(params));
+    const query = queryParams.length ? '?' + new URLSearchParams(Object.fromEntries(queryParams) as Record<string, string>).toString() : '';
     return this.client.getBlob(`/audit/export${query}`);
+  }
+
+  private cleanParams(params?: AuditLogFilters): AuditLogFilters {
+    return Object.fromEntries(
+      Object.entries(params || {}).filter(([, value]) => value !== undefined && value !== null && value !== '' && value !== 'undefined'),
+    ) as AuditLogFilters;
   }
 }
 

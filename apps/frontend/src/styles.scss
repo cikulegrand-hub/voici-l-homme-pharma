@@ -106,9 +106,9 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-/* Règles responsive (ERG-02 : écran >= 1366x768 et tablette 10") */
+/* Règles responsive (ERG-02 : écran >= 1366x768, tablette 10" et mobile) */
 @media (max-width: 1024px) {
-  /* Tablette 10 pouces */
+  /* Tablette */
   body {
     font-size: 15px;
   }
@@ -117,4 +117,60 @@ h1, h2, h3, h4, h5, h6 {
     min-height: 44px; /* Touch target minimum */
   }
 }
+
+@media (max-width: 768px) {
+  /* Mobile & petites tablettes */
+  body {
+    font-size: 14px;
+  }
+
+  /* Boîtes de dialogue en plein écran ou presque sur petit écran */
+  .cdk-overlay-pane {
+    max-width: 96vw !important;
+  }
+
+  .mat-mdc-dialog-container .mdc-dialog__surface {
+    max-width: 96vw !important;
+    padding: 16px !important;
+  }
+
+  .mat-mdc-dialog-actions {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    justify-content: stretch !important;
+
+    button {
+      flex: 1 1 auto !important;
+    }
+  }
+
+  /* Grilles responsive automatiques */
+  .responsive-grid-2,
+  .responsive-grid-3,
+  .responsive-grid-4 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Tableaux scrollables */
+  .mat-mdc-table {
+    min-width: 600px;
+  }
+
+  .table-container,
+  .mat-mdc-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Utilitaires globaux de layout */
+.overflow-x-auto {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.w-full {
+  width: 100%;
+}
+
 

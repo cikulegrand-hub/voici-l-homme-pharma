@@ -41,7 +41,13 @@ import { ProductCategory } from '@vhp/shared';
           <mat-tab label="Catégories de produits">
             <div class="tab-body">
               <div class="add-section">
-                <h3>{{ editingCatId() ? 'Modifier la catégorie' : 'Nouvelle catégorie' }}</h3>
+                <h3>
+                  @if (editingCatId()) {
+                    Modifier la catégorie
+                  } @else {
+                    Nouvelle catégorie
+                  }
+                </h3>
                 <div class="form-row">
                   <mat-form-field appearance="outline" class="flex-1">
                     <mat-label>Nom de la catégorie *</mat-label>
@@ -222,9 +228,12 @@ import { ProductCategory } from '@vhp/shared';
         overflow: hidden;
         max-height: 280px;
         overflow-y: auto;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
       }
       .data-table {
         width: 100%;
+        min-width: 440px;
         border-collapse: collapse;
         text-align: left;
         font-size: 0.9rem;
@@ -276,6 +285,19 @@ import { ProductCategory } from '@vhp/shared';
         width: 18px;
         height: 18px;
         color: #0284c7;
+      }
+      @media (max-width: 600px) {
+        .form-row {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .actions-inline {
+          width: 100%;
+          margin-bottom: 8px;
+        }
+        .actions-inline button {
+          width: 100%;
+        }
       }
     `,
   ],

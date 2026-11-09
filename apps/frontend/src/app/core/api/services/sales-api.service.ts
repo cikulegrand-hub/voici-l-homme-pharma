@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { BaseApiClient } from '../generated/base-api-client';
 import { CreateSaleRequestDto, CancelSaleDto } from '../generated/models';
-import { Sale } from '@vhp/shared';
+import { Sale, ResolveConflictDto } from '@vhp/shared';
 
 @Injectable({
   providedIn: 'root',
@@ -18,8 +18,16 @@ export class SalesApiService {
     return this.client.post<any>('/sales/preview', dto);
   }
 
-  getSales(params?: { startDate?: string; endDate?: string }): Observable<Sale[]> {
-    return this.client.get<Sale[]>('/sales', { params });
+  getSales(params?: { query?: string; startDate?: string; endDate?: string; status?: string }): Observable<Sale[]> {
+    const cleanParams: Record<string, string> = {};
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          cleanParams[key] = String(value);
+        }
+      });
+    }
+    return this.client.get<Sale[]>('/sales', { params: Object.keys(cleanParams).length ? cleanParams : undefined });
   }
 
   getSaleById(id: string): Observable<Sale> {
@@ -39,12 +47,33 @@ export class SalesApiService {
     return this.client.getBlob(`/sales/invoice/${encodeURIComponent(invoiceNumber)}${suffix}`);
   }
 
+  getInvoiceHtml(invoiceNumber: string, ticket = false, duplicate = false): Observable<string> {
+    const suffix = duplicate ? '/duplicata/html' : ticket ? '/ticket-html' : '/html';
+    return this.client.getText(`/sales/invoice/${encodeURIComponent(invoiceNumber)}${suffix}`);
+  }
+
   requestCancellation(id: string, dto: any): Observable<any> {
     return this.client.post<any>(`/sales/${id}/request-cancellation`, dto);
   }
 
   listCancellationRequests(): Observable<any[]> {
     return this.client.get<any[]>('/sales/cancellation-requests');
+  }
+
+  approveCancellationRequest(requestId: string): Observable<Sale> {
+    return this.client.post<Sale>(`/sales/cancellation-requests/${requestId}/approve`, {});
+  }
+
+  rejectCancellationRequest(requestId: string, reason: string): Observable<any> {
+    return this.client.post<any>(`/sales/cancellation-requests/${requestId}/reject`, { reason });
+  }
+
+  listConflicts(): Observable<any[]> {
+    return this.client.get<any[]>('/sales/conflicts');
+  }
+
+  resolveConflict(id: string, dto: ResolveConflictDto): Observable<any> {
+    return this.client.post<any>(`/sales/${id}/resolve-conflict`, dto);
   }
 
   holdCart(dto: any): Observable<any> {

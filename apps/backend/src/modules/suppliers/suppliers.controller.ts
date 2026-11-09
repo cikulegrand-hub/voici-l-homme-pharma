@@ -60,10 +60,14 @@ export class SuppliersController {
 
   @Get()
   @RequirePermission('stock.consulter')
-  @ApiOperation({ summary: 'Lister les fournisseurs actifs' })
-  async listSuppliers(@Req() req: any): Promise<Supplier[]> {
+  @ApiOperation({ summary: 'Lister les fournisseurs' })
+  async listSuppliers(
+    @Query('includeInactive') includeInactive: string,
+    @Req() req: any,
+  ): Promise<Supplier[]> {
     const { pharmacyId, userId } = this.getAuthenticatedContext(req);
-    return this.suppliersService.listSuppliers(pharmacyId, userId);
+    const allowInactive = includeInactive !== 'false';
+    return this.suppliersService.listSuppliers(pharmacyId, userId, allowInactive);
   }
 
   // ==========================================

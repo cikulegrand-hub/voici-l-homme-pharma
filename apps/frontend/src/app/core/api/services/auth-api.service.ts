@@ -20,16 +20,6 @@ export interface PinAuthResult {
   supervisorName: string;
 }
 
-export interface LoginHistoryItem {
-  id: string;
-  username: string;
-  ipAddress: string;
-  userAgent?: string;
-  success: boolean;
-  failureReason?: string;
-  attemptedAt: string;
-}
-
 @Injectable({
   providedIn: 'root',
 })
@@ -82,10 +72,6 @@ export class AuthApiService {
 
   changeMyPin(dto: ChangeMyPinDto): Observable<{ success: boolean; message: string }> {
     return this.client.post<{ success: boolean; message: string }>('/auth/change-pin', dto);
-  }
-
-  getLoginHistory(): Observable<LoginHistoryItem[]> {
-    return this.client.get<LoginHistoryItem[]>('/auth/login-history');
   }
 
   verifyPin(dto: VerifyPinDto): Observable<PinAuthResult> {

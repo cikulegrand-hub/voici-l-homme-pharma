@@ -497,8 +497,9 @@ module.exports = async function runSalesTests(ctx) {
     const initialRate = initialSale.body?.appliedExchangeRate;
 
     // Simuler un nouveau taux de change
-    await request('POST', '/settings/exchange-rates', {
+    await request('POST', '/cash/exchange-rates', {
       rate: 3500.0,
+      effectiveDate: new Date().toISOString(),
       source: 'TEST_E2E_UPDATE',
     });
 

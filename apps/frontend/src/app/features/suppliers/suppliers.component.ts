@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -18,6 +19,7 @@ import { PermissionService } from '../../core/permissions/permission.service';
 import { HasPermissionDirective } from '../../core/permissions/has-permission.directive';
 import { SupplierDialogComponent } from './supplier-dialog.component';
 import { PurchaseOrderDialogComponent } from './purchase-order-dialog.component';
+import { PurchaseOrderDetailDialogComponent } from './purchase-order-detail-dialog.component';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
 import { Supplier, PurchaseOrder, PurchaseOrderStatus } from '@vhp/shared';
 
@@ -45,7 +47,7 @@ import { Supplier, PurchaseOrder, PurchaseOrderStatus } from '@vhp/shared';
       <!-- En-tête de la page -->
       <div class="page-header">
         <div class="header-titles">
-          <h1>Achats & Fournisseurs (Module ACH)</h1>
+          <h1>Achats & Fournisseurs</h1>
           <p class="subtitle">Gestion du fichier fournisseurs, bons de commande, délais et exportations PDF</p>
         </div>
         <div class="header-actions">
@@ -137,8 +139,18 @@ import { Supplier, PurchaseOrder, PurchaseOrderStatus } from '@vhp/shared';
                         <td>{{ s.contactName || '—' }}</td>
                         <td>
                           <div class="contact-details">
-                            @if (s.phone) { <span>{{ s.phone }}</span> }
-                            @if (s.email) { <span class="email-sub">{{ s.email }}</span> }
+                            @if (s.phone) {
+                              <a [href]="'tel:' + s.phone" class="contact-link" matTooltip="Appeler">
+                                <mat-icon class="contact-icon">phone</mat-icon>
+                                <span>{{ s.phone }}</span>
+                              </a>
+                            }
+                            @if (s.email) {
+                              <a [href]="'mailto:' + s.email" class="contact-link email-sub" matTooltip="Envoyer un email">
+                                <mat-icon class="contact-icon">email</mat-icon>
+                                <span>{{ s.email }}</span>
+                              </a>
+                            }
                             @if (!s.phone && !s.email) { <span>—</span> }
                           </div>
                         </td>
@@ -155,14 +167,48 @@ import { Supplier, PurchaseOrder, PurchaseOrderStatus } from '@vhp/shared';
                           </span>
                         </td>
                         <td class="actions-cell">
+                          <!-- Commander chez ce fournisseur -->
+                          <button
+                            mat-icon-button
+                            color="accent"
+                            matTooltip="Créer une commande pour ce fournisseur"
+                            *hasPermission="'stock.recevoir'"
+                            [disabled]="!s.isActive"
+                            (click)="orderFromSupplier(s)"
+                          >
+                            <mat-icon>post_add</mat-icon>
+                          </button>
+
+                          <!-- Voir les commandes de ce fournisseur -->
                           <button
                             mat-icon-button
                             color="primary"
-                            matTooltip="Modifier"
+                            matTooltip="Filtrer les commandes de ce fournisseur"
+                            (click)="filterOrdersBySupplier(s)"
+                          >
+                            <mat-icon>receipt_long</mat-icon>
+                          </button>
+
+                          <!-- Modifier la fiche -->
+                          <button
+                            mat-icon-button
+                            color="primary"
+                            matTooltip="Modifier la fiche"
                             *hasPermission="'stock.recevoir'"
                             (click)="editSupplier(s)"
                           >
                             <mat-icon>edit</mat-icon>
+                          </button>
+
+                          <!-- Activer / Désactiver -->
+                          <button
+                            mat-icon-button
+                            [color]="s.isActive ? 'warn' : 'accent'"
+                            [matTooltip]="s.isActive ? 'Désactiver le fournisseur' : 'Réactiver le fournisseur'"
+                            *hasPermission="'stock.recevoir'"
+                            (click)="toggleSupplierStatus(s)"
+                          >
+                            <mat-icon>{{ s.isActive ? 'block' : 'check_circle' }}</mat-icon>
                           </button>
                         </td>
                       </tr>
@@ -253,6 +299,16 @@ import { Supplier, PurchaseOrder, PurchaseOrderStatus } from '@vhp/shared';
                           </span>
                         </td>
                         <td class="actions-cell">
+                          <!-- Consulter le détail du bon -->
+                          <button
+                            mat-icon-button
+                            color="primary"
+                            matTooltip="Consulter le détail du bon"
+                            (click)="viewOrderDetail(o)"
+                          >
+                            <mat-icon>visibility</mat-icon>
+                          </button>
+
                           <!-- Télécharger PDF (ACH-02) -->
                           <button
                             mat-icon-button
@@ -262,6 +318,19 @@ import { Supplier, PurchaseOrder, PurchaseOrderStatus } from '@vhp/shared';
                           >
                             <mat-icon>picture_as_pdf</mat-icon>
                           </button>
+
+                          <!-- Réceptionner la livraison -->
+                          @if (o.status === 'ENVOYE' || o.status === 'PARTIELLEMENT_RECU') {
+                            <button
+                              mat-icon-button
+                              color="accent"
+                              matTooltip="Réceptionner la commande en stock"
+                              *hasPermission="'stock.recevoir'"
+                              (click)="receiveOrder(o)"
+                            >
+                              <mat-icon>inventory_2</mat-icon>
+                            </button>
+                          }
 
                           <!-- Actions de changement de statut -->
                           @if (o.status === 'BROUILLON') {
@@ -289,7 +358,7 @@ import { Supplier, PurchaseOrder, PurchaseOrderStatus } from '@vhp/shared';
                             <button
                               mat-icon-button
                               color="warn"
-                              matTooltip="Annuler le solde"
+                              matTooltip="Annuler / Clôturer le solde"
                               *hasPermission="'stock.recevoir'"
                               (click)="updateStatus(o, 'ANNULE')"
                             >
@@ -364,9 +433,12 @@ import { Supplier, PurchaseOrder, PurchaseOrderStatus } from '@vhp/shared';
       border-radius: 8px;
       border: 1px solid #e2e8f0;
       overflow: hidden;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
     }
     .data-table {
       width: 100%;
+      min-width: 650px;
       border-collapse: collapse;
       font-size: 0.9rem;
     }
@@ -401,6 +473,25 @@ import { Supplier, PurchaseOrder, PurchaseOrderStatus } from '@vhp/shared';
     .contact-details {
       display: flex;
       flex-direction: column;
+      gap: 2px;
+    }
+    .contact-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      color: #0284c7;
+      text-decoration: none;
+      font-size: 0.85rem;
+    }
+    .contact-link:hover {
+      text-decoration: underline;
+      color: #0369a1;
+    }
+    .contact-icon {
+      font-size: 14px;
+      width: 14px;
+      height: 14px;
+      color: #64748b;
     }
     .email-sub {
       font-size: 0.8rem;
@@ -502,12 +593,36 @@ import { Supplier, PurchaseOrder, PurchaseOrderStatus } from '@vhp/shared';
       margin-bottom: 8px;
       color: #94a3b8;
     }
+    @media (max-width: 768px) {
+      .page-container {
+        padding: 12px 6px;
+      }
+      .page-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+      }
+      .header-actions {
+        flex-direction: column;
+      }
+      .header-actions button {
+        width: 100%;
+      }
+      .toolbar-card {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .filter-select {
+        width: 100%;
+      }
+    }
   `],
 })
 export class SuppliersComponent implements OnInit {
   private readonly suppliersApi = inject(SuppliersApiService);
   private readonly alert = inject(AlertService);
   private readonly dialog = inject(MatDialog);
+  private readonly router = inject(Router);
   public readonly perm = inject(PermissionService);
 
   activeTab = 0;
@@ -604,6 +719,47 @@ export class SuppliersComponent implements OnInit {
     });
   }
 
+  orderFromSupplier(supplier: Supplier) {
+    const ref = this.dialog.open(PurchaseOrderDialogComponent, {
+      width: '850px',
+      data: { supplierId: supplier.id },
+    });
+    ref.afterClosed().subscribe((res) => {
+      if (res) {
+        this.loadOrders();
+        this.activeTab = 1;
+      }
+    });
+  }
+
+  filterOrdersBySupplier(supplier: Supplier) {
+    this.searchOrder = supplier.name;
+    this.activeTab = 1;
+  }
+
+  toggleSupplierStatus(supplier: Supplier) {
+    const action = supplier.isActive ? 'désactiver' : 'réactiver';
+    const confirmRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: `${supplier.isActive ? 'Désactiver' : 'Réactiver'} le fournisseur`,
+        message: `Voulez-vous vraiment ${action} le fournisseur "${supplier.name}" ? ${supplier.isActive ? 'Il ne pourra plus être sélectionné pour de nouvelles commandes.' : 'Il sera à nouveau disponible pour les commandes.'}`,
+        confirmColor: supplier.isActive ? 'warn' : 'primary',
+      },
+    });
+
+    confirmRef.afterClosed().subscribe((confirmed) => {
+      if (confirmed) {
+        this.suppliersApi.toggleSupplierActive(supplier.id, !supplier.isActive).subscribe({
+          next: () => {
+            this.alert.success(`Fournisseur "${supplier.name}" ${supplier.isActive ? 'désactivé' : 'réactivé'} avec succès.`);
+            this.loadSuppliers();
+          },
+          error: (err) => this.alert.error(err.error?.message || 'Erreur lors de la mise à jour du fournisseur.'),
+        });
+      }
+    });
+  }
+
   openNewOrderDialog() {
     const ref = this.dialog.open(PurchaseOrderDialogComponent, { width: '850px' });
     ref.afterClosed().subscribe((res) => {
@@ -614,11 +770,36 @@ export class SuppliersComponent implements OnInit {
     });
   }
 
+  viewOrderDetail(order: PurchaseOrder) {
+    const ref = this.dialog.open(PurchaseOrderDetailDialogComponent, {
+      width: '850px',
+      data: { order },
+    });
+
+    ref.afterClosed().subscribe((result) => {
+      if (!result) return;
+      if (result.action === 'DOWNLOAD_PDF') {
+        this.downloadPdf(result.order);
+      } else if (result.action === 'RECEIVE_ORDER') {
+        this.receiveOrder(result.order);
+      }
+    });
+  }
+
+  receiveOrder(order: PurchaseOrder) {
+    this.alert.info(`Ouverture de la réception pour le bon ${order.orderNumber}...`);
+    this.router.navigate(['/reception'], { queryParams: { orderId: order.id } });
+  }
+
   updateStatus(order: PurchaseOrder, status: PurchaseOrderStatus) {
+    const isCancelBalance = (order.status === 'ENVOYE' || order.status === 'PARTIELLEMENT_RECU') && status === 'ANNULE';
     const confirmRef = this.dialog.open(ConfirmDialogComponent, {
       data: {
-        title: 'Changer le statut du bon',
-        message: `Voulez-vous passer le bon ${order.orderNumber} au statut "${this.formatStatus(status)}" ?`,
+        title: isCancelBalance ? 'Clôturer et annuler le solde' : 'Changer le statut du bon',
+        message: isCancelBalance
+          ? `Voulez-vous clôturer la commande ${order.orderNumber} et annuler le solde des articles restants ?`
+          : `Voulez-vous passer le bon ${order.orderNumber} au statut "${this.formatStatus(status)}" ?`,
+        confirmColor: status === 'ANNULE' ? 'warn' : 'primary',
       },
     });
 

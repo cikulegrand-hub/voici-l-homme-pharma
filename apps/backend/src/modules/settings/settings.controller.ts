@@ -8,6 +8,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { SettingsService } from './settings.service';
@@ -18,21 +19,32 @@ import {
   UpdatePrintTemplatesDto,
   SimulateImportDto,
   ExecuteImportDto,
+  UploadLogoDto,
 } from './dto/settings.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { RequirePermission } from '../auth/decorators/auth.decorators';
 
 @ApiTags('Paramétrage & Administration (PAR)')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('settings')
 export class SettingsController {
   constructor(private readonly settingsService: SettingsService) {}
+
+  private getAuthorId(req: any): string {
+    const authorId = req?.user?.id;
+    if (!authorId) {
+      throw new UnauthorizedException('Utilisateur authentifié requis.');
+    }
+    return authorId;
+  }
 
   @Get()
   @ApiOperation({ summary: 'Consulter l’ensemble des paramètres de l’officine' })
   getAllSettings() {
     return {
-      pharmacy: this.settingsService.getPharmacyIdentity(),
+      identity: this.settingsService.getPharmacyIdentity(),
       financial: this.settingsService.getFinancialRules(),
       alerts: this.settingsService.getAlertThresholds(),
       printTemplates: this.settingsService.getPrintTemplates(),
@@ -48,24 +60,18 @@ export class SettingsController {
   }
 
   @Patch(['identity', 'pharmacy'])
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @RequirePermission('parametres.modifier')
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Mettre à jour l’identité officielle de l’officine (PAR-01)' })
   updatePharmacyIdentity(@Body() dto: UpdatePharmacyIdentityDto, @Req() req: any) {
-    const authorId = req.user?.id || 'admin-user-id';
-    return this.settingsService.updatePharmacyIdentity(dto, authorId);
+    return this.settingsService.updatePharmacyIdentity(dto, this.getAuthorId(req));
   }
 
   @Post('logo')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @RequirePermission('parametres.modifier')
   @HttpCode(HttpStatus.OK)
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Téléverser le logo de l’officine (PAR-01)' })
-  uploadLogo(@Body('logoUrl') logoUrl: string, @Req() req: any) {
-    const authorId = req.user?.id || 'admin-user-id';
-    return this.settingsService.updateLogo(logoUrl, authorId);
+  uploadLogo(@Body() dto: UploadLogoDto, @Req() req: any) {
+    return this.settingsService.updateLogo(dto.logoUrl, this.getAuthorId(req));
   }
 
   // ---------- 2. RÈGLES FINANCIÈRES & TAXES (PAR-02, PAR-03, RG-07, RG-08) ----------
@@ -77,13 +83,10 @@ export class SettingsController {
   }
 
   @Patch('financial')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @RequirePermission('parametres.modifier')
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Mettre à jour les règles financières et taxes (PAR-02, PAR-03)' })
   updateFinancialRules(@Body() dto: UpdateFinancialRulesDto, @Req() req: any) {
-    const authorId = req.user?.id || 'admin-user-id';
-    return this.settingsService.updateFinancialRules(dto, authorId);
+    return this.settingsService.updateFinancialRules(dto, this.getAuthorId(req));
   }
 
   // ---------- 3. SEUILS D'ALERTE & SÉCURITÉ (PAR-04, AUT-03, STK-09) ----------
@@ -95,13 +98,10 @@ export class SettingsController {
   }
 
   @Patch('alerts')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @RequirePermission('parametres.modifier')
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Mettre à jour les seuils d’alerte et timeout de session (PAR-04, AUT-03)' })
   updateAlertThresholds(@Body() dto: UpdateAlertThresholdsDto, @Req() req: any) {
-    const authorId = req.user?.id || 'admin-user-id';
-    return this.settingsService.updateAlertThresholds(dto, authorId);
+    return this.settingsService.updateAlertThresholds(dto, this.getAuthorId(req));
   }
 
   // ---------- 4. MODÈLES D'IMPRESSION (PAR-05, PAR-06) ----------
@@ -113,58 +113,27 @@ export class SettingsController {
   }
 
   @Patch('print-templates')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @RequirePermission('parametres.modifier')
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Mettre à jour les modèles de ticket et facture (PAR-05, PAR-06)' })
   updatePrintTemplates(@Body() dto: UpdatePrintTemplatesDto, @Req() req: any) {
-    const authorId = req.user?.id || 'admin-user-id';
-    return this.settingsService.updatePrintTemplates(dto, authorId);
+    return this.settingsService.updatePrintTemplates(dto, this.getAuthorId(req));
   }
 
   // ---------- 5. ASSISTANT D'IMPORT INITIAL (PAR-07) ----------
 
   @Post('import/simulate')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @RequirePermission('parametres.modifier')
   @HttpCode(HttpStatus.OK)
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Simuler l’importation de données sans aucune écriture en base (PAR-07)' })
   simulateImport(@Body() dto: SimulateImportDto) {
     return this.settingsService.simulateImport(dto);
   }
 
   @Post('import/execute')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @RequirePermission('parametres.modifier')
   @HttpCode(HttpStatus.OK)
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Valider définitivement et exécuter l’importation transactionnelle (PAR-07)' })
   executeImport(@Body() dto: ExecuteImportDto, @Req() req: any) {
-    const authorId = req.user?.id || 'admin-user-id';
-    return this.settingsService.executeImport(dto, authorId);
-  }
-
-  // ---------- 6. SAUVEGARDES & RESTAURATION (PAR-08) ----------
-
-  @Post('backups')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequirePermission('parametres.modifier')
-  @HttpCode(HttpStatus.CREATED)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Déclencher une sauvegarde manuelle des données de l’officine (PAR-08)' })
-  createBackup(@Req() req: any) {
-    const authorId = req.user?.id || 'admin-user-id';
-    const authorName = req.user?.fullName || 'Administrateur';
-    return this.settingsService.createBackup(authorId, authorName);
-  }
-
-  @Get('backups')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequirePermission('parametres.modifier')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Consulter l’historique des sauvegardes avec statut (PAR-08)' })
-  getBackupHistory() {
-    return this.settingsService.getBackupHistory();
+    return this.settingsService.executeImport(dto, this.getAuthorId(req));
   }
 }

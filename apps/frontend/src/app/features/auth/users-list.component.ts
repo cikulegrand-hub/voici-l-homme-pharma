@@ -69,12 +69,12 @@ import { UserProfile, RoleName } from '@vhp/shared';
           <mat-form-field appearance="outline" class="filter-field search-field">
             <mat-label>{{ i18n.actions.search }}</mat-label>
             <mat-icon matPrefix>search</mat-icon>
-            <input matInput [(ngModel)]="searchTerm" (input)="applyFilters()" placeholder="Rechercher par nom ou identifiant..." />
+            <input matInput [ngModel]="searchTerm()" (ngModelChange)="searchTerm.set($event)" placeholder="Rechercher par nom ou identifiant..." />
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="filter-field">
             <mat-label>{{ i18n.users.role }}</mat-label>
-            <mat-select [(ngModel)]="roleFilter" (selectionChange)="applyFilters()">
+            <mat-select [ngModel]="roleFilter()" (ngModelChange)="roleFilter.set($event)">
               <mat-option value="">{{ i18n.users.allRoles }}</mat-option>
               @for (role of availableRoles; track role) {
                 <mat-option [value]="role">{{ getRoleName(role) }}</mat-option>
@@ -84,7 +84,7 @@ import { UserProfile, RoleName } from '@vhp/shared';
 
           <mat-form-field appearance="outline" class="filter-field">
             <mat-label>{{ i18n.users.status }}</mat-label>
-            <mat-select [(ngModel)]="statusFilter" (selectionChange)="applyFilters()">
+            <mat-select [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)">
               <mat-option value="">{{ i18n.users.allStatuses }}</mat-option>
               <mat-option value="active">{{ i18n.users.active }}</mat-option>
               <mat-option value="inactive">{{ i18n.users.inactive }}</mat-option>
@@ -192,8 +192,14 @@ import { UserProfile, RoleName } from '@vhp/shared';
     .filters-row { display: flex; gap: 16px; flex-wrap: wrap; }
     .filter-field { flex: 0 0 auto; }
     .search-field { flex: 1 1 250px; min-width: 200px; }
-    .table-card { overflow: hidden; }
-    .users-table { width: 100%; }
+    .table-card {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .users-table {
+      width: 100%;
+      min-width: 600px;
+    }
     .username-cell { font-family: monospace; font-weight: 600; color: #1e3a2f; }
     .role-badge {
       display: inline-block; padding: 4px 10px; border-radius: 12px;
@@ -221,6 +227,12 @@ import { UserProfile, RoleName } from '@vhp/shared';
       .filters-row { flex-direction: column; }
       .filter-field { flex: 1 1 100%; }
     }
+
+    @media (max-width: 600px) {
+      .users-page { padding: 8px 4px; }
+      .page-header { flex-direction: column; align-items: stretch; }
+      .page-header button { width: 100%; }
+    }
   `],
 })
 export class UsersListComponent implements OnInit {
@@ -235,24 +247,26 @@ export class UsersListComponent implements OnInit {
   readonly displayedColumns = ['username', 'fullName', 'email', 'role', 'status', 'actions'];
   readonly availableRoles: RoleName[] = ['ADMIN', 'PHARMACIEN', 'CAISSIER', 'STOCK', 'COMPTABLE'];
 
-  searchTerm = '';
-  roleFilter = '';
-  statusFilter = '';
+  readonly searchTerm = signal('');
+  readonly roleFilter = signal('');
+  readonly statusFilter = signal('');
 
   readonly filteredUsers = computed(() => {
     let result = this.allUsers();
-    const term = this.searchTerm.toLowerCase().trim();
+    const term = this.searchTerm().toLowerCase().trim();
     if (term) {
       result = result.filter(
         (u) => u.username.toLowerCase().includes(term) || u.fullName.toLowerCase().includes(term),
       );
     }
-    if (this.roleFilter) {
-      result = result.filter((u) => u.role === this.roleFilter);
+    const role = this.roleFilter();
+    if (role) {
+      result = result.filter((u) => u.role === role);
     }
-    if (this.statusFilter === 'active') {
+    const status = this.statusFilter();
+    if (status === 'active') {
       result = result.filter((u) => u.isActive);
-    } else if (this.statusFilter === 'inactive') {
+    } else if (status === 'inactive') {
       result = result.filter((u) => !u.isActive);
     }
     return result;
@@ -277,8 +291,7 @@ export class UsersListComponent implements OnInit {
   }
 
   applyFilters(): void {
-    // Les filtres sont réactifs via computed(), on force juste la réévaluation
-    this.allUsers.update((u) => [...u]);
+    // Les filtres sont automatiquement réactifs via les signaux
   }
 
   getRoleName(role: string): string {

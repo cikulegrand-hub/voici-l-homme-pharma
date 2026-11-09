@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { DashboardChartPoint, DashboardMetric, ReportFilters, ReportLink, ReportResult, ReportKey } from '@vhp/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { CashService } from '../cash/cash.service';
+import { ExchangeRateResolver } from '../cash/exchange-rate.resolver';
 import { ReportFilterDto } from './dto/reports.dto';
 import { getReportDefinition } from './reports.registry';
 import { calculateGrossMargin, sumNetRevenue } from './reports-calculations';
@@ -22,7 +23,7 @@ export interface DashboardSnapshot {
 
 @Injectable()
 export class ReportsQueryService {
-  constructor(private readonly prisma: PrismaService, private readonly cashService: CashService) {}
+  constructor(private readonly prisma: PrismaService, private readonly cashService: CashService, private readonly exchangeRateResolver: ExchangeRateResolver) {}
 
   normalizeFilters(dto: ReportFilterDto = {}, pharmacyId = DEFAULT_PHARMACY_ID): ReportFilters & { pharmacyId: string } {
     const now = new Date();
@@ -31,7 +32,7 @@ export class ReportsQueryService {
     const from = dto.from ? new Date(dto.from) : this.startOfPeriod(to, period);
 
     if (from > to) {
-      throw new Error('La date de début doit être antérieure ou égale à la date de fin.');
+      throw new BadRequestException('La date de début doit être antérieure ou égale à la date de fin.');
     }
 
     if (dto.siteId && dto.siteId !== pharmacyId) {
@@ -302,18 +303,24 @@ export class ReportsQueryService {
 
   private async treasury(filters: ReportFilters & { pharmacyId: string }): Promise<ReportResult> {
     const dateWhere = { gte: new Date(filters.from), lte: new Date(filters.to) };
-    const [payments, receivablePayments, expenses] = await Promise.all([
+    const [payments, receivablePayments, expenses, movements] = await Promise.all([
       this.prisma.sale_payments.findMany({ where: { sales: this.saleWhere(filters) }, select: { currency: true, amount_paid: true, payment_method: true } }),
       this.prisma.customer_payments.findMany({ where: { pharmacy_id: filters.pharmacyId, created_at: dateWhere }, select: { currency: true, amount_paid: true, amount_paid_cdf: true, payment_method: true } }),
       this.prisma.expenses.findMany({ where: { pharmacy_id: filters.pharmacyId, created_at: dateWhere }, select: { amount_cdf: true, amount_usd: true } }),
+      this.prisma.cash_movements.findMany({ where: { pharmacy_id: filters.pharmacyId, created_at: dateWhere }, select: { type: true, amount_cdf: true, amount_usd: true } }),
     ]);
     const byCurrency: Record<string, { receipts: number; expenses: number; balance: number }> = { CDF: { receipts: 0, expenses: 0, balance: 0 }, USD: { receipts: 0, expenses: 0, balance: 0 } };
     for (const payment of payments) byCurrency[payment.currency] ??= { receipts: 0, expenses: 0, balance: 0 }, byCurrency[payment.currency].receipts += this.decimal(payment.amount_paid);
     for (const payment of receivablePayments) { const currency = payment.currency || 'CDF'; byCurrency[currency] ??= { receipts: 0, expenses: 0, balance: 0 }; byCurrency[currency].receipts += this.decimal(payment.amount_paid ?? payment.amount_paid_cdf); }
     byCurrency.CDF.expenses = expenses.reduce((sum, row) => sum + this.decimal(row.amount_cdf), 0);
     byCurrency.USD.expenses = expenses.reduce((sum, row) => sum + this.decimal(row.amount_usd), 0);
+    for (const movement of movements) {
+      const sign = movement.type === 'APPORT' ? 1 : -1;
+      byCurrency.CDF.receipts += sign * this.decimal(movement.amount_cdf);
+      byCurrency.USD.receipts += sign * this.decimal(movement.amount_usd);
+    }
     for (const currency of Object.keys(byCurrency)) byCurrency[currency].balance = byCurrency[currency].receipts - byCurrency[currency].expenses;
-    const data = Object.entries(byCurrency).map(([currency, values]) => ({ currency, ...values }));
+    const data = Object.entries(byCurrency).map(([currency, values]) => ({ currency, ...values, debit: values.expenses, credit: values.receipts }));
     return { reportKey: 'treasury', filters: this.stripInternalFilter(filters), data, totals: { rowCount: data.length, isEmpty: data.length === 0, byCurrency: { CDF: byCurrency.CDF, USD: byCurrency.USD } } };
   }
 
@@ -449,12 +456,8 @@ export class ReportsQueryService {
   }
 
   private async currentRate(filters: ReportFilters & { pharmacyId: string }): Promise<number> {
-    const rate = await this.prisma.exchange_rates.findFirst({
-      where: { pharmacy_id: filters.pharmacyId, effective_date: { lte: new Date(filters.to) } },
-      orderBy: { effective_date: 'desc' },
-      select: { rate: true },
-    });
-    return rate && Number(rate.rate) > 0 ? Number(rate.rate) : 1;
+    const rate = await this.exchangeRateResolver.getRateAt(filters.pharmacyId, new Date(filters.to));
+    return Number(rate.rate);
   }
 
   private variation(value: number, previous: number): number | null {

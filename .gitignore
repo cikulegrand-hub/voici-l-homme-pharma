@@ -13,6 +13,11 @@ dist
 dist-ssr
 *.local
 
+.data
+**/.data/
+.data/*
+**/.data/*
+
 .vscode/*
 !.vscode/extensions.json
 .idea

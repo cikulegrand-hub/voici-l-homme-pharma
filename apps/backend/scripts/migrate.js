@@ -65,6 +65,13 @@ async function runMigrations() {
       ['20261101211000_fin_accountant_readonly', path.join(prismaMigrationsDir, '20261101211000_fin_accountant_readonly', 'migration.sql')],
       ['20261101212000_fin_payment_currency_amount', path.join(prismaMigrationsDir, '20261101212000_fin_payment_currency_amount', 'migration.sql')],
       ['20261102200000_notifications_and_audit_hardening', path.join(prismaMigrationsDir, '20261102200000_notifications_and_audit_hardening', 'migration.sql')],
+      ['20261103200000_v2_sales_offline_and_held_carts', path.join(prismaMigrationsDir, '20261103200000_v2_sales_offline_and_held_carts', 'migration.sql')],
+      ['20261104230000_exchange_rate_audit_reference', path.join(prismaMigrationsDir, '20261104230000_exchange_rate_audit_reference', 'migration.sql')],
+      ['20261105090000_exchange_rate_trace_financial_entries', path.join(prismaMigrationsDir, '20261105090000_exchange_rate_trace_financial_entries', 'migration.sql')],
+      ['20261105100000_module_f_cli_customer_profile', path.join(prismaMigrationsDir, '20261105100000_module_f_cli_customer_profile', 'migration.sql')],
+      ['20261105110000_customer_profile_photo', path.join(prismaMigrationsDir, '20261105110000_customer_profile_photo', 'migration.sql')],
+      ['20261106120000_cash_movements', path.join(prismaMigrationsDir, '20261106120000_cash_movements', 'migration.sql')],
+      ['20261107100000_persist_sale_cancellation_requests', path.join(prismaMigrationsDir, '20261107100000_persist_sale_cancellation_requests', 'migration.sql')],
     ];
 
     await client.query(`

@@ -4,6 +4,7 @@ import {
   NotFoundException,
   BadRequestException,
   Logger,
+  UnauthorizedException,
 } from '@nestjs/common';
 import {
   Supplier,
@@ -21,6 +22,7 @@ import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CumpService } from '../stock/cump.service';
 import { Prisma } from '@prisma/client';
+import { ExchangeRateResolver } from '../cash/exchange-rate.resolver';
 
 @Injectable()
 export class SuppliersService implements OnModuleInit {
@@ -30,6 +32,7 @@ export class SuppliersService implements OnModuleInit {
     private readonly prisma: PrismaService,
     private readonly cumpService: CumpService,
     private readonly auditService: AuditService,
+    private readonly exchangeRateResolver: ExchangeRateResolver,
   ) {}
 
   async onModuleInit() {
@@ -42,25 +45,15 @@ export class SuppliersService implements OnModuleInit {
       const user = await this.prisma.users.findUnique({ where: { id: userId } });
       if (user) return user.id;
     }
-    const admin = await this.prisma.users.findFirst({ where: { username: 'admin' } });
-    return admin?.id || '22222222-2222-2222-2222-222222222221';
+    if (userId) {
+      const userByName = await this.prisma.users.findFirst({ where: { username: userId } });
+      if (userByName) return userByName.id;
+    }
+    throw new UnauthorizedException('Utilisateur non authentifié ou session invalide.');
   }
 
   private async getCurrentExchangeRate(pharmacyId: string): Promise<number> {
-    const rate = await this.prisma.exchange_rates.findFirst({
-      where: {
-        pharmacy_id: pharmacyId,
-        base_currency: 'USD',
-        target_currency: 'CDF',
-        effective_date: { lte: new Date() },
-      },
-      orderBy: { effective_date: 'desc' },
-    });
-    if (!rate || Number(rate.rate) <= 0) {
-      throw new BadRequestException(
-        'Aucun taux de change USD/CDF en vigueur n’est configuré pour cette officine.',
-      );
-    }
+    const rate = await this.exchangeRateResolver.getRateAt(pharmacyId);
     return Number(rate.rate);
   }
 
@@ -133,7 +126,7 @@ export class SuppliersService implements OnModuleInit {
       },
     });
 
-    this.auditService.logAction({
+    await this.auditService.logAction({
       userId: authorId || 'system',
       userName: 'Gestionnaire Stock',
       action: 'FOURNISSEUR_CREE',
@@ -145,25 +138,44 @@ export class SuppliersService implements OnModuleInit {
     return this.mapToSupplier(created);
   }
 
-  async listSuppliers(pharmacyId = '11111111-1111-1111-1111-111111111111', _userId?: string): Promise<Supplier[]> {
+  async listSuppliers(
+    pharmacyId = '11111111-1111-1111-1111-111111111111',
+    _userId?: string,
+    includeInactive = true,
+  ): Promise<Supplier[]> {
+    const where: any = { pharmacy_id: pharmacyId };
+    if (!includeInactive) {
+      where.is_active = true;
+    }
+
     const list = await this.prisma.suppliers.findMany({
-      where: { pharmacy_id: pharmacyId, is_active: true },
+      where,
       orderBy: { name: 'asc' },
     });
 
     return list.map((s) => this.mapToSupplier(s));
   }
 
-  async getSupplierById(id: string, pharmacyId = '11111111-1111-1111-1111-111111111111', _userId?: string): Promise<Supplier> {
+  async getSupplierById(
+    id: string,
+    pharmacyId = '11111111-1111-1111-1111-111111111111',
+    _userId?: string,
+    allowInactive = true,
+  ): Promise<Supplier> {
     const s = await this.prisma.suppliers.findUnique({ where: { id } });
-    if (!s || s.pharmacy_id !== pharmacyId || !s.is_active) {
+    if (!s || s.pharmacy_id !== pharmacyId || (!allowInactive && !s.is_active)) {
       throw new NotFoundException('Fournisseur introuvable.');
     }
     return this.mapToSupplier(s);
   }
 
-  async updateSupplier(id: string, dto: UpdateSupplierDto, pharmacyId = '11111111-1111-1111-1111-111111111111', authorId?: string): Promise<Supplier> {
-    await this.getSupplierById(id, pharmacyId);
+  async updateSupplier(
+    id: string,
+    dto: UpdateSupplierDto,
+    pharmacyId = '11111111-1111-1111-1111-111111111111',
+    authorId?: string,
+  ): Promise<Supplier> {
+    await this.getSupplierById(id, pharmacyId, authorId, true);
 
     const updated = await this.prisma.suppliers.update({
       where: { id },
@@ -175,17 +187,18 @@ export class SuppliersService implements OnModuleInit {
         address: dto.address !== undefined ? dto.address.trim() : undefined,
         payment_terms: dto.paymentTerms !== undefined ? dto.paymentTerms.trim() : undefined,
         lead_time_days: dto.leadTimeDays !== undefined ? dto.leadTimeDays : undefined,
+        is_active: dto.isActive !== undefined ? dto.isActive : undefined,
         updated_at: new Date(),
       },
     });
 
-    this.auditService.logAction({
+    await this.auditService.logAction({
       userId: authorId || 'system',
       userName: 'Gestionnaire Stock',
-      action: 'FOURNISSEUR_MODIFIE',
+      action: dto.isActive === false ? 'FOURNISSEUR_DESACTIVE' : dto.isActive === true ? 'FOURNISSEUR_ACTIVE' : 'FOURNISSEUR_MODIFIE',
       entityName: 'SUPPLIER',
       entityId: updated.id,
-      newValues: { name: updated.name },
+      newValues: { name: updated.name, isActive: updated.is_active },
     });
 
     return this.mapToSupplier(updated);
@@ -200,7 +213,10 @@ export class SuppliersService implements OnModuleInit {
     userId: string,
     pharmacyId = '11111111-1111-1111-1111-111111111111',
   ): Promise<PurchaseOrder> {
-    await this.getSupplierById(dto.supplierId, pharmacyId);
+    const supplier = await this.getSupplierById(dto.supplierId, pharmacyId, userId, true);
+    if (!supplier.isActive) {
+      throw new BadRequestException('Impossible de passer commande auprès d’un fournisseur inactif.');
+    }
     const validUserId = await this.resolveValidUserId(userId);
     const year = new Date().getFullYear();
     const exchangeRate = await this.getCurrentExchangeRate(pharmacyId);
@@ -223,6 +239,8 @@ export class SuppliersService implements OnModuleInit {
           total_amount_usd: totalAmountUsd,
           created_by: validUserId,
           notes: dto.notes?.trim() || undefined,
+          exchange_rate_id: (await this.exchangeRateResolver.getRateAt(pharmacyId)).id,
+          exchange_rate_applied: exchangeRate,
           expected_delivery_date: dto.expectedDeliveryDate ? new Date(dto.expectedDeliveryDate) : undefined,
           purchase_order_items: {
             create: dto.items.map((it) => ({
@@ -241,7 +259,7 @@ export class SuppliersService implements OnModuleInit {
       });
     });
 
-    this.auditService.logAction({
+    await this.auditService.logAction({
       userId: validUserId,
       userName: 'Gestionnaire Stock',
       action: 'BON_DE_COMMANDE_CREE',
@@ -315,7 +333,7 @@ export class SuppliersService implements OnModuleInit {
       },
     });
 
-    this.auditService.logAction({
+    await this.auditService.logAction({
       userId: authorId || 'system',
       userName: 'Gestionnaire Stock',
       action: 'STATUT_COMMANDE_MODIFIE',
@@ -430,6 +448,8 @@ export class SuppliersService implements OnModuleInit {
           received_by: validUserId,
           idempotency_key: dto.idempotencyKey || undefined,
           supplier_invoice_number: dto.supplierInvoiceNumber || undefined,
+          exchange_rate_id: (await this.exchangeRateResolver.getRateAt(pharmacyId)).id,
+          exchange_rate_applied: exchangeRate,
           notes: dto.notes || `Réception sur bon de commande ${order.order_number}`,
         },
       });
@@ -555,7 +575,7 @@ export class SuppliersService implements OnModuleInit {
       throw error;
     }
 
-    this.auditService.logAction({
+    await this.auditService.logAction({
       userId: validUserId,
       userName: 'Magasinier',
       action: 'RECEPTION_COMMANDE_FOURNISSEUR',
@@ -592,69 +612,100 @@ export class SuppliersService implements OnModuleInit {
     return this.generatePurchaseOrderPdfBuffer(order, pharmacy);
   }
 
+  private pdfEscape(str: string): string {
+    return (str || '')
+      .replace(/\\/g, '\\\\')
+      .replace(/\(/g, '\\(')
+      .replace(/\)/g, '\\)')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
+
   private generatePurchaseOrderPdfBuffer(order: PurchaseOrder, pharmacy: any): Buffer {
-    const lines = [
-      '%PDF-1.4',
-      '1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj',
-      '2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj',
-      '3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >> endobj',
-      '4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> endobj',
-    ];
+    const objects: string[] = [];
+    const font1Obj = 3;
+    const font2Obj = 4;
+    const pageObjNum = 5;
+    const contentObjNum = 6;
 
-    const pharmacyName = pharmacy?.name || "VOICI L'HOMME PHARMA";
-    const pharmacyCity = pharmacy?.city || 'Kinshasa, RDC';
-    const supplierName = order.supplierName || 'Fournisseur';
+    // 1. Catalog
+    objects.push('<< /Type /Catalog /Pages 2 0 R >>');
+    // 2. Pages
+    objects.push(`<< /Type /Pages /Kids [${pageObjNum} 0 R] /Count 1 >>`);
+    // 3. Font regular
+    objects.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+    // 4. Font bold
+    objects.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>');
+    // 5. Page
+    objects.push(
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 ${font1Obj} 0 R /F2 ${font2Obj} 0 R >> >> /Contents ${contentObjNum} 0 R >>`,
+    );
 
-    // Construction du flux de texte PDF
-    let contentStream = 'BT /F1 16 Tf 50 780 Td (' + pharmacyName + ') Tj ET\n';
-    contentStream += 'BT /F1 10 Tf 50 765 Td (' + pharmacyCity + ' - Officine Pharmaceutique Agréée) Tj ET\n';
-    contentStream += 'BT /F1 14 Tf 50 725 Td (BON DE COMMANDE FOURNISSEUR N° ' + order.orderNumber + ') Tj ET\n';
-    contentStream += 'BT /F1 10 Tf 50 705 Td (Date: ' + order.orderDate.slice(0, 10) + ' | Statut: ' + order.status + ') Tj ET\n';
-    contentStream += 'BT /F1 10 Tf 50 680 Td (Fournisseur : ' + supplierName + ') Tj ET\n';
-    contentStream += 'BT /F1 10 Tf 50 650 Td (------------------------------------------------------------------------------------------------------) Tj ET\n';
-    contentStream += 'BT /F1 9 Tf 50 635 Td (Article / Produit                  | DCI                  | Qte Cdee | Prix Unit. CDF | Total CDF) Tj ET\n';
-    contentStream += 'BT /F1 10 Tf 50 625 Td (------------------------------------------------------------------------------------------------------) Tj ET\n';
+    const pharmacyName = this.pdfEscape(pharmacy?.name || "VOICI L'HOMME PHARMA");
+    const pharmacyCity = this.pdfEscape(pharmacy?.city || 'Kinshasa, RDC');
+    const supplierName = this.pdfEscape(order.supplierName || 'Fournisseur');
+    const orderNumber = this.pdfEscape(order.orderNumber);
+    const orderDate = order.orderDate ? order.orderDate.slice(0, 10) : '';
 
-    let y = 605;
-    for (const item of order.items) {
-      const pName = (item.productName || 'Produit').slice(0, 28).padEnd(30, ' ');
-      const pDci = (item.dci || '').slice(0, 18).padEnd(20, ' ');
-      const qty = String(item.orderedQuantity).padStart(6, ' ');
-      const price = String(item.unitPriceCdf).padStart(12, ' ');
-      const total = String(item.orderedQuantity * item.unitPriceCdf).padStart(12, ' ');
-
-      contentStream += `BT /F1 9 Tf 50 ${y} Td (${pName} | ${pDci} | ${qty} | ${price} | ${total}) Tj ET\n`;
-      y -= 20;
+    const cmds: string[] = [];
+    cmds.push(`BT /F2 16 Tf 50 780 Td (${pharmacyName}) Tj ET`);
+    cmds.push(`BT /F1 10 Tf 50 765 Td (${pharmacyCity} - Officine Pharmaceutique Agreee) Tj ET`);
+    cmds.push(`BT /F2 13 Tf 50 725 Td (BON DE COMMANDE FOURNISSEUR N* ${orderNumber}) Tj ET`);
+    cmds.push(`BT /F1 9 Tf 50 705 Td (Date: ${orderDate} | Statut: ${order.status}) Tj ET`);
+    cmds.push(`BT /F2 10 Tf 50 680 Td (Fournisseur : ${supplierName}) Tj ET`);
+    if (order.notes) {
+      cmds.push(`BT /F1 8 Tf 50 665 Td (Notes: ${this.pdfEscape(order.notes.slice(0, 80))}) Tj ET`);
     }
 
-    contentStream += `BT /F1 10 Tf 50 ${y} Td (------------------------------------------------------------------------------------------------------) Tj ET\n`;
-    y -= 25;
-    contentStream += `BT /F1 12 Tf 50 ${y} Td (TOTAL COMMANDE : ${order.totalAmountCdf.toLocaleString()} CDF  /  ${order.totalAmountUsd.toLocaleString()} USD) Tj ET\n`;
-    y -= 50;
-    contentStream += `BT /F1 10 Tf 50 ${y} Td (Visa et Cachet du Pharmacien Titulaire Responsable :) Tj ET\n`;
+    cmds.push('50 650 m 545 650 l S');
+    cmds.push('BT /F2 8 Tf 50 638 Td (Article / Produit) Tj ET');
+    cmds.push('BT /F2 8 Tf 220 638 Td (DCI) Tj ET');
+    cmds.push('BT /F2 8 Tf 330 638 Td (Qte) Tj ET');
+    cmds.push('BT /F2 8 Tf 390 638 Td (P.U. CDF) Tj ET');
+    cmds.push('BT /F2 8 Tf 470 638 Td (Total CDF) Tj ET');
+    cmds.push('50 630 m 545 630 l S');
 
-    const streamLength = Buffer.byteLength(contentStream);
-    lines.push(`5 0 obj << /Length ${streamLength} >> stream\n${contentStream}\nendstream\nendobj`);
+    let y = 615;
+    for (const item of order.items.slice(0, 24)) {
+      const pName = this.pdfEscape((item.productName || 'Produit').slice(0, 28));
+      const pDci = this.pdfEscape((item.dci || '').slice(0, 18));
+      const qty = String(item.orderedQuantity);
+      const price = Number(item.unitPriceCdf || 0).toLocaleString('fr-FR');
+      const total = (Number(item.orderedQuantity || 0) * Number(item.unitPriceCdf || 0)).toLocaleString('fr-FR');
 
-    // Table de références croisées (XREF)
-    const pdfBody = lines.join('\n') + '\n';
-    const xrefOffset = Buffer.byteLength(pdfBody);
-    const xref = [
-      'xref',
-      '0 6',
-      '0000000000 65535 f ',
-      '0000000009 00000 n ',
-      '0000000058 00000 n ',
-      '0000000115 00000 n ',
-      '0000000244 00000 n ',
-      '0000000325 00000 n ',
-      'trailer << /Size 6 /Root 1 0 R >>',
-      'startxref',
-      String(xrefOffset),
-      '%%EOF',
-    ].join('\n');
+      cmds.push(`BT /F1 8 Tf 50 ${y} Td (${pName}) Tj ET`);
+      cmds.push(`BT /F1 8 Tf 220 ${y} Td (${pDci}) Tj ET`);
+      cmds.push(`BT /F1 8 Tf 330 ${y} Td (${qty}) Tj ET`);
+      cmds.push(`BT /F1 8 Tf 390 ${y} Td (${price}) Tj ET`);
+      cmds.push(`BT /F2 8 Tf 470 ${y} Td (${total}) Tj ET`);
+      y -= 18;
+    }
 
-    return Buffer.from(pdfBody + xref);
+    cmds.push(`50 ${y + 5} m 545 ${y + 5} l S`);
+    y -= 15;
+    cmds.push(`BT /F2 11 Tf 50 ${y} Td (TOTAL COMMANDE : ${Number(order.totalAmountCdf || 0).toLocaleString('fr-FR')} CDF  /  ~ ${Number(order.totalAmountUsd || 0).toLocaleString('fr-FR')} USD) Tj ET`);
+    y -= 35;
+    cmds.push(`BT /F1 9 Tf 50 ${y} Td (Visa et Cachet du Pharmacien Titulaire Responsable :) Tj ET`);
+    cmds.push('50 40 m 545 40 l S');
+    cmds.push('BT /F1 7 Tf 50 28 Td (Document edite automatiquement - Logiciel Voici l\'Homme Pharma) Tj ET');
+
+    const streamContent = cmds.join('\n');
+    objects.push(`<< /Length ${Buffer.byteLength(streamContent, 'latin1')} >>\nstream\n${streamContent}\nendstream`);
+
+    let output = '%PDF-1.4\n';
+    const offsets = [0];
+    for (let i = 0; i < objects.length; i++) {
+      offsets.push(Buffer.byteLength(output, 'latin1'));
+      output += `${i + 1} 0 obj\n${objects[i]}\nendobj\n`;
+    }
+
+    const xrefOffset = Buffer.byteLength(output, 'latin1');
+    output += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets
+      .slice(1)
+      .map((offset) => `${String(offset).padStart(10, '0')} 00000 n `)
+      .join('\n')}\ntrailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+
+    return Buffer.from(output, 'latin1');
   }
 
   // ==========================================

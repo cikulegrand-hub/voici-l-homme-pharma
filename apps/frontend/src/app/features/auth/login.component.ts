@@ -269,6 +269,18 @@ import { I18N_FR } from '../../core/i18n/translations.fr';
       font-size: 12px;
       line-height: 1.6;
     }
+
+    @media (max-width: 480px) {
+      .login-wrapper {
+        padding: 12px;
+      }
+      .brand-title {
+        font-size: 20px;
+      }
+      .login-card {
+        padding: 0;
+      }
+    }
   `],
 })
 export class LoginComponent implements OnInit {

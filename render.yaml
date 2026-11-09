@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: voici-l-homme-pharma-backend
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm install && npm run prisma:generate && npm run build --workspace=@vhp/backend
+    startCommand: npm run start:prod --workspace=@vhp/backend
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: KEEP_ALIVE_URL
+        sync: false

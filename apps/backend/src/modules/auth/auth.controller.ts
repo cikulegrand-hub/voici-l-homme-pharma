@@ -10,6 +10,7 @@ import {
   Param,
   UseGuards,
   ParseUUIDPipe,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
@@ -98,7 +99,8 @@ async getUserById(@Param('id', ParseUUIDPipe) id: string) {
   @ApiOperation({ summary: 'Créer un utilisateur avec rôle prédéfini (AUT-04, AUT-05)' })
   @ApiResponse({ status: 201, description: 'Utilisateur créé avec succès' })
   async createUser(@Body() dto: CreateUserDto, @Req() req: any) {
-    const pharmacyId = req.user?.pharmacyId || '11111111-1111-1111-1111-111111111111';
+    const pharmacyId = req.user?.pharmacyId;
+    if (!pharmacyId) throw new UnauthorizedException('Contexte pharmacie requis.');
     const authorId = req.user?.id;
     return this.authService.createUser(dto, pharmacyId, authorId);
   }
@@ -137,8 +139,9 @@ async updateUser(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateUser
   @RequirePermission('admin.utilisateurs')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Réinitialisation du mot de passe par un administrateur (AUT-06)' })
-async resetPassword(@Param('id', ParseUUIDPipe) userId: string, @Body() dto: ResetPasswordDto, @Req() req: any) {
-    const adminId = req.user?.id || 'admin-user-id';
+  async resetPassword(@Param('id', ParseUUIDPipe) userId: string, @Body() dto: ResetPasswordDto, @Req() req: any) {
+    const adminId = req.user?.id;
+    if (!adminId) throw new UnauthorizedException('Administrateur authentifié requis.');
     await this.authService.resetPasswordByAdmin(userId, dto.newPassword, adminId);
     return { success: true, message: 'Mot de passe réinitialisé avec succès.' };
   }
@@ -161,15 +164,6 @@ async resetPassword(@Param('id', ParseUUIDPipe) userId: string, @Body() dto: Res
   async changePin(@Body() dto: ChangeMyPinDto, @Req() req: any) {
     await this.authService.changeMyPin(req.user.id, dto);
     return { success: true, message: 'Code PIN modifié avec succès.' };
-  }
-
-  @Get('login-history')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @RequirePermission('admin.audit')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Consulter l’historique des connexions (date, utilisateur, IP, résultat) (AUT-07)' })
-  async getLoginHistory() {
-    return this.authService.getLoginHistory();
   }
 
   @Post('verify-pin')

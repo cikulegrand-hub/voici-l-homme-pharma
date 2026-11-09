@@ -4,6 +4,7 @@ import { ReportsService } from './reports.service';
 import { ReportFilterDto } from './dto/reports.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { RequirePermission } from '../auth/decorators/auth.decorators';
 
 @ApiTags('Tableau de bord & Rapports (RPT)')
 @Controller('reports')
@@ -12,6 +13,7 @@ export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
   @Get('dashboard')
+  @RequirePermission('rapports.dashboard')
   @ApiOperation({ summary: 'Indicateurs consolidés du tableau de bord RPT-01 à RPT-06' })
   async getDashboardMetrics(@Query() query: ReportFilterDto, @Req() req: any) {
     this.reportsService.assertAccess(req.user.role, 'dashboard');
@@ -33,6 +35,7 @@ export class ReportsController {
   }
 
   @Get(':reportKey/export')
+  @RequirePermission('rapports.exporter')
   @ApiOperation({ summary: 'Exporter un rapport RPT-09 en CSV, Excel ou PDF' })
   async exportReport(@Param('reportKey') reportKey: string, @Query() query: ReportFilterDto, @Req() req: any, @Res() response: any) {
     this.reportsService.assertAccess(req.user.role, reportKey, true);

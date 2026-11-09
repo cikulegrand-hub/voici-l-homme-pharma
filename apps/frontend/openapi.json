@@ -50,6 +50,21 @@
         ]
       }
     },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logout",
+        "summary": "Déconnexion utilisateur et traçabilité d’audit (AUD-01)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Déconnexion enregistrée"
+          }
+        },
+        "tags": [
+          "Authentification & Utilisateurs (AUT)"
+        ]
+      }
+    },
     "/api/v1/auth/me": {
       "get": {
         "operationId": "AuthController_getMe",
@@ -344,26 +359,6 @@
         ]
       }
     },
-    "/api/v1/auth/login-history": {
-      "get": {
-        "operationId": "AuthController_getLoginHistory",
-        "summary": "Consulter l’historique des connexions (date, utilisateur, IP, résultat) (AUT-07)",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Authentification & Utilisateurs (AUT)"
-        ],
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
     "/api/v1/auth/verify-pin": {
       "post": {
         "operationId": "AuthController_verifyPin",
@@ -397,7 +392,7 @@
     "/api/v1/audit/logs": {
       "get": {
         "operationId": "AuditController_getLogs",
-        "summary": "Consulter et rechercher dans le journal d’audit inaltérable (AUD-01 à AUD-04)",
+        "summary": "Consulter et rechercher dans le journal d’audit inaltérable avec pagination (AUD-01 à AUD-04)",
         "parameters": [
           {
             "name": "action",
@@ -422,22 +417,141 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "Liste paginée des entrées du journal d’audit"
+          },
+          "403": {
+            "description": "Accès interdit aux rôles non autorisés (Caissier, Gestionnaire stock)"
+          }
+        },
+        "tags": [
+          "Audit & Traçabilité inaltérable (AUD)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/audit/export": {
+      "get": {
+        "operationId": "AuditController_exportLogs",
+        "summary": "Exporter le journal d’audit au format CSV/Excel pour inspection (AUD-05)",
+        "parameters": [
+          {
+            "name": "action",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "entityName",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Fichier CSV téléchargeable"
+          }
+        },
+        "tags": [
+          "Audit & Traçabilité inaltérable (AUD)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/catalog/categories": {
+      "get": {
+        "operationId": "CatalogController_listCategories",
+        "summary": "Lister les catégories de produits (CAT-04)",
+        "parameters": [],
         "responses": {
           "200": {
             "description": ""
           }
         },
         "tags": [
-          "Audit & Traçabilité inaltérable (AUD)"
+          "Catalogue produits (CAT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
         ]
-      }
-    },
-    "/api/v1/catalog/categories": {
+      },
       "post": {
         "operationId": "CatalogController_createCategory",
-        "summary": "Créer une catégorie ou forme galénique (CAT-04)",
+        "summary": "Créer une nouvelle catégorie (CAT-04)",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -456,11 +570,84 @@
         },
         "tags": [
           "Catalogue produits (CAT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/catalog/categories/{id}": {
+      "patch": {
+        "operationId": "CatalogController_updateCategory",
+        "summary": "Modifier une catégorie existante (CAT-04)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCategoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalogue produits (CAT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
         ]
       },
+      "delete": {
+        "operationId": "CatalogController_deleteCategory",
+        "summary": "Supprimer une catégorie sans produits associés (CAT-04)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalogue produits (CAT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/catalog/galenic-forms": {
       "get": {
-        "operationId": "CatalogController_listCategories",
-        "summary": "Lister les catégories administrables (CAT-04)",
+        "operationId": "CatalogController_listGalenicForms",
+        "summary": "Lister les formes galéniques administrables (CAT-04)",
         "parameters": [],
         "responses": {
           "200": {
@@ -469,13 +656,189 @@
         },
         "tags": [
           "Catalogue produits (CAT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "operationId": "CatalogController_createGalenicForm",
+        "summary": "Ajouter une nouvelle forme galénique (CAT-04)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGalenicFormDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalogue produits (CAT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/catalog/autocomplete": {
+      "get": {
+        "operationId": "CatalogController_autocomplete",
+        "summary": "Autocomplétion ultra-légère pour la caisse (CAT-05, PERF-01)",
+        "parameters": [
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "description": "Terme de recherche (nom, DCI, code-barres)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalogue produits (CAT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
         ]
       }
     },
     "/api/v1/catalog/products": {
+      "get": {
+        "operationId": "CatalogController_searchProducts",
+        "summary": "Recherche instantanée avec tolérance aux fautes et pagination (CAT-05, PERF-01)",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Recherche textuelle (Nom, DCI, Code-barres)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "categoryId",
+            "required": false,
+            "in": "query",
+            "description": "Filtre par catégorie",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "requiresPrescription",
+            "required": false,
+            "in": "query",
+            "description": "Filtre ordonnance requise",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "isControlled",
+            "required": false,
+            "in": "query",
+            "description": "Filtre produit contrôlé",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "isColdChain",
+            "required": false,
+            "in": "query",
+            "description": "Filtre chaîne du froid",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "isActive",
+            "required": false,
+            "in": "query",
+            "description": "Filtre produit actif (défaut true)",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Numéro de page (défaut 1)",
+            "schema": {
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Taille de page (défaut 20)",
+            "schema": {
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "description": "Champ de tri",
+            "schema": {
+              "default": "name",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "description": "Sens du tri (asc ou desc)",
+            "schema": {
+              "default": "asc",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalogue produits (CAT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
       "post": {
         "operationId": "CatalogController_createProduct",
-        "summary": "Créer une fiche produit complète avec unité de vente (CAT-01, CAT-02, CAT-03)",
+        "summary": "Créer une fiche produit complète (CAT-01, CAT-02, CAT-03)",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -494,18 +857,33 @@
         },
         "tags": [
           "Catalogue produits (CAT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
         ]
-      },
+      }
+    },
+    "/api/v1/catalog/products/{id}": {
       "get": {
-        "operationId": "CatalogController_searchProducts",
-        "summary": "Recherche instantanée par nom, DCI ou code-barres (CAT-05)",
+        "operationId": "CatalogController_getProduct",
+        "summary": "Consulter la fiche détaillée d’un produit (CAT-01)",
         "parameters": [
           {
-            "name": "q",
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeInactive",
             "required": false,
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "boolean"
             }
           }
         ],
@@ -516,13 +894,16 @@
         },
         "tags": [
           "Catalogue produits (CAT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
         ]
-      }
-    },
-    "/api/v1/catalog/products/{id}": {
-      "get": {
-        "operationId": "CatalogController_getProduct",
-        "summary": "Consulter la fiche d’un produit",
+      },
+      "patch": {
+        "operationId": "CatalogController_updateProduct",
+        "summary": "Mettre à jour une fiche produit (CAT-01, CAT-02)",
         "parameters": [
           {
             "name": "id",
@@ -533,6 +914,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -540,13 +931,18 @@
         },
         "tags": [
           "Catalogue produits (CAT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
         ]
       }
     },
     "/api/v1/catalog/products/{id}/price": {
       "patch": {
         "operationId": "CatalogController_updatePrice",
-        "summary": "Modifier le prix avec historique (CAT-06)",
+        "summary": "Modifier le prix avec motif et historique obligatoire (CAT-06)",
         "parameters": [
           {
             "name": "id",
@@ -574,13 +970,18 @@
         },
         "tags": [
           "Catalogue produits (CAT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
         ]
       }
     },
     "/api/v1/catalog/products/{id}/price-history": {
       "get": {
         "operationId": "CatalogController_getPriceHistory",
-        "summary": "Historique des modifications de prix (CAT-06)",
+        "summary": "Historique audité des modifications de prix (CAT-06)",
         "parameters": [
           {
             "name": "id",
@@ -598,13 +999,94 @@
         },
         "tags": [
           "Catalogue produits (CAT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/catalog/products/{id}/barcodes": {
+      "post": {
+        "operationId": "CatalogController_addBarcode",
+        "summary": "Associer un code-barres supplémentaire (CAT-03)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddBarcodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalogue produits (CAT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/catalog/products/{id}/barcodes/{barcodeId}": {
+      "delete": {
+        "operationId": "CatalogController_removeBarcode",
+        "summary": "Supprimer un code-barres d’un produit (CAT-03)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "barcodeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalogue produits (CAT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
         ]
       }
     },
     "/api/v1/catalog/products/{id}/deactivate": {
       "patch": {
         "operationId": "CatalogController_deactivateProduct",
-        "summary": "Désactiver un produit sans perdre l’historique (CAT-08, RG-06)",
+        "summary": "Désactiver un produit sans perte d’historique (CAT-08, RG-06)",
         "parameters": [
           {
             "name": "id",
@@ -616,12 +1098,46 @@
           }
         ],
         "responses": {
-          "204": {
+          "200": {
             "description": ""
           }
         },
         "tags": [
           "Catalogue produits (CAT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/catalog/products/{id}/activate": {
+      "patch": {
+        "operationId": "CatalogController_activateProduct",
+        "summary": "Réactiver un produit désactivé (CAT-08)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Catalogue produits (CAT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
         ]
       }
     },
@@ -637,13 +1153,18 @@
         },
         "tags": [
           "Catalogue produits (CAT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
         ]
       }
     },
-    "/api/v1/catalog/import-csv": {
+    "/api/v1/catalog/import/simulate": {
       "post": {
-        "operationId": "CatalogController_importCsv",
-        "summary": "Importer des produits via CSV avec rapport d’erreurs (CAT-07)",
+        "operationId": "CatalogController_simulateImport",
+        "summary": "Simuler l’importation d’un catalogue avec rapport d’erreurs (CAT-07)",
         "parameters": [],
         "responses": {
           "201": {
@@ -652,755 +1173,31 @@
         },
         "tags": [
           "Catalogue produits (CAT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
         ]
       }
     },
-    "/api/v1/stock/lots": {
+    "/api/v1/catalog/import/execute": {
       "post": {
-        "operationId": "StockController_createLot",
-        "summary": "Réceptionner un lot avec date de péremption (STK-01, STK-02)",
+        "operationId": "CatalogController_executeImport",
+        "summary": "Exécuter l’importation définitive du catalogue (CAT-07)",
         "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateLotDto"
-              }
-            }
-          }
-        },
         "responses": {
           "201": {
             "description": ""
           }
         },
         "tags": [
-          "Gestion du stock & Traçabilité (STK)"
-        ]
-      }
-    },
-    "/api/v1/stock/products/{productId}": {
-      "get": {
-        "operationId": "StockController_getStockByProduct",
-        "summary": "Consulter les lots et le stock disponible par produit (STK-07)",
-        "parameters": [
-          {
-            "name": "productId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
+          "Catalogue produits (CAT)"
         ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Gestion du stock & Traçabilité (STK)"
-        ]
-      }
-    },
-    "/api/v1/stock/alerts": {
-      "get": {
-        "operationId": "StockController_getAlerts",
-        "summary": "Alertes stock bas et péremptions à 30, 60, 90 jours (STK-08, STK-09)",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Gestion du stock & Traçabilité (STK)"
-        ]
-      }
-    },
-    "/api/v1/stock/cump-valuation": {
-      "get": {
-        "operationId": "StockController_getCumpValuation",
-        "summary": "Valorisation intégrale du stock au Coût Unitaire Moyen Pondéré (STK-12, RG-14)",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Gestion du stock & Traçabilité (STK)"
-        ]
-      }
-    },
-    "/api/v1/stock/controlled-substances-register": {
-      "get": {
-        "operationId": "StockController_getControlledSubstancesRegister",
-        "summary": "Registre officiel des stupéfiants et substances contrôlées (STK-14)",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Gestion du stock & Traçabilité (STK)"
-        ]
-      }
-    },
-    "/api/v1/stock/adjustments/request": {
-      "post": {
-        "operationId": "StockController_requestAdjustment",
-        "summary": "Demander un ajustement de stock (Gestionnaire de stock) (STK-05)",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RequestAdjustmentDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Gestion du stock & Traçabilité (STK)"
-        ]
-      }
-    },
-    "/api/v1/stock/adjustments/pending": {
-      "get": {
-        "operationId": "StockController_listPendingAdjustments",
-        "summary": "Lister les ajustements en attente de validation pharmacien (STK-05)",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Gestion du stock & Traçabilité (STK)"
-        ]
-      }
-    },
-    "/api/v1/stock/adjustments/{id}/approve": {
-      "patch": {
-        "operationId": "StockController_approveAdjustment",
-        "summary": "Valider ou rejeter un ajustement (Pharmacien uniquement) (STK-05, RG-11)",
-        "parameters": [
+        "security": [
           {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
+            "bearer": []
           }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Gestion du stock & Traçabilité (STK)"
-        ]
-      }
-    },
-    "/api/v1/stock/movements": {
-      "post": {
-        "operationId": "StockController_createMovement",
-        "summary": "Enregistrer un mouvement de stock avec motif obligatoire (STK-04, RG-11)",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateMovementDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Gestion du stock & Traçabilité (STK)"
-        ]
-      },
-      "get": {
-        "operationId": "StockController_getMovements",
-        "summary": "Consulter le journal inaltérable des mouvements de stock (STK-06)",
-        "parameters": [
-          {
-            "name": "lotId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "type",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Gestion du stock & Traçabilité (STK)"
-        ]
-      }
-    },
-    "/api/v1/stock/lots/{id}/quarantine": {
-      "post": {
-        "operationId": "StockController_quarantineLot",
-        "summary": "Mettre un lot en quarantaine / blocage sanitaire (STK-10, RG-03)",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/QuarantineLotDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Gestion du stock & Traçabilité (STK)"
-        ]
-      }
-    },
-    "/api/v1/stock/inventories": {
-      "post": {
-        "operationId": "StockController_createInventory",
-        "summary": "Créer une session d’inventaire physique avec comptage (STK-11)",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateInventoryDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Gestion du stock & Traçabilité (STK)"
-        ]
-      }
-    },
-    "/api/v1/stock/inventories/{id}/validate": {
-      "post": {
-        "operationId": "StockController_validateInventory",
-        "summary": "Validation officielle de l’inventaire par le Pharmacien (STK-11)",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ValidateInventoryDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Gestion du stock & Traçabilité (STK)"
-        ]
-      }
-    },
-    "/api/v1/sales": {
-      "post": {
-        "operationId": "SalesController_createSale",
-        "summary": "Enregistrer une vente rapide au comptoir (VTE-01 à VTE-08)",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateSaleRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Vente validée, numérotation séquentielle et déstockage FEFO effectués"
-          }
-        },
-        "tags": [
-          "Ventes, Facturation & Caisse Comptoir (VTE)"
-        ]
-      },
-      "get": {
-        "operationId": "SalesController_listSales",
-        "summary": "Historique des ventes de l’officine",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Ventes, Facturation & Caisse Comptoir (VTE)"
-        ]
-      }
-    },
-    "/api/v1/sales/{id}": {
-      "get": {
-        "operationId": "SalesController_getSale",
-        "summary": "Consulter le détail d’une facture par ID",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Ventes, Facturation & Caisse Comptoir (VTE)"
-        ]
-      }
-    },
-    "/api/v1/sales/invoice/{invoiceNumber}/duplicata": {
-      "get": {
-        "operationId": "SalesController_getDuplicata",
-        "summary": "Réimpression d’une facture marquée DUPLICATA (VTE-16)",
-        "parameters": [
-          {
-            "name": "invoiceNumber",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Ventes, Facturation & Caisse Comptoir (VTE)"
-        ]
-      }
-    },
-    "/api/v1/sales/{id}/cancel": {
-      "patch": {
-        "operationId": "SalesController_cancelSale",
-        "summary": "Annuler une vente avec motif et émission d’avoir (VTE-13, RG-04)",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CancelSaleDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Ventes, Facturation & Caisse Comptoir (VTE)"
-        ]
-      }
-    },
-    "/api/v1/sales/hold-cart": {
-      "post": {
-        "operationId": "SalesController_holdCart",
-        "summary": "Mettre en attente un panier (VTE-11)",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/HoldCartDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Ventes, Facturation & Caisse Comptoir (VTE)"
-        ]
-      }
-    },
-    "/api/v1/sales/held-carts/list": {
-      "get": {
-        "operationId": "SalesController_listHeldCarts",
-        "summary": "Lister les paniers en attente de reprise",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Ventes, Facturation & Caisse Comptoir (VTE)"
-        ]
-      }
-    },
-    "/api/v1/sales/held-carts/{id}/resume": {
-      "post": {
-        "operationId": "SalesController_resumeHeldCart",
-        "summary": "Reprendre un panier mis en attente",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Ventes, Facturation & Caisse Comptoir (VTE)"
-        ]
-      }
-    },
-    "/api/v1/customers": {
-      "post": {
-        "operationId": "CustomersController_createCustomer",
-        "summary": "Créer un client (Particulier / Entreprise / Assurance) (CLI-01)",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateCustomerDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Fichier Clients & Ordonnances (CLI)"
-        ]
-      },
-      "get": {
-        "operationId": "CustomersController_listCustomers",
-        "summary": "Lister les clients enregistrés",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Fichier Clients & Ordonnances (CLI)"
-        ]
-      }
-    },
-    "/api/v1/customers/{id}": {
-      "get": {
-        "operationId": "CustomersController_getCustomer",
-        "summary": "Consulter la fiche client et solde créance (CLI-01, CLI-03)",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Fichier Clients & Ordonnances (CLI)"
-        ]
-      }
-    },
-    "/api/v1/customers/{id}/statement": {
-      "get": {
-        "operationId": "CustomersController_getStatement",
-        "summary": "Relevé de compte client, créances et plafond (CLI-03)",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Fichier Clients & Ordonnances (CLI)"
-        ]
-      }
-    },
-    "/api/v1/customers/{id}/settle-debt": {
-      "patch": {
-        "operationId": "CustomersController_settleDebt",
-        "summary": "Encaisser un règlement de créance client (CLI-04)",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SettleDebtDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Fichier Clients & Ordonnances (CLI)"
-        ]
-      }
-    },
-    "/api/v1/customers/prescriptions": {
-      "post": {
-        "operationId": "CustomersController_createPrescription",
-        "summary": "Enregistrer une ordonnance avec lien signé temporaire (CLI-05, CLI-06)",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreatePrescriptionDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Fichier Clients & Ordonnances (CLI)"
-        ]
-      }
-    },
-    "/api/v1/customers/{id}/prescriptions": {
-      "get": {
-        "operationId": "CustomersController_getCustomerPrescriptions",
-        "summary": "Consulter les ordonnances archivées d’un patient (accès journalisé CLI-06)",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Fichier Clients & Ordonnances (CLI)"
-        ]
-      }
-    },
-    "/api/v1/settings": {
-      "get": {
-        "operationId": "SettingsController_getSettings",
-        "summary": "Consulter l’ensemble des paramètres de l’officine (PAR-01 à PAR-04)",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Paramétrage & Administration (PAR)"
-        ]
-      }
-    },
-    "/api/v1/settings/pharmacy": {
-      "patch": {
-        "operationId": "SettingsController_updatePharmacy",
-        "summary": "Mettre à jour l’identité et les coordonnées de l’officine (PAR-01)",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdatePharmacySettingsDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Paramétrage & Administration (PAR)"
-        ]
-      }
-    },
-    "/api/v1/settings/financial": {
-      "patch": {
-        "operationId": "SettingsController_updateFinancial",
-        "summary": "Mettre à jour les devises, taxes et plafonds de remises par rôle (PAR-02, PAR-03, PAR-04)",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateFinancialSettingsDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Paramétrage & Administration (PAR)"
-        ]
-      }
-    },
-    "/api/v1/settings/alerts": {
-      "patch": {
-        "operationId": "SettingsController_updateAlerts",
-        "summary": "Mettre à jour les seuils de péremption et timeout d’inactivité (PAR-04, AUT-03, STK-09)",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateAlertSettingsDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Paramétrage & Administration (PAR)"
         ]
       }
     },
@@ -1434,6 +1231,75 @@
         "operationId": "CashController_getCurrentSession",
         "summary": "Consulter la session de caisse en cours de l’utilisateur",
         "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Caisse & Gestion Financière (FIN)"
+        ]
+      }
+    },
+    "/api/v1/cash/sessions/active": {
+      "get": {
+        "operationId": "CashController_getActiveSession",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Caisse & Gestion Financière (FIN)"
+        ]
+      }
+    },
+    "/api/v1/cash/sessions/{id}/movements": {
+      "post": {
+        "operationId": "CashController_createMovement",
+        "summary": "Enregistrer un apport ou un retrait physique de caisse (FIN-05)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCashMovementDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Caisse & Gestion Financière (FIN)"
+        ]
+      },
+      "get": {
+        "operationId": "CashController_listMovements",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": ""
@@ -1482,7 +1348,17 @@
       "get": {
         "operationId": "CashController_getActiveRate",
         "summary": "Consulter le taux de change officiel actif (FIN-04, RG-08)",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "at",
+            "required": false,
+            "in": "query",
+            "description": "Date ISO pour consulter le taux en vigueur à cet instant",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": ""
@@ -1560,7 +1436,221 @@
       "get": {
         "operationId": "CashController_listExpenses",
         "summary": "Lister les dépenses de l’officine",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Caisse & Gestion Financière (FIN)"
+        ]
+      }
+    },
+    "/api/v1/cash/expenses/{id}/reverse": {
+      "post": {
+        "operationId": "CashController_reverseExpense",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReverseExpenseDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Caisse & Gestion Financière (FIN)"
+        ]
+      }
+    },
+    "/api/v1/cash/expenses/{id}/receipt": {
+      "post": {
+        "operationId": "CashController_uploadReceipt",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Caisse & Gestion Financière (FIN)"
+        ]
+      },
+      "get": {
+        "operationId": "CashController_downloadReceipt",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Caisse & Gestion Financière (FIN)"
+        ]
+      }
+    },
+    "/api/v1/cash/expense-categories": {
+      "get": {
+        "operationId": "CashController_listExpenseCategories",
         "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Caisse & Gestion Financière (FIN)"
+        ]
+      },
+      "post": {
+        "operationId": "CashController_createExpenseCategory",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateExpenseCategoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Caisse & Gestion Financière (FIN)"
+        ]
+      }
+    },
+    "/api/v1/cash/payment-summary": {
+      "get": {
+        "operationId": "CashController_paymentSummary",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Caisse & Gestion Financière (FIN)"
+        ]
+      }
+    },
+    "/api/v1/cash/alerts/variances": {
+      "get": {
+        "operationId": "CashController_varianceAlerts",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Caisse & Gestion Financière (FIN)"
+        ]
+      }
+    },
+    "/api/v1/cash/profitability": {
+      "get": {
+        "operationId": "CashController_profitability",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": ""
@@ -1575,7 +1665,16 @@
       "get": {
         "operationId": "CashController_getAgingBalance",
         "summary": "Balance âgée des créances clients 0-30, 31-60, >60 jours (FIN-06)",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "asOf",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": ""
@@ -1583,6 +1682,2284 @@
         },
         "tags": [
           "Caisse & Gestion Financière (FIN)"
+        ]
+      }
+    },
+    "/api/v1/stock/lots": {
+      "post": {
+        "operationId": "StockController_createLot",
+        "summary": "Réceptionner un lot avec date de péremption (STK-01, STK-02)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLotDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "StockController_listLots",
+        "summary": "Lister les lots (STK-07)",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/stock/reception/direct": {
+      "post": {
+        "operationId": "StockController_directReception",
+        "summary": "Réception directe multi-produits avec clé d’idempotence et CUMP (STK-01, RG-14)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DirectReceptionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/stock/products/{productId}": {
+      "get": {
+        "operationId": "StockController_getStockByProduct",
+        "summary": "Consulter les lots et le stock disponible par produit (STK-07)",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/stock/fefo/simulate": {
+      "post": {
+        "operationId": "StockController_simulateFefoAllocation",
+        "summary": "Simuler l’allocation FEFO pour consultation ou délivrance (RG-01)",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/stock/alerts": {
+      "get": {
+        "operationId": "StockController_getAlerts",
+        "summary": "Alertes stock bas, ruptures et péremptions à 30, 60, 90 jours (STK-08, STK-09)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/stock/cump-valuation": {
+      "get": {
+        "operationId": "StockController_getCumpValuation",
+        "summary": "Valorisation intégrale du stock au CUMP (STK-12, RG-14)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/stock/valuation/cump": {
+      "get": {
+        "operationId": "StockController_getCumpValuationAlias",
+        "summary": "Valorisation au CUMP (alias frontend)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/stock/controlled-substances-register": {
+      "get": {
+        "operationId": "StockController_getControlledSubstancesRegister",
+        "summary": "Registre officiel des stupéfiants et substances contrôlées (STK-14)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/stock/controlled-register": {
+      "get": {
+        "operationId": "StockController_getControlledRegisterCompat",
+        "summary": "Registre officiel des stupéfiants et substances contrôlées (compatibilité)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/stock/adjustments/request": {
+      "post": {
+        "operationId": "StockController_requestAdjustment",
+        "summary": "Demander un ajustement de stock (Gestionnaire) (STK-05)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestAdjustmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/stock/adjustments/pending": {
+      "get": {
+        "operationId": "StockController_listPendingAdjustments",
+        "summary": "Lister les ajustements en attente de validation pharmacien (STK-05)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/stock/adjustments/{id}/approve": {
+      "post": {
+        "operationId": "StockController_approveAdjustmentPost",
+        "summary": "Valider ou rejeter un ajustement (Pharmacien uniquement) (STK-05, RG-11)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveAdjustmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "patch": {
+        "operationId": "StockController_approveAdjustment",
+        "summary": "Valider ou rejeter un ajustement (Pharmacien uniquement) (STK-05, RG-11)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveAdjustmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/stock/movements": {
+      "post": {
+        "operationId": "StockController_createMovement",
+        "summary": "Enregistrer un mouvement de stock avec motif obligatoire (STK-04, RG-11)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMovementDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "StockController_getMovements",
+        "summary": "Consulter le journal inaltérable des mouvements de stock (STK-06)",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lotId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "startDate",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endDate",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/stock/lots/{id}/quarantine": {
+      "post": {
+        "operationId": "StockController_quarantineLot",
+        "summary": "Mettre un lot en quarantaine sanitaire (STK-10, RG-03)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuarantineLotDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "patch": {
+        "operationId": "StockController_patchQuarantineLot",
+        "summary": "Bloquer ou débloquer un lot (compatibilité Angular)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuarantineLotDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/stock/lots/{id}/unquarantine": {
+      "post": {
+        "operationId": "StockController_unquarantineLot",
+        "summary": "Débloquer un lot de quarantaine sanitaire (STK-10, RG-03)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnquarantineLotDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/stock/inventories": {
+      "post": {
+        "operationId": "StockController_createInventory",
+        "summary": "Créer une session d’inventaire physique avec comptage (STK-11)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInventoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "StockController_listInventories",
+        "summary": "Lister les sessions d’inventaire (STK-11)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/stock/inventories/{id}": {
+      "get": {
+        "operationId": "StockController_getInventoryById",
+        "summary": "Détails d’un inventaire avec écarts de comptage (STK-11)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/stock/inventories/{id}/counts": {
+      "post": {
+        "operationId": "StockController_recordInventoryCount",
+        "summary": "Saisir un comptage d’inventaire (STK-11)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordInventoryCountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/stock/inventories/{id}/validate": {
+      "post": {
+        "operationId": "StockController_validateInventory",
+        "summary": "Validation officielle de l’inventaire par le Pharmacien (STK-11)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateInventoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/stock/inventories/{id}/cancel": {
+      "post": {
+        "operationId": "StockController_cancelInventory",
+        "summary": "Annuler un inventaire sans générer de mouvements (STK-11)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Gestion du stock & Traçabilité (STK)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/sales": {
+      "post": {
+        "operationId": "SalesController_createSale",
+        "summary": "Enregistrer une vente rapide au comptoir",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSaleRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Vente validée et déstockage FEFO effectué"
+          }
+        },
+        "tags": [
+          "Ventes, Facturation & Caisse Comptoir (VTE)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "SalesController_listSales",
+        "summary": "Historique et recherche multi-critères des ventes",
+        "parameters": [
+          {
+            "name": "query",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "startDate",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endDate",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Ventes, Facturation & Caisse Comptoir (VTE)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/sales/preview": {
+      "post": {
+        "operationId": "SalesController_previewSale",
+        "summary": "Prévisualiser les montants d’une vente sans écriture",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSaleRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Ventes, Facturation & Caisse Comptoir (VTE)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/sales/sync": {
+      "post": {
+        "operationId": "SalesController_syncOfflineSales",
+        "summary": "Synchroniser un lot de ventes réalisées hors-ligne (V2 Hors-ligne)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OfflineSyncBatchDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Ventes, Facturation & Caisse Comptoir (VTE)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/sales/conflicts": {
+      "get": {
+        "operationId": "SalesController_listConflicts",
+        "summary": "Lister les ventes en conflit de stock lors de la synchronisation hors-ligne",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Ventes, Facturation & Caisse Comptoir (VTE)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/sales/{id}/resolve-conflict": {
+      "post": {
+        "operationId": "SalesController_resolveConflict",
+        "summary": "Arbitrer et résoudre un conflit de vente hors-ligne (Pharmacien Responsable)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveConflictRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Ventes, Facturation & Caisse Comptoir (VTE)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/sales/invoice/{invoiceNumber}/duplicata": {
+      "get": {
+        "operationId": "SalesController_getDuplicata",
+        "summary": "Réimpression d’une facture marquée DUPLICATA",
+        "parameters": [
+          {
+            "name": "invoiceNumber",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Ventes, Facturation & Caisse Comptoir (VTE)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/sales/invoice/{invoiceNumber}/html": {
+      "get": {
+        "operationId": "SalesController_getInvoiceHtml",
+        "summary": "Obtenir la facture en HTML prête à imprimer",
+        "parameters": [
+          {
+            "name": "invoiceNumber",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Ventes, Facturation & Caisse Comptoir (VTE)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/sales/invoice/{invoiceNumber}/ticket-html": {
+      "get": {
+        "operationId": "SalesController_getTicketHtml",
+        "summary": "Obtenir le ticket de caisse en HTML prêt à imprimer",
+        "parameters": [
+          {
+            "name": "invoiceNumber",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Ventes, Facturation & Caisse Comptoir (VTE)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/sales/invoice/{invoiceNumber}/duplicata/html": {
+      "get": {
+        "operationId": "SalesController_getDuplicataHtml",
+        "summary": "Obtenir le duplicata en HTML prêt à imprimer",
+        "parameters": [
+          {
+            "name": "invoiceNumber",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Ventes, Facturation & Caisse Comptoir (VTE)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/sales/invoice/{invoiceNumber}/document": {
+      "get": {
+        "operationId": "SalesController_document",
+        "parameters": [
+          {
+            "name": "invoiceNumber",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Ventes, Facturation & Caisse Comptoir (VTE)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/sales/invoice/{invoiceNumber}/ticket": {
+      "get": {
+        "operationId": "SalesController_ticket",
+        "parameters": [
+          {
+            "name": "invoiceNumber",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Ventes, Facturation & Caisse Comptoir (VTE)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/sales/invoice/{invoiceNumber}/duplicata/document": {
+      "get": {
+        "operationId": "SalesController_duplicateDocument",
+        "parameters": [
+          {
+            "name": "invoiceNumber",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Ventes, Facturation & Caisse Comptoir (VTE)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/sales/hold-cart": {
+      "post": {
+        "operationId": "SalesController_holdCart",
+        "summary": "Mettre en attente un panier",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HoldCartDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Ventes, Facturation & Caisse Comptoir (VTE)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/sales/held-carts/list": {
+      "get": {
+        "operationId": "SalesController_listHeldCarts",
+        "summary": "Lister les paniers en attente",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Ventes, Facturation & Caisse Comptoir (VTE)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/sales/held-carts/{id}/resume": {
+      "post": {
+        "operationId": "SalesController_resumeHeldCart",
+        "summary": "Reprendre un panier mis en attente",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Ventes, Facturation & Caisse Comptoir (VTE)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/sales/{id}/request-cancellation": {
+      "post": {
+        "operationId": "SalesController_requestCancellation",
+        "summary": "Transmettre une demande d’annulation de vente au pharmacien (VTE-13, UC-05)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCancellationRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Ventes, Facturation & Caisse Comptoir (VTE)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/sales/cancellation-requests": {
+      "get": {
+        "operationId": "SalesController_listCancellationRequests",
+        "summary": "Lister les demandes d’annulation en attente de validation pharmacien",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Ventes, Facturation & Caisse Comptoir (VTE)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/sales/{id}/cancel": {
+      "patch": {
+        "operationId": "SalesController_cancelSale",
+        "summary": "Annuler une vente avec motif",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelSaleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Ventes, Facturation & Caisse Comptoir (VTE)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/sales/{id}": {
+      "get": {
+        "operationId": "SalesController_getSale",
+        "summary": "Consulter le détail d’une facture par ID",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Ventes, Facturation & Caisse Comptoir (VTE)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/customers": {
+      "post": {
+        "operationId": "CustomersController_createCustomer",
+        "summary": "Créer un client (CLI-01)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCustomerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Fichier Clients & Ordonnances (CLI)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "CustomersController_listCustomers",
+        "summary": "Lister/rechercher les clients avec solde calculé (CLI-01)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Fichier Clients & Ordonnances (CLI)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/customers/quick": {
+      "post": {
+        "operationId": "CustomersController_createQuickCustomer",
+        "summary": "Créer un particulier au comptoir avec une fiche minimale",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateQuickCustomerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Fichier Clients & Ordonnances (CLI)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/customers/insurers": {
+      "get": {
+        "operationId": "CustomersController_listInsurers",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Fichier Clients & Ordonnances (CLI)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/customers/identity-documents/{documentId}/number": {
+      "get": {
+        "operationId": "CustomersController_revealIdentityNumber",
+        "parameters": [
+          {
+            "name": "documentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Fichier Clients & Ordonnances (CLI)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/customers/identity-documents/{documentId}/signed-url": {
+      "get": {
+        "operationId": "CustomersController_identityScanSignedUrl",
+        "parameters": [
+          {
+            "name": "documentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Fichier Clients & Ordonnances (CLI)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/customers/{id}/photo": {
+      "post": {
+        "operationId": "CustomersController_uploadProfilePhoto",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Fichier Clients & Ordonnances (CLI)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "CustomersController_removeProfilePhoto",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Fichier Clients & Ordonnances (CLI)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/customers/{id}/photo/signed-url": {
+      "get": {
+        "operationId": "CustomersController_profilePhotoSignedUrl",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Fichier Clients & Ordonnances (CLI)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/customers/{id}/photo/file": {
+      "get": {
+        "operationId": "CustomersController_profilePhotoFile",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Fichier Clients & Ordonnances (CLI)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/customers/privacy-notice": {
+      "get": {
+        "operationId": "CustomersController_privacyNotice",
+        "summary": "Lire la mention de confidentialité (CLI-10)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Fichier Clients & Ordonnances (CLI)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/customers/prescriptions": {
+      "post": {
+        "operationId": "CustomersController_createPrescription",
+        "summary": "Téléverser une ordonnance dans le stockage privé (CLI-05, CLI-06)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePrescriptionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Fichier Clients & Ordonnances (CLI)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/customers/prescriptions/{prescriptionId}/signed-url": {
+      "get": {
+        "operationId": "CustomersController_signedUrl",
+        "summary": "Obtenir à la demande un lien signé temporaire, journalisé (CLI-06, RG-17)",
+        "parameters": [
+          {
+            "name": "prescriptionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Fichier Clients & Ordonnances (CLI)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/customers/prescriptions/{prescriptionId}/file": {
+      "get": {
+        "operationId": "CustomersController_file",
+        "summary": "Lire une image d’ordonnance locale via une requête authentifiée",
+        "parameters": [
+          {
+            "name": "prescriptionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Fichier Clients & Ordonnances (CLI)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/customers/{id}/prescriptions": {
+      "get": {
+        "operationId": "CustomersController_getCustomerPrescriptions",
+        "summary": "Lister les métadonnées des ordonnances, sans URL (CLI-06)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Fichier Clients & Ordonnances (CLI)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/customers/{id}/history": {
+      "get": {
+        "operationId": "CustomersController_history",
+        "summary": "Historique des achats et règlements client",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Fichier Clients & Ordonnances (CLI)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/customers/{id}": {
+      "patch": {
+        "operationId": "CustomersController_updateCustomer",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCustomerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Fichier Clients & Ordonnances (CLI)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "CustomersController_getCustomer",
+        "summary": "Consulter une fiche client",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Fichier Clients & Ordonnances (CLI)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/customers/{id}/deactivate": {
+      "patch": {
+        "operationId": "CustomersController_deactivateCustomer",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Fichier Clients & Ordonnances (CLI)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/customers/{id}/statement": {
+      "get": {
+        "operationId": "CustomersController_getStatement",
+        "summary": "Relevé de compte client",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Fichier Clients & Ordonnances (CLI)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/customers/{id}/settle-debt": {
+      "patch": {
+        "operationId": "CustomersController_settleDebt",
+        "summary": "Encaisser un règlement FIFO idempotent lié à la caisse (CLI-04)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettleDebtDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Fichier Clients & Ordonnances (CLI)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings": {
+      "get": {
+        "operationId": "SettingsController_getAllSettings",
+        "summary": "Consulter l’ensemble des paramètres de l’officine",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Paramétrage & Administration (PAR)"
+        ]
+      }
+    },
+    "/api/v1/settings/identity": {
+      "get": {
+        "operationId": "SettingsController_getPharmacyIdentity",
+        "summary": "Consulter l’identité et les coordonnées de l’officine (PAR-01)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Paramétrage & Administration (PAR)"
+        ]
+      },
+      "patch": {
+        "operationId": "SettingsController_updatePharmacyIdentity",
+        "summary": "Mettre à jour l’identité officielle de l’officine (PAR-01)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePharmacyIdentityDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Paramétrage & Administration (PAR)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings/pharmacy": {
+      "patch": {
+        "operationId": "SettingsController_updatePharmacyIdentity",
+        "summary": "Mettre à jour l’identité officielle de l’officine (PAR-01)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePharmacyIdentityDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Paramétrage & Administration (PAR)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings/logo": {
+      "post": {
+        "operationId": "SettingsController_uploadLogo",
+        "summary": "Téléverser le logo de l’officine (PAR-01)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Paramétrage & Administration (PAR)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings/financial": {
+      "get": {
+        "operationId": "SettingsController_getFinancialRules",
+        "summary": "Consulter les devises, règles d’arrondi, taxes et plafonds de remise (PAR-02, PAR-03)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Paramétrage & Administration (PAR)"
+        ]
+      },
+      "patch": {
+        "operationId": "SettingsController_updateFinancialRules",
+        "summary": "Mettre à jour les règles financières et taxes (PAR-02, PAR-03)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFinancialRulesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Paramétrage & Administration (PAR)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings/alerts": {
+      "get": {
+        "operationId": "SettingsController_getAlertThresholds",
+        "summary": "Consulter les seuils d’alerte de péremption et timeout session (PAR-04, AUT-03)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Paramétrage & Administration (PAR)"
+        ]
+      },
+      "patch": {
+        "operationId": "SettingsController_updateAlertThresholds",
+        "summary": "Mettre à jour les seuils d’alerte et timeout de session (PAR-04, AUT-03)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAlertThresholdsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Paramétrage & Administration (PAR)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings/print-templates": {
+      "get": {
+        "operationId": "SettingsController_getPrintTemplates",
+        "summary": "Consulter les modèles de ticket de caisse et de facture (PAR-05, PAR-06)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Paramétrage & Administration (PAR)"
+        ]
+      },
+      "patch": {
+        "operationId": "SettingsController_updatePrintTemplates",
+        "summary": "Mettre à jour les modèles de ticket et facture (PAR-05, PAR-06)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePrintTemplatesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Paramétrage & Administration (PAR)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings/import/simulate": {
+      "post": {
+        "operationId": "SettingsController_simulateImport",
+        "summary": "Simuler l’importation de données sans aucune écriture en base (PAR-07)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulateImportDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Paramétrage & Administration (PAR)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings/import/execute": {
+      "post": {
+        "operationId": "SettingsController_executeImport",
+        "summary": "Valider définitivement et exécuter l’importation transactionnelle (PAR-07)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExecuteImportDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Paramétrage & Administration (PAR)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
         ]
       }
     },
@@ -1603,11 +3980,16 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Fournisseur créé avec succès"
           }
         },
         "tags": [
           "Achats & Fournisseurs (ACH)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
         ]
       },
       "get": {
@@ -1621,6 +4003,299 @@
         },
         "tags": [
           "Achats & Fournisseurs (ACH)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/suppliers/orders": {
+      "post": {
+        "operationId": "SuppliersController_createPurchaseOrder",
+        "summary": "Créer un bon de commande fournisseur (ACH-02)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePurchaseOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Bon de commande créé"
+          }
+        },
+        "tags": [
+          "Achats & Fournisseurs (ACH)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "SuppliersController_listOrders",
+        "summary": "Lister les bons de commande avec filtres et pagination",
+        "parameters": [
+          {
+            "name": "supplierId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "BROUILLON",
+                "ENVOYE",
+                "PARTIELLEMENT_RECU",
+                "RECU",
+                "ANNULE"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Achats & Fournisseurs (ACH)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/suppliers/orders/list": {
+      "get": {
+        "operationId": "SuppliersController_listOrdersCompat",
+        "summary": "Lister les bons de commande (compatibilité)",
+        "parameters": [
+          {
+            "name": "supplierId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "BROUILLON",
+                "ENVOYE",
+                "PARTIELLEMENT_RECU",
+                "RECU",
+                "ANNULE"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Achats & Fournisseurs (ACH)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/suppliers/orders/{id}": {
+      "get": {
+        "operationId": "SuppliersController_getOrderById",
+        "summary": "Consulter le détail d’un bon de commande",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Achats & Fournisseurs (ACH)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/suppliers/orders/{id}/pdf": {
+      "get": {
+        "operationId": "SuppliersController_exportOrderPdf",
+        "summary": "Exporter un bon de commande au format PDF (ACH-02)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Achats & Fournisseurs (ACH)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/suppliers/orders/{id}/receive": {
+      "post": {
+        "operationId": "SuppliersController_receiveOrder",
+        "summary": "Réceptionner une commande fournisseur avec création de lots et CUMP (ACH-04, STK-01, RG-14)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReceiveOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Achats & Fournisseurs (ACH)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/suppliers/orders/{id}/status": {
+      "patch": {
+        "operationId": "SuppliersController_updateStatus",
+        "summary": "Modifier le statut d’un bon de commande (ACH-02)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePurchaseOrderStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Achats & Fournisseurs (ACH)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
         ]
       }
     },
@@ -1645,87 +4320,16 @@
         },
         "tags": [
           "Achats & Fournisseurs (ACH)"
-        ]
-      }
-    },
-    "/api/v1/suppliers/orders": {
-      "post": {
-        "operationId": "SuppliersController_createPurchaseOrder",
-        "summary": "Créer un bon de commande fournisseur (ACH-02)",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreatePurchaseOrderDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Achats & Fournisseurs (ACH)"
-        ]
-      }
-    },
-    "/api/v1/suppliers/orders/list": {
-      "get": {
-        "operationId": "SuppliersController_listOrders",
-        "summary": "Lister les bons de commande",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Achats & Fournisseurs (ACH)"
-        ]
-      }
-    },
-    "/api/v1/suppliers/orders/{id}/receive": {
-      "post": {
-        "operationId": "SuppliersController_receiveOrder",
-        "summary": "Réceptionner une commande fournisseur avec création automatique des lots (ACH-04, STK-01)",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ReceiveOrderDto"
-              }
-            }
+        "security": [
+          {
+            "bearer": []
           }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Achats & Fournisseurs (ACH)"
         ]
-      }
-    },
-    "/api/v1/suppliers/orders/{id}/status": {
+      },
       "patch": {
-        "operationId": "SuppliersController_updateStatus",
-        "summary": "Modifier le statut d’un bon de commande",
+        "operationId": "SuppliersController_updateSupplier",
+        "summary": "Modifier une fiche fournisseur (ACH-01)",
         "parameters": [
           {
             "name": "id",
@@ -1736,6 +4340,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSupplierDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -1743,14 +4357,154 @@
         },
         "tags": [
           "Achats & Fournisseurs (ACH)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
         ]
       }
     },
     "/api/v1/reports/dashboard": {
       "get": {
         "operationId": "ReportsController_getDashboardMetrics",
-        "summary": "Indicateurs consolidés du tableau de bord (RPT-01 à RPT-06)",
-        "parameters": [],
+        "summary": "Indicateurs consolidés du tableau de bord RPT-01 à RPT-06",
+        "parameters": [
+          {
+            "name": "format",
+            "required": false,
+            "in": "query",
+            "description": "Format de sortie pour un export.",
+            "schema": {
+              "enum": [
+                "csv",
+                "xlsx",
+                "pdf"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Début inclus, format ISO.",
+            "schema": {
+              "example": "2026-11-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Fin incluse, format ISO.",
+            "schema": {
+              "example": "2026-11-02",
+              "type": "string"
+            }
+          },
+          {
+            "name": "period",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "day",
+              "enum": [
+                "day",
+                "week",
+                "month",
+                "custom"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "categoryId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "siteId",
+            "required": false,
+            "in": "query",
+            "description": "Identifiant du site/officine.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "currency",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "CDF",
+                "USD"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 50,
+              "example": 50,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "createdAt",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortDirection",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "desc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": ""
@@ -1764,8 +4518,143 @@
     "/api/v1/reports/sales": {
       "get": {
         "operationId": "ReportsController_getSalesDetailedReport",
-        "summary": "Rapport détaillé des ventes et chiffre d’affaires (RPT-08)",
-        "parameters": [],
+        "summary": "Rapport détaillé des ventes et chiffre d’affaires RPT-08",
+        "parameters": [
+          {
+            "name": "format",
+            "required": false,
+            "in": "query",
+            "description": "Format de sortie pour un export.",
+            "schema": {
+              "enum": [
+                "csv",
+                "xlsx",
+                "pdf"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Début inclus, format ISO.",
+            "schema": {
+              "example": "2026-11-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Fin incluse, format ISO.",
+            "schema": {
+              "example": "2026-11-02",
+              "type": "string"
+            }
+          },
+          {
+            "name": "period",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "day",
+              "enum": [
+                "day",
+                "week",
+                "month",
+                "custom"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "categoryId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "siteId",
+            "required": false,
+            "in": "query",
+            "description": "Identifiant du site/officine.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "currency",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "CDF",
+                "USD"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 50,
+              "example": 50,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "createdAt",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortDirection",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "desc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": ""
@@ -1779,7 +4668,7 @@
     "/api/v1/reports/stock-alerts": {
       "get": {
         "operationId": "ReportsController_getStockDetailedReport",
-        "summary": "Rapport détaillé des alertes de stock et péremptions (RPT-08)",
+        "summary": "Rapport détaillé des alertes de stock et péremptions RPT-08",
         "parameters": [],
         "responses": {
           "200": {
@@ -1788,6 +4677,447 @@
         },
         "tags": [
           "Tableau de bord & Rapports (RPT)"
+        ]
+      }
+    },
+    "/api/v1/reports/{reportKey}/export": {
+      "get": {
+        "operationId": "ReportsController_exportReport",
+        "summary": "Exporter un rapport RPT-09 en CSV, Excel ou PDF",
+        "parameters": [
+          {
+            "name": "reportKey",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "format",
+            "required": false,
+            "in": "query",
+            "description": "Format de sortie pour un export.",
+            "schema": {
+              "enum": [
+                "csv",
+                "xlsx",
+                "pdf"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Début inclus, format ISO.",
+            "schema": {
+              "example": "2026-11-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Fin incluse, format ISO.",
+            "schema": {
+              "example": "2026-11-02",
+              "type": "string"
+            }
+          },
+          {
+            "name": "period",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "day",
+              "enum": [
+                "day",
+                "week",
+                "month",
+                "custom"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "categoryId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "siteId",
+            "required": false,
+            "in": "query",
+            "description": "Identifiant du site/officine.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "currency",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "CDF",
+                "USD"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 50,
+              "example": 50,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "createdAt",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortDirection",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "desc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Tableau de bord & Rapports (RPT)"
+        ]
+      }
+    },
+    "/api/v1/reports/{reportKey}": {
+      "get": {
+        "operationId": "ReportsController_getDetailedReport",
+        "summary": "Rapport RPT-08 paginé avec filtres et totaux serveur",
+        "parameters": [
+          {
+            "name": "reportKey",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "format",
+            "required": false,
+            "in": "query",
+            "description": "Format de sortie pour un export.",
+            "schema": {
+              "enum": [
+                "csv",
+                "xlsx",
+                "pdf"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Début inclus, format ISO.",
+            "schema": {
+              "example": "2026-11-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Fin incluse, format ISO.",
+            "schema": {
+              "example": "2026-11-02",
+              "type": "string"
+            }
+          },
+          {
+            "name": "period",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "day",
+              "enum": [
+                "day",
+                "week",
+                "month",
+                "custom"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "categoryId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "siteId",
+            "required": false,
+            "in": "query",
+            "description": "Identifiant du site/officine.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "currency",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "CDF",
+                "USD"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 50,
+              "example": 50,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "createdAt",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortDirection",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "desc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Tableau de bord & Rapports (RPT)"
+        ]
+      }
+    },
+    "/api/v1/notifications": {
+      "get": {
+        "operationId": "NotificationsController_getNotifications",
+        "summary": "Lister les notifications avec statut lu/non-lu pour l’utilisateur (NOT-01)",
+        "parameters": [
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "description": "Filtrer par type",
+            "schema": {
+              "enum": [
+                "STOCK_BAS",
+                "PEREMPTION",
+                "CREANCE_RETARD",
+                "ECART_CAISSE"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Liste des notifications"
+          }
+        },
+        "tags": [
+          "Centre de Notifications internes (NOT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/notifications/unread-count": {
+      "get": {
+        "operationId": "NotificationsController_getUnreadCount",
+        "summary": "Compteur de notifications non lues pour badge d’en-tête (NOT-02)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Compteur d’alertes non lues"
+          }
+        },
+        "tags": [
+          "Centre de Notifications internes (NOT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/notifications/{id}/read": {
+      "patch": {
+        "operationId": "NotificationsController_markAsRead",
+        "summary": "Marquer une alerte comme lue par l’utilisateur connecté (NOT-01)",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Statut mis à jour"
+          }
+        },
+        "tags": [
+          "Centre de Notifications internes (NOT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/notifications/mark-all-read": {
+      "patch": {
+        "operationId": "NotificationsController_markAllAsRead",
+        "summary": "Marquer toutes les alertes comme lues (NOT-01)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Nombre d’alertes marquées lues"
+          }
+        },
+        "tags": [
+          "Centre de Notifications internes (NOT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/notifications/sync": {
+      "post": {
+        "operationId": "NotificationsController_syncAlerts",
+        "summary": "Déclencher la détection et génération des alertes (stock bas, péremptions, créances, écarts)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Nombre d’alertes créées"
+          }
+        },
+        "tags": [
+          "Centre de Notifications internes (NOT)"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
         ]
       }
     },
@@ -2003,6 +5333,35 @@
           "name"
         ]
       },
+      "UpdateCategoryDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Antalgiques & Antipyrétiques"
+          },
+          "description": {
+            "type": "string",
+            "example": "Médicaments contre la douleur et la fièvre"
+          }
+        }
+      },
+      "CreateGalenicFormDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Comprimé"
+          },
+          "description": {
+            "type": "string",
+            "example": "Forme solide pour voie orale"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
       "CreateProductDto": {
         "type": "object",
         "properties": {
@@ -2110,6 +5469,68 @@
           "barcodes"
         ]
       },
+      "UpdateProductDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "dci": {
+            "type": "string"
+          },
+          "dosage": {
+            "type": "string"
+          },
+          "galenicForm": {
+            "type": "string"
+          },
+          "sellingUnit": {
+            "type": "string"
+          },
+          "laboratory": {
+            "type": "string"
+          },
+          "categoryId": {
+            "type": "string"
+          },
+          "sellingPriceCdf": {
+            "type": "number"
+          },
+          "sellingPriceUsd": {
+            "type": "number"
+          },
+          "taxRate": {
+            "type": "number"
+          },
+          "minAlertThreshold": {
+            "type": "number"
+          },
+          "maxThreshold": {
+            "type": "number"
+          },
+          "securityStock": {
+            "type": "number"
+          },
+          "storageLocation": {
+            "type": "string"
+          },
+          "requiresPrescription": {
+            "type": "boolean"
+          },
+          "isControlledSubstance": {
+            "type": "boolean"
+          },
+          "isColdChain": {
+            "type": "boolean"
+          },
+          "barcodes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "UpdateProductPriceDto": {
         "type": "object",
         "properties": {
@@ -2135,12 +5556,180 @@
           "reason"
         ]
       },
+      "AddBarcodeDto": {
+        "type": "object",
+        "properties": {
+          "barcode": {
+            "type": "string",
+            "example": "3582910012345",
+            "description": "Code-barres à associer (CAT-03)"
+          },
+          "isPrimary": {
+            "type": "boolean",
+            "example": false
+          }
+        },
+        "required": [
+          "barcode"
+        ]
+      },
+      "OpenCashSessionDto": {
+        "type": "object",
+        "properties": {
+          "initialFloatCdf": {
+            "type": "number",
+            "example": 50000,
+            "description": "Fonds de caisse initial en Franc Congolais (CDF)"
+          },
+          "initialFloatUsd": {
+            "type": "number",
+            "example": 20,
+            "description": "Fonds de caisse initial en Dollars (USD)"
+          }
+        },
+        "required": [
+          "initialFloatCdf",
+          "initialFloatUsd"
+        ]
+      },
+      "CreateCashMovementDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "APPORT",
+              "RETRAIT"
+            ]
+          },
+          "amountCdf": {
+            "type": "number",
+            "example": 50000
+          },
+          "amountUsd": {
+            "type": "number",
+            "example": 20
+          },
+          "reason": {
+            "type": "string",
+            "example": "Réassort du tiroir principal"
+          }
+        },
+        "required": [
+          "type",
+          "reason"
+        ]
+      },
+      "CloseCashSessionDto": {
+        "type": "object",
+        "properties": {
+          "countedAmountCdf": {
+            "type": "number",
+            "example": 245000,
+            "description": "Montant réel physique compté en caisse (CDF)"
+          },
+          "countedAmountUsd": {
+            "type": "number",
+            "example": 95,
+            "description": "Montant réel physique compté en caisse (USD)"
+          },
+          "varianceReason": {
+            "type": "string",
+            "example": "Rendu monnaie de 500 CDF manquant",
+            "description": "Justification obligatoire si écart (FIN-02, RG-12)"
+          }
+        },
+        "required": [
+          "countedAmountCdf",
+          "countedAmountUsd"
+        ]
+      },
+      "SetExchangeRateDto": {
+        "type": "object",
+        "properties": {
+          "rate": {
+            "type": "number",
+            "example": 2850,
+            "description": "Taux officiel du jour : 1 USD = X CDF (FIN-04, RG-08)"
+          },
+          "effectiveDate": {
+            "type": "string",
+            "example": "2026-11-04T08:00:00.000Z",
+            "description": "Date/heure ISO à partir de laquelle le taux devient applicable."
+          },
+          "notes": {
+            "type": "string",
+            "example": "Ajustement cours officiel Banque Centrale / Marché Limete"
+          }
+        },
+        "required": [
+          "rate",
+          "effectiveDate"
+        ]
+      },
+      "CreateExpenseDto": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "example": "Facture SNEL électricité officine"
+          },
+          "category": {
+            "type": "string",
+            "example": "Électricité / Énergie"
+          },
+          "amountCdf": {
+            "type": "number",
+            "example": 75000,
+            "description": "Montant en CDF"
+          },
+          "amountUsd": {
+            "type": "number",
+            "example": 0,
+            "description": "Montant en USD"
+          },
+          "receiptPath": {
+            "type": "string",
+            "example": "recus/snel-octobre-2026.pdf"
+          }
+        },
+        "required": [
+          "description",
+          "category",
+          "amountCdf"
+        ]
+      },
+      "ReverseExpenseDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "example": "Correction de saisie",
+            "description": "Motif obligatoire de la contre-passation"
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "CreateExpenseCategoryDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Transport"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
       "CreateLotDto": {
         "type": "object",
         "properties": {
           "productId": {
             "type": "string",
-            "example": "prd-xxx",
+            "example": "44444444-4444-4444-4444-444444444441",
             "description": "ID du produit"
           },
           "lotNumber": {
@@ -2158,6 +5747,10 @@
             "example": 240,
             "description": "Quantité entrée"
           },
+          "initialQuantity": {
+            "type": "number",
+            "example": 240
+          },
           "purchasePriceCdf": {
             "type": "number",
             "example": 1800,
@@ -2167,6 +5760,10 @@
             "type": "number",
             "example": 0.63,
             "description": "Prix d’achat unitaire USD"
+          },
+          "storageLocation": {
+            "type": "string",
+            "example": "Rayon A-03"
           }
         },
         "required": [
@@ -2174,8 +5771,78 @@
           "lotNumber",
           "expiryDate",
           "quantity",
-          "purchasePriceCdf",
-          "purchasePriceUsd"
+          "purchasePriceCdf"
+        ]
+      },
+      "DirectReceptionLineDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "example": "44444444-4444-4444-4444-444444444441"
+          },
+          "lotNumber": {
+            "type": "string",
+            "example": "LOT-2026-X1"
+          },
+          "expiryDate": {
+            "type": "string",
+            "example": "2028-06-30"
+          },
+          "quantity": {
+            "type": "number",
+            "example": 50
+          },
+          "purchasePriceCdf": {
+            "type": "number",
+            "example": 2500
+          },
+          "purchasePriceUsd": {
+            "type": "number",
+            "example": 0.88
+          },
+          "storageLocation": {
+            "type": "string",
+            "example": "Rayon A-03"
+          }
+        },
+        "required": [
+          "productId",
+          "lotNumber",
+          "expiryDate",
+          "quantity",
+          "purchasePriceCdf"
+        ]
+      },
+      "DirectReceptionDto": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "example": "idemp-uuid-1234",
+            "description": "Clé d’idempotence unique (évite doubles écritures)"
+          },
+          "supplierId": {
+            "type": "string",
+            "example": "supplier-uuid"
+          },
+          "supplierInvoiceNumber": {
+            "type": "string",
+            "example": "FACT-LABOREX-9821"
+          },
+          "notes": {
+            "type": "string",
+            "example": "Livraison express commande urgente"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DirectReceptionLineDto"
+            }
+          }
+        },
+        "required": [
+          "lines"
         ]
       },
       "RequestAdjustmentDto": {
@@ -2190,16 +5857,48 @@
             "example": -2,
             "description": "Écart constaté (+ ou -)"
           },
+          "quantityDifference": {
+            "type": "number",
+            "example": 5,
+            "description": "Différence de quantité"
+          },
           "reason": {
             "type": "string",
-            "example": "Écart constaté lors du rangement rayon"
+            "example": "Écart constaté lors du rangement rayon",
+            "description": "Motif obligatoire"
           }
         },
         "required": [
           "lotId",
-          "variance",
           "reason"
         ]
+      },
+      "ApproveAdjustmentDto": {
+        "type": "object",
+        "properties": {
+          "approved": {
+            "type": "boolean",
+            "example": true,
+            "description": "Valider (true) ou Rejeter (false)"
+          },
+          "action": {
+            "type": "string",
+            "example": "APPROVE"
+          },
+          "rejectionReason": {
+            "type": "string",
+            "example": "Écart non justifié après recomptage"
+          },
+          "pharmacistComment": {
+            "type": "string",
+            "example": "Vérifié en rayon par le titulaire"
+          },
+          "pinCode": {
+            "type": "string",
+            "example": "1234",
+            "description": "Code PIN pharmacien si exigé"
+          }
+        }
       },
       "CreateMovementDto": {
         "type": "object",
@@ -2245,7 +5944,23 @@
         "properties": {
           "reason": {
             "type": "string",
-            "example": "Rappel sanitaire lot fabricant"
+            "example": "Rappel sanitaire officiel du fabricant (RG-03)"
+          },
+          "quarantined": {
+            "type": "boolean",
+            "description": "true = quarantaine, false = déblocage (PATCH)"
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "UnquarantineLotDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "example": "Levée d’alerte qualité confirmée par le laboratoire"
           }
         },
         "required": [
@@ -2263,6 +5978,10 @@
             "type": "number",
             "example": 238,
             "description": "Quantité comptée physiquement"
+          },
+          "justification": {
+            "type": "string",
+            "example": "Casse non déclarée"
           }
         },
         "required": [
@@ -2277,6 +5996,21 @@
             "type": "string",
             "example": "INV-2026-10"
           },
+          "type": {
+            "type": "string",
+            "example": "TOURNANT",
+            "enum": [
+              "COMPLET",
+              "TOURNANT"
+            ]
+          },
+          "productIds": {
+            "description": "IDs produits pour un inventaire tournant",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "lines": {
             "type": "array",
             "items": {
@@ -2287,10 +6021,26 @@
             "type": "string",
             "example": "Inventaire tournant rayon B"
           }
+        }
+      },
+      "RecordInventoryCountDto": {
+        "type": "object",
+        "properties": {
+          "lotId": {
+            "type": "string",
+            "example": "lot-xxx"
+          },
+          "countedQuantity": {
+            "type": "number",
+            "example": 238
+          },
+          "justification": {
+            "type": "string"
+          }
         },
         "required": [
-          "reference",
-          "lines"
+          "lotId",
+          "countedQuantity"
         ]
       },
       "ValidateInventoryDto": {
@@ -2299,11 +6049,16 @@
           "validationComment": {
             "type": "string",
             "example": "Écarts vérifiés et conformes au comptage physique"
+          },
+          "justification": {
+            "type": "string",
+            "example": "Comptage validé par le pharmacien"
+          },
+          "pinCode": {
+            "type": "string",
+            "example": "1234"
           }
-        },
-        "required": [
-          "validationComment"
-        ]
+        }
       },
       "SaleItemRequestDto": {
         "type": "object",
@@ -2327,6 +6082,11 @@
             "type": "number",
             "example": 0,
             "description": "Remise en CDF sur la ligne"
+          },
+          "lotId": {
+            "type": "string",
+            "example": "lot-uuid-12345",
+            "description": "ID du lot sélectionné manuellement (profil habilité ou PIN superviseur VTE-04)"
           }
         },
         "required": [
@@ -2437,24 +6197,13 @@
           "idempotencyKey"
         ]
       },
-      "CancelSaleDto": {
+      "OfflineSyncBatchDto": {
         "type": "object",
-        "properties": {
-          "reason": {
-            "type": "string",
-            "example": "Erreur de saisie caissier",
-            "description": "Motif obligatoire d’annulation (VTE-13)"
-          },
-          "restockItems": {
-            "type": "boolean",
-            "example": true,
-            "description": "Remise en stock des médicaments si non altérés"
-          }
-        },
-        "required": [
-          "reason",
-          "restockItems"
-        ]
+        "properties": {}
+      },
+      "ResolveConflictRequestDto": {
+        "type": "object",
+        "properties": {}
       },
       "HoldCartDto": {
         "type": "object",
@@ -2468,6 +6217,10 @@
             "items": {
               "$ref": "#/components/schemas/SaleItemRequestDto"
             }
+          },
+          "customerId": {
+            "type": "string",
+            "example": "cust-uuid"
           }
         },
         "required": [
@@ -2475,7 +6228,168 @@
           "items"
         ]
       },
+      "CreateCancellationRequestDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "example": "Erreur de saisie caissier",
+            "description": "Motif de la demande d’annulation transmise au pharmacien"
+          },
+          "restockItems": {
+            "type": "boolean",
+            "example": true,
+            "description": "Demande de réintégration en stock"
+          },
+          "items": {
+            "description": "Lignes et quantités concernées pour un avoir partiel",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "reason",
+          "restockItems"
+        ]
+      },
+      "CancelSaleDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "example": "Erreur de saisie caissier",
+            "description": "Motif obligatoire d’annulation (VTE-13)"
+          },
+          "restockItems": {
+            "type": "boolean",
+            "example": true,
+            "description": "Remise en stock des médicaments si non altérés"
+          },
+          "items": {
+            "description": "Lignes et quantités retournées pour un avoir partiel.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "supervisorPin": {
+            "type": "string",
+            "example": "1234",
+            "description": "Code PIN superviseur pour dérogation d’annulation par caissier"
+          }
+        },
+        "required": [
+          "reason",
+          "restockItems"
+        ]
+      },
       "CreateCustomerDto": {
+        "type": "object",
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "example": "Jean Mukendi"
+          },
+          "phone": {
+            "type": "string",
+            "example": "+243 81 234 56 78"
+          },
+          "email": {
+            "type": "string",
+            "example": "j.mukendi@email.cd"
+          },
+          "companyName": {
+            "type": "string",
+            "example": "Société Commerciale de Kinshasa"
+          },
+          "address": {
+            "type": "string",
+            "example": "Av. du 30 Juin, Gombe"
+          },
+          "customerType": {
+            "type": "string",
+            "example": "PARTICULIER",
+            "enum": [
+              "PARTICULIER",
+              "ENTREPRISE",
+              "ASSURANCE"
+            ]
+          },
+          "creditLimitCdf": {
+            "type": "number",
+            "example": 500000,
+            "description": "Plafond de crédit autorisé en CDF (RG-13)"
+          },
+          "medicalNotes": {
+            "type": "string",
+            "example": "Allergie sévère à la pénicilline (CLI-07)"
+          }
+        },
+        "required": [
+          "fullName",
+          "customerType",
+          "creditLimitCdf"
+        ]
+      },
+      "CreateQuickCustomerDto": {
+        "type": "object",
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "example": "Jean Mukendi"
+          },
+          "phone": {
+            "type": "string",
+            "example": "+243 81 234 56 78"
+          },
+          "consentementDonnees": {
+            "type": "boolean",
+            "description": "Consentement recueilli au comptoir"
+          }
+        },
+        "required": [
+          "fullName",
+          "consentementDonnees"
+        ]
+      },
+      "CreatePrescriptionDto": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "example": "cli-001"
+          },
+          "prescriberName": {
+            "type": "string",
+            "example": "Dr. Ilunga"
+          },
+          "healthCenter": {
+            "type": "string",
+            "example": "Clinique Ngaliema"
+          },
+          "prescriptionDate": {
+            "type": "string",
+            "example": "2026-10-28",
+            "description": "Date de prescription AAAA-MM-JJ"
+          },
+          "storageFilePath": {
+            "type": "string",
+            "description": "Private path already created by a storage integration"
+          },
+          "prescriptionText": {
+            "type": "string",
+            "example": "Amoxicilline 500 mg 1 gélule 3x/jour pendant 7 jours"
+          }
+        },
+        "required": [
+          "customerId",
+          "prescriberName",
+          "prescriptionDate"
+        ]
+      },
+      "UpdateCustomerDto": {
         "type": "object",
         "properties": {
           "fullName": {
@@ -2533,57 +6447,40 @@
           },
           "paymentMethod": {
             "type": "string",
-            "example": "ESPECES",
             "enum": [
               "ESPECES",
               "MOBILE_MONEY",
+              "CARTE_BANCAIRE",
               "VIREMENT"
             ]
+          },
+          "currency": {
+            "type": "string",
+            "example": "CDF",
+            "enum": [
+              "CDF",
+              "USD"
+            ]
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "example": "b1d177a6-5c8a-4b6e-8f2b-b329e9d2c6b8"
+          },
+          "cashSessionId": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
           }
         },
         "required": [
           "amountPaidCdf",
-          "paymentMethod"
+          "paymentMethod",
+          "currency",
+          "idempotencyKey"
         ]
       },
-      "CreatePrescriptionDto": {
-        "type": "object",
-        "properties": {
-          "customerId": {
-            "type": "string",
-            "example": "cli-001"
-          },
-          "prescriberName": {
-            "type": "string",
-            "example": "Dr. Ilunga"
-          },
-          "healthCenter": {
-            "type": "string",
-            "example": "Clinique Ngaliema"
-          },
-          "prescriptionDate": {
-            "type": "string",
-            "example": "2026-10-28",
-            "description": "Date de prescription AAAA-MM-JJ"
-          },
-          "storageFilePath": {
-            "type": "string",
-            "example": "prescriptions/cli-001/scan_20261028.jpg",
-            "description": "Chemin privé Supabase Storage (CLI-06)"
-          },
-          "prescriptionText": {
-            "type": "string",
-            "example": "Amoxicilline 500 mg 1 gélule 3x/jour pendant 7 jours"
-          }
-        },
-        "required": [
-          "customerId",
-          "prescriberName",
-          "prescriptionDate",
-          "storageFilePath"
-        ]
-      },
-      "UpdatePharmacySettingsDto": {
+      "UpdatePharmacyIdentityDto": {
         "type": "object",
         "properties": {
           "name": {
@@ -2592,7 +6489,7 @@
           },
           "address": {
             "type": "string",
-            "example": "Av. de l’Église, Q. Résidentiel, Commune de Limete, Kinshasa"
+            "example": "Av. de l’Église, Q. Résidentiel, Commune de Limete, Kinshasa, RDC"
           },
           "phone": {
             "type": "string",
@@ -2602,23 +6499,72 @@
             "type": "string",
             "example": "contact@voicilhommepharma.cd"
           },
+          "rccm": {
+            "type": "string",
+            "example": "CD/KIN/RCCM/14-B-2345",
+            "description": "Numéro RCCM (RDC)"
+          },
+          "idNat": {
+            "type": "string",
+            "example": "01-83-N12345P",
+            "description": "Identification Nationale (RDC)"
+          },
           "taxNumber": {
             "type": "string",
-            "example": "CD/KIN/RCCM/14-B-2345"
+            "example": "A0912345B",
+            "description": "Numéro Impôt / NIF"
+          },
+          "logoUrl": {
+            "type": "string",
+            "example": "https://storage.supabase.co/vhp/logo.png"
           },
           "receiptFooterText": {
             "type": "string",
-            "example": "Tout médicament vendu ne peut être repris ni échangé sans accord du pharmacien."
+            "example": "Tout médicament vendu ne peut être repris ni échangé sans accord préalable du pharmacien."
+          },
+          "invoiceLegalNotice": {
+            "type": "string",
+            "example": "Facture conforme aux dispositions de la DGI / RDC. Exonération sous réserve d’homologation."
           }
         },
         "required": [
           "name",
           "address",
           "phone",
+          "rccm",
+          "idNat",
+          "taxNumber",
           "receiptFooterText"
         ]
       },
-      "UpdateFinancialSettingsDto": {
+      "TaxItemDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "TVA_16"
+          },
+          "name": {
+            "type": "string",
+            "example": "TVA Standard 16%"
+          },
+          "rate": {
+            "type": "number",
+            "example": 16
+          },
+          "isActive": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "rate",
+          "isActive"
+        ]
+      },
+      "UpdateFinancialRulesDto": {
         "type": "object",
         "properties": {
           "defaultCurrency": {
@@ -2629,51 +6575,107 @@
               "USD"
             ]
           },
-          "standardTaxRate": {
+          "activeCurrencies": {
+            "example": [
+              "CDF",
+              "USD"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "cdfDecimals": {
             "type": "number",
-            "example": 16,
-            "description": "Taux TVA standard en %"
+            "example": 0,
+            "description": "Décimales pour le Franc Congolais (toujours 0 par défaut)"
+          },
+          "usdDecimals": {
+            "type": "number",
+            "example": 2,
+            "description": "Décimales pour le Dollar USD"
+          },
+          "cdfRoundingRule": {
+            "type": "string",
+            "example": "ENTIER",
+            "enum": [
+              "ENTIER",
+              "CINQUANTE",
+              "CENT"
+            ]
+          },
+          "usdRoundingRule": {
+            "type": "string",
+            "example": "DECIMAL_2",
+            "enum": [
+              "DECIMAL_2"
+            ]
+          },
+          "activePaymentMethods": {
+            "example": [
+              "ESPECES",
+              "MOBILE_MONEY",
+              "CARTE_BANCAIRE",
+              "VIREMENT",
+              "CREDIT_CLIENT"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "taxes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TaxItemDto"
+            }
           },
           "cashierDiscountCapPercent": {
             "type": "number",
             "example": 5,
-            "description": "Plafond de remise max autorisé pour un Caissier (%)"
+            "description": "Plafond remise caissier en %"
           },
           "pharmacistDiscountCapPercent": {
             "type": "number",
             "example": 15,
-            "description": "Plafond de remise max pour le Pharmacien (%)"
+            "description": "Plafond remise pharmacien en %"
           }
         },
         "required": [
           "defaultCurrency",
-          "standardTaxRate",
+          "activeCurrencies",
+          "cdfDecimals",
+          "usdDecimals",
+          "cdfRoundingRule",
+          "usdRoundingRule",
+          "activePaymentMethods",
+          "taxes",
           "cashierDiscountCapPercent",
           "pharmacistDiscountCapPercent"
         ]
       },
-      "UpdateAlertSettingsDto": {
+      "UpdateAlertThresholdsDto": {
         "type": "object",
         "properties": {
           "expiryWarningDaysLevel1": {
             "type": "number",
             "example": 30,
-            "description": "Premier seuil alerte péremption en jours"
+            "description": "Seuil alerte péremption niveau 1 (jours)"
           },
           "expiryWarningDaysLevel2": {
             "type": "number",
             "example": 60,
-            "description": "Deuxième seuil alerte péremption en jours"
+            "description": "Seuil alerte péremption niveau 2 (jours)"
           },
           "expiryWarningDaysLevel3": {
             "type": "number",
             "example": 90,
-            "description": "Troisième seuil alerte péremption en jours"
+            "description": "Seuil alerte péremption niveau 3 (jours)"
           },
           "sessionInactivityTimeoutMinutes": {
             "type": "number",
-            "example": 30,
-            "description": "Délai d’inactivité avant déconnexion automatique en minutes (AUT-03)"
+            "example": 15,
+            "description": "Délai d’inactivité de session en minutes (AUT-03)"
           }
         },
         "required": [
@@ -2683,96 +6685,83 @@
           "sessionInactivityTimeoutMinutes"
         ]
       },
-      "OpenCashSessionDto": {
+      "UpdatePrintTemplatesDto": {
         "type": "object",
         "properties": {
-          "initialFloatCdf": {
-            "type": "number",
-            "example": 50000,
-            "description": "Fonds de caisse initial en Franc Congolais (CDF)"
+          "ticketHeader": {
+            "type": "string",
+            "example": "PHARMACIE VOICI L’HOMME\nKinshasa - Limete"
           },
-          "initialFloatUsd": {
-            "type": "number",
-            "example": 20,
-            "description": "Fonds de caisse initial en Dollars (USD)"
+          "ticketFooter": {
+            "type": "string",
+            "example": "Merci pour votre confiance. Bon rétablissement !"
+          },
+          "showLogoOnTicket": {
+            "type": "boolean",
+            "example": true
+          },
+          "invoiceLegalNotice": {
+            "type": "string",
+            "example": "Facture soumise à la TVA selon ordonnance fiscale en vigueur en RDC."
           }
         },
         "required": [
-          "initialFloatCdf",
-          "initialFloatUsd"
+          "ticketHeader",
+          "ticketFooter",
+          "showLogoOnTicket",
+          "invoiceLegalNotice"
         ]
       },
-      "CloseCashSessionDto": {
+      "SimulateImportDto": {
         "type": "object",
         "properties": {
-          "countedAmountCdf": {
-            "type": "number",
-            "example": 245000,
-            "description": "Montant réel physique compté en caisse (CDF)"
-          },
-          "countedAmountUsd": {
-            "type": "number",
-            "example": 95,
-            "description": "Montant réel physique compté en caisse (USD)"
-          },
-          "varianceReason": {
+          "type": {
             "type": "string",
-            "example": "Rendu monnaie de 500 CDF manquant",
-            "description": "Justification obligatoire si écart (FIN-02, RG-12)"
+            "example": "products",
+            "enum": [
+              "products",
+              "stock",
+              "suppliers",
+              "customers"
+            ]
+          },
+          "rows": {
+            "description": "Lignes extraites du fichier Excel/CSV",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
-          "countedAmountCdf",
-          "countedAmountUsd"
+          "type",
+          "rows"
         ]
       },
-      "SetExchangeRateDto": {
+      "ExecuteImportDto": {
         "type": "object",
         "properties": {
-          "rate": {
-            "type": "number",
-            "example": 2850,
-            "description": "Taux officiel du jour : 1 USD = X CDF (FIN-04, RG-08)"
-          },
-          "notes": {
+          "type": {
             "type": "string",
-            "example": "Ajustement cours officiel Banque Centrale / Marché Limete"
+            "example": "products",
+            "enum": [
+              "products",
+              "stock",
+              "suppliers",
+              "customers"
+            ]
+          },
+          "rows": {
+            "description": "Lignes validées à insérer définitivement",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
-          "rate"
-        ]
-      },
-      "CreateExpenseDto": {
-        "type": "object",
-        "properties": {
-          "description": {
-            "type": "string",
-            "example": "Facture SNEL électricité officine"
-          },
-          "category": {
-            "type": "string",
-            "example": "Électricité / Énergie"
-          },
-          "amountCdf": {
-            "type": "number",
-            "example": 75000,
-            "description": "Montant en CDF"
-          },
-          "amountUsd": {
-            "type": "number",
-            "example": 0,
-            "description": "Montant en USD"
-          },
-          "receiptPath": {
-            "type": "string",
-            "example": "recus/snel-octobre-2026.pdf"
-          }
-        },
-        "required": [
-          "description",
-          "category",
-          "amountCdf"
+          "type",
+          "rows"
         ]
       },
       "CreateSupplierDto": {
@@ -2818,7 +6807,7 @@
         "properties": {
           "productId": {
             "type": "string",
-            "example": "prd-xxx"
+            "example": "44444444-4444-4444-4444-444444444441"
           },
           "orderedQuantity": {
             "type": "number",
@@ -2829,6 +6818,11 @@
             "type": "number",
             "example": 1800,
             "description": "Prix d’achat unitaire estimé en CDF"
+          },
+          "unitPriceUsd": {
+            "type": "number",
+            "example": 0.63,
+            "description": "Prix d’achat unitaire estimé en USD"
           }
         },
         "required": [
@@ -2842,13 +6836,17 @@
         "properties": {
           "supplierId": {
             "type": "string",
-            "example": "sup-001"
+            "example": "supplier-uuid"
           },
           "items": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/OrderItemDto"
             }
+          },
+          "expectedDeliveryDate": {
+            "type": "string",
+            "example": "2026-11-15"
           },
           "notes": {
             "type": "string",
@@ -2865,7 +6863,7 @@
         "properties": {
           "productId": {
             "type": "string",
-            "example": "prd-xxx"
+            "example": "44444444-4444-4444-4444-444444444441"
           },
           "lotNumber": {
             "type": "string",
@@ -2882,6 +6880,18 @@
           "actualPurchasePriceCdf": {
             "type": "number",
             "example": 1800
+          },
+          "actualPurchasePriceUsd": {
+            "type": "number",
+            "example": 0.63
+          },
+          "storageLocation": {
+            "type": "string",
+            "example": "Rayon A-03"
+          },
+          "purchaseOrderItemId": {
+            "type": "string",
+            "example": "purchase-order-item-uuid"
           }
         },
         "required": [
@@ -2895,6 +6905,11 @@
       "ReceiveOrderDto": {
         "type": "object",
         "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "example": "idemp-uuid-1234",
+            "description": "Clé d’idempotence unique pour éviter les doublons"
+          },
           "lines": {
             "type": "array",
             "items": {
@@ -2905,11 +6920,58 @@
             "type": "string",
             "example": "FAC-LBX-2026-9018",
             "description": "Numéro de facture fournisseur liée"
+          },
+          "notes": {
+            "type": "string",
+            "example": "Réception conforme sans dommage"
           }
         },
         "required": [
           "lines"
         ]
+      },
+      "UpdatePurchaseOrderStatusDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "ENVOYE",
+            "enum": [
+              "BROUILLON",
+              "ENVOYE",
+              "ANNULE"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "UpdateSupplierDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "contactName": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "paymentTerms": {
+            "type": "string"
+          },
+          "leadTimeDays": {
+            "type": "number"
+          }
+        }
       }
     }
   }

@@ -25,6 +25,7 @@ export class CashApiService {
   addMovement(sessionId: string, dto: { type: string; amountCdf: number; amountUsd: number; reason: string }): Observable<any> {
     return this.client.post<any>(`/cash/sessions/${sessionId}/movements`, dto);
   }
+  getMovements(sessionId: string): Observable<any[]> { return this.client.get<any[]>(`/cash/sessions/${sessionId}/movements`); }
 
   getActiveRate(at?: string): Observable<ExchangeRate> {
     const query = at ? `?at=${encodeURIComponent(at)}` : '';

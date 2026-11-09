@@ -5,6 +5,7 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import {
   Product,
@@ -26,6 +27,7 @@ import {
 } from './dto/catalog.dto';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { ExchangeRateResolver } from '../cash/exchange-rate.resolver';
 
 export interface InternalProduct extends Product {
   category?: ProductCategory;
@@ -56,6 +58,7 @@ export class CatalogService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly exchangeRateResolver: ExchangeRateResolver,
   ) {}
 
   async onModuleInit() {
@@ -68,8 +71,11 @@ export class CatalogService implements OnModuleInit {
       const user = await this.prisma.users.findUnique({ where: { id: userId } });
       if (user) return user.id;
     }
-    const admin = await this.prisma.users.findFirst({ where: { username: 'admin' } });
-    return admin?.id || '22222222-2222-2222-2222-222222222221';
+    if (userId) {
+      const userByName = await this.prisma.users.findFirst({ where: { username: userId } });
+      if (userByName) return userByName.id;
+    }
+    throw new UnauthorizedException('Utilisateur non authentifié ou session invalide.');
   }
 
   private async ensureSeedProducts() {
@@ -335,7 +341,7 @@ export class CatalogService implements OnModuleInit {
       },
     });
 
-    this.auditService.logAction({
+    await this.auditService.logAction({
       userId: authorId || 'system',
       userName: 'Utilisateur habilité',
       action: 'FORME_GALENIQUE_CREEE',
@@ -413,7 +419,7 @@ export class CatalogService implements OnModuleInit {
       }
     }
 
-    this.auditService.logAction({
+    await this.auditService.logAction({
       userId: authorId || 'system',
       userName: 'Pharmacien',
       action: 'PRODUIT_CREE',
@@ -537,7 +543,7 @@ export class CatalogService implements OnModuleInit {
         },
       });
 
-      this.auditService.logAction({
+      await this.auditService.logAction({
         userId: userId || 'system',
         userName: 'Pharmacien',
         action: 'PRIX_MODIFIE',
@@ -548,7 +554,7 @@ export class CatalogService implements OnModuleInit {
       });
     }
 
-    this.auditService.logAction({
+    await this.auditService.logAction({
       userId: userId || 'system',
       userName: 'Pharmacien',
       action: 'PRODUIT_MODIFIE',
@@ -922,7 +928,7 @@ export class CatalogService implements OnModuleInit {
       },
     });
 
-    this.auditService.logAction({
+    await this.auditService.logAction({
       userId,
       userName: 'Pharmacien',
       action: 'PRIX_MODIFIE',
@@ -982,7 +988,7 @@ export class CatalogService implements OnModuleInit {
       },
     });
 
-    this.auditService.logAction({
+    await this.auditService.logAction({
       userId: authorId || 'system',
       userName: 'Pharmacien',
       action: 'PRODUIT_DESACTIVE',
@@ -1012,7 +1018,7 @@ export class CatalogService implements OnModuleInit {
       },
     });
 
-    this.auditService.logAction({
+    await this.auditService.logAction({
       userId: authorId || 'system',
       userName: 'Pharmacien',
       action: 'PRODUIT_REACTIVE',
@@ -1154,7 +1160,7 @@ export class CatalogService implements OnModuleInit {
             galenicForm: item.galenicForm,
             sellingUnit: item.sellingUnit,
             sellingPriceCdf: item.sellingPriceCdf,
-            sellingPriceUsd: item.sellingPriceUsd || Number((item.sellingPriceCdf / 2850).toFixed(2)),
+            sellingPriceUsd: item.sellingPriceUsd || Number((item.sellingPriceCdf / Number((await this.exchangeRateResolver.getRateAt(pharmacyId)).rate)).toFixed(2)),
             taxRate: item.taxRate,
             minAlertThreshold: item.minAlertThreshold,
             requiresPrescription: item.requiresPrescription,
@@ -1171,7 +1177,7 @@ export class CatalogService implements OnModuleInit {
       }
     }
 
-    this.auditService.logAction({
+    await this.auditService.logAction({
       userId: authorId || 'system',
       userName: 'Pharmacien',
       action: 'CATALOGUE_IMPORTE',

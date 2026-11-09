@@ -1,8 +1,8 @@
 import {
   Injectable,
-  OnModuleInit,
   BadRequestException,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { CashSession, ExchangeRate } from '@vhp/shared';
 import {
@@ -12,9 +12,11 @@ import {
   CreateExpenseDto,
   ReverseExpenseDto,
   CreateExpenseCategoryDto,
+  CreateCashMovementDto,
 } from './dto/cash.dto';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { ExchangeRateResolver } from './exchange-rate.resolver';
 
 export interface Expense {
   id: string;
@@ -31,32 +33,15 @@ export interface Expense {
 }
 
 @Injectable()
-export class CashService implements OnModuleInit {
+export class CashService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly exchangeRateResolver: ExchangeRateResolver,
   ) {}
 
-  async onModuleInit() {
-    await this.ensureInitialExchangeRate();
-  }
-
-  private async ensureInitialExchangeRate() {
-    try {
-      const rateCount = await this.prisma.exchange_rates.count();
-      if (rateCount === 0) {
-        const pharmacy = await this.prisma.pharmacies.findFirst({ where: { code: 'OFF-KIN-001' } });
-        const adminUser = await this.prisma.users.findFirst({ where: { username: 'admin' } });
-
-        if (pharmacy && adminUser) {
-          await this.prisma.exchange_rates.create({
-            data: {
-              id: '55555555-5555-5555-5555-555555555551',
-              pharmacy_id: pharmacy.id,
-              created_by: adminUser.id,
-              base_currency: 'USD',
-              target_currency: 'CDF',
-              rate: 2850.0,
+  /* Legacy initializer removed: rates must be created explicitly. */
+  /*
               notes: 'Taux initial de référence (FIN-04)',
             },
           });
@@ -67,20 +52,13 @@ export class CashService implements OnModuleInit {
     }
   }
 
+  */
   // ---------- FIN-04 & RG-08 : Taux de change CDF / USD ----------
 
-  async getActiveExchangeRate(
-    pharmacyId = '11111111-1111-1111-1111-111111111111',
-    at?: string,
-  ): Promise<ExchangeRate> {
-    const whereClause: any = { pharmacy_id: pharmacyId };
-    if (at) {
-      whereClause.effective_date = { lte: new Date(at) };
-    }
-
-    const rate = await this.prisma.exchange_rates.findFirst({
-      where: whereClause,
-      orderBy: { effective_date: 'desc' },
+  async getActiveExchangeRate(pharmacyId: string, at?: string): Promise<ExchangeRate> {
+    const selected = await this.exchangeRateResolver.getRateAt(pharmacyId, at ? new Date(at) : new Date());
+    const rate = await this.prisma.exchange_rates.findUnique({
+      where: { id: selected.id },
       include: {
         users: {
           select: { full_name: true, username: true },
@@ -114,8 +92,11 @@ export class CashService implements OnModuleInit {
       const user = await this.prisma.users.findUnique({ where: { id: userId } });
       if (user) return user.id;
     }
-    const admin = await this.prisma.users.findFirst({ where: { username: 'admin' } });
-    return admin?.id || '22222222-2222-2222-2222-222222222221';
+    if (userId) {
+      const userByName = await this.prisma.users.findFirst({ where: { username: userId } });
+      if (userByName) return userByName.id;
+    }
+    throw new UnauthorizedException('Utilisateur non authentifié ou session invalide.');
   }
 
   async setExchangeRate(dto: SetExchangeRateDto, userId: string, pharmacyId: string): Promise<ExchangeRate> {
@@ -133,11 +114,12 @@ export class CashService implements OnModuleInit {
         base_currency: 'USD',
         target_currency: 'CDF',
         rate: dto.rate,
+        effective_date: new Date(dto.effectiveDate),
         notes: dto.notes,
       },
     });
 
-    this.auditService.logAction({
+    await this.auditService.logAction({
       userId: validUserId,
       userName: 'Pharmacien',
       action: 'TAUX_DE_CHANGE_MODIFIE',
@@ -158,7 +140,7 @@ export class CashService implements OnModuleInit {
     };
   }
 
-  async getExchangeRatesHistory(pharmacyId = '11111111-1111-1111-1111-111111111111'): Promise<ExchangeRate[]> {
+  async getExchangeRatesHistory(pharmacyId: string): Promise<ExchangeRate[]> {
     const rates = await this.prisma.exchange_rates.findMany({
       where: { pharmacy_id: pharmacyId },
       orderBy: { effective_date: 'desc' },
@@ -211,7 +193,7 @@ export class CashService implements OnModuleInit {
       },
     });
 
-    this.auditService.logAction({
+    await this.auditService.logAction({
       userId: validUserId,
       userName: 'Caissier',
       action: 'OUVERTURE_SESSION_CAISSE',
@@ -236,6 +218,35 @@ export class CashService implements OnModuleInit {
     return session ? this.mapToCashSession(session) : null;
   }
 
+  async createMovement(sessionId: string, dto: CreateCashMovementDto, userId: string, pharmacyId: string) {
+    const validUserId = await this.resolveValidUserId(userId);
+    const amountCdf = Number(dto.amountCdf || 0);
+    const amountUsd = Number(dto.amountUsd || 0);
+    if (amountCdf <= 0 && amountUsd <= 0) throw new BadRequestException('Un montant CDF ou USD strictement positif est requis.');
+    const session = await this.prisma.cash_sessions.findFirst({ where: { id: sessionId, pharmacy_id: pharmacyId, user_id: validUserId, status: 'OUVERTE' } });
+    if (!session) throw new NotFoundException('Session de caisse ouverte introuvable.');
+    const rate = await this.exchangeRateResolver.getRateAt(pharmacyId, new Date());
+    const sign = dto.type === 'APPORT' ? 1 : -1;
+    const movement = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.cash_movements.create({ data: {
+        pharmacy_id: pharmacyId, cash_session_id: sessionId, user_id: validUserId,
+        type: dto.type, amount_cdf: amountCdf, amount_usd: amountUsd,
+        exchange_rate_id: rate.id, exchange_rate_applied: rate.rate, reason: dto.reason.trim(),
+      }});
+      await tx.cash_sessions.update({ where: { id: sessionId }, data: {
+        expected_amount_cdf: { increment: sign * amountCdf }, expected_amount_usd: { increment: sign * amountUsd },
+      }});
+      return created;
+    });
+    await this.auditService.logAction({ userId: validUserId, userName: 'Caissier', action: `MOUVEMENT_CAISSE_${dto.type}`, entityName: 'CASH_MOVEMENT', entityId: movement.id, newValues: { type: dto.type, amountCdf, amountUsd, reason: dto.reason } });
+    return { id: movement.id, sessionId, type: movement.type, amountCdf, amountUsd, reason: movement.reason, createdAt: movement.created_at.toISOString() };
+  }
+
+  async listMovements(sessionId: string, pharmacyId: string) {
+    const rows = await this.prisma.cash_movements.findMany({ where: { cash_session_id: sessionId, pharmacy_id: pharmacyId }, orderBy: { created_at: 'desc' } });
+    return rows.map((row) => ({ id: row.id, sessionId: row.cash_session_id, type: row.type, amountCdf: Number(row.amount_cdf), amountUsd: Number(row.amount_usd), reason: row.reason, createdAt: row.created_at.toISOString() }));
+  }
+
   // Ajout d'encaissement à la session en cours
   async recordSaleIncomeToActiveSession(userId: string, amountCdf: number, amountUsd: number) {
     const current = await this.getCurrentSession(userId);
@@ -255,7 +266,7 @@ export class CashService implements OnModuleInit {
   async closeSession(sessionId: string, dto: CloseCashSessionDto, userId?: string): Promise<CashSession> {
     const session = await this.prisma.cash_sessions.findUnique({
       where: { id: sessionId },
-      include: { sales: { where: { status: 'VALIDEE' }, include: { sale_payments: true } }, customer_payments: true, expenses: true },
+      include: { sales: { where: { status: { in: ['VALIDEE', 'PARTIELLEMENT_PAYEE', 'AVOIR', 'RETOURNEE'] } }, include: { sale_payments: true, credit_notes: true } }, customer_payments: true, expenses: true, cash_movements: true },
     });
 
     if (!session) throw new NotFoundException('Session de caisse introuvable.');
@@ -266,14 +277,38 @@ export class CashService implements OnModuleInit {
       throw new BadRequestException('Cette session de caisse est déjà clôturée.');
     }
 
-    const salesCdf = session.sales.reduce((sum: number, sale: any) => sum + sale.sale_payments.filter((p: any) => p.payment_method === 'ESPECES' && p.currency === 'CDF').reduce((s: number, p: any) => s + Number(p.amount_paid) - Number(p.change_given_cdf || 0), 0), 0);
-    const salesUsd = session.sales.reduce((sum: number, sale: any) => sum + sale.sale_payments.filter((p: any) => p.payment_method === 'ESPECES' && p.currency === 'USD').reduce((s: number, p: any) => s + Number(p.amount_paid), 0), 0);
+    let totalCashReceivedCdf = 0;
+    let totalCashReceivedUsd = 0;
+    let totalChangeGivenCdf = 0;
+
+    for (const sale of session.sales) {
+      const cashPayments = sale.sale_payments.filter((p: any) => p.payment_method === 'ESPECES');
+      if (cashPayments.length > 0) {
+        for (const p of cashPayments) {
+          if (p.currency === 'CDF') {
+            totalCashReceivedCdf += Number(p.amount_paid);
+          } else if (p.currency === 'USD') {
+            totalCashReceivedUsd += Number(p.amount_paid);
+          }
+        }
+        // Déduction exacte du rendu de monnaie en CDF issu du tiroir-caisse
+        totalChangeGivenCdf += cashPayments.reduce((sum: number, p: any) => sum + Number(p.change_given_cdf || 0), 0);
+      }
+    }
+
+    const salesCdf = totalCashReceivedCdf - totalChangeGivenCdf;
+    const salesUsd = totalCashReceivedUsd;
     const receivablesCdf = session.customer_payments.filter((p: any) => p.payment_method === 'ESPECES' && p.currency === 'CDF').reduce((s: number, p: any) => s + Number(p.amount_paid_cdf), 0);
     const receivablesUsd = session.customer_payments.filter((p: any) => p.payment_method === 'ESPECES' && p.currency === 'USD').reduce((s: number, p: any) => s + Number(p.amount_paid ?? 0), 0);
     const expensesCdf = session.expenses.reduce((s: number, e: any) => s + Number(e.amount_cdf), 0);
     const expensesUsd = session.expenses.reduce((s: number, e: any) => s + Number(e.amount_usd), 0);
-    const expectedCdf = Number(session.initial_float_cdf) + salesCdf + receivablesCdf - expensesCdf;
-    const expectedUsd = Number(session.initial_float_usd) + salesUsd + receivablesUsd - expensesUsd;
+    const creditNotes = session.sales.flatMap((sale: any) => sale.credit_notes || []);
+    const creditNotesCdf = creditNotes.reduce((s: number, n: any) => s + Number(n.total_amount_cdf), 0);
+    const creditNotesUsd = creditNotes.reduce((s: number, n: any) => s + Number(n.total_amount_usd), 0);
+    const movementCdf = session.cash_movements.reduce((s: number, m: any) => s + (m.type === 'APPORT' ? 1 : -1) * Number(m.amount_cdf), 0);
+    const movementUsd = session.cash_movements.reduce((s: number, m: any) => s + (m.type === 'APPORT' ? 1 : -1) * Number(m.amount_usd), 0);
+    const expectedCdf = Number(session.initial_float_cdf) + salesCdf + receivablesCdf - expensesCdf - creditNotesCdf + movementCdf;
+    const expectedUsd = Number(session.initial_float_usd) + salesUsd + receivablesUsd - expensesUsd - creditNotesUsd + movementUsd;
 
     const varianceCdf = dto.countedAmountCdf - expectedCdf;
     const varianceUsd = dto.countedAmountUsd - expectedUsd;
@@ -297,7 +332,16 @@ export class CashService implements OnModuleInit {
       },
     });
 
-    this.auditService.logAction({
+    // Libération et annulation automatique des paniers en attente du vendeur (Règle V2 arbitrage)
+    await this.prisma.$executeRaw`
+      UPDATE held_carts 
+      SET status = 'ANNULE' 
+      WHERE pharmacy_id = ${session.pharmacy_id}::uuid 
+        AND user_id = ${session.user_id}::uuid 
+        AND status = 'ACTIF'
+    `.catch(() => {});
+
+    await this.auditService.logAction({
       userId: userId || session.user_id,
       userName: 'Caissier',
       action: 'CLOTURE_SESSION_CAISSE',
@@ -312,7 +356,7 @@ export class CashService implements OnModuleInit {
     });
 
     if (varianceCdf !== 0 || varianceUsd !== 0) {
-      this.auditService.logAction({
+      await this.auditService.logAction({
         userId: userId || session.user_id, userName: 'Caissier', action: 'ALERTE_ECART_CAISSE',
         entityName: 'CASH_SESSION', entityId: session.id,
         newValues: { varianceCdf, varianceUsd, reason: dto.varianceReason },
@@ -361,7 +405,7 @@ export class CashService implements OnModuleInit {
       return expense;
     });
 
-    this.auditService.logAction({
+    await this.auditService.logAction({
       userId: validUserId,
       userName: 'Utilisateur',
       action: 'DEPENSE_CREEE',

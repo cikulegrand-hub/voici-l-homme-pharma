@@ -74,8 +74,8 @@ export class SuppliersApiService {
   // FOURNISSEURS (ACH-01)
   // ==========================================
 
-  getSuppliers(): Observable<Supplier[]> {
-    return this.client.get<Supplier[]>('/suppliers');
+  getSuppliers(includeInactive = true): Observable<Supplier[]> {
+    return this.client.get<Supplier[]>('/suppliers', { params: { includeInactive: String(includeInactive) } });
   }
 
   getSupplierById(id: string): Observable<Supplier> {
@@ -88,6 +88,10 @@ export class SuppliersApiService {
 
   updateSupplier(id: string, dto: UpdateSupplierDto): Observable<Supplier> {
     return this.client.patch<Supplier>(`/suppliers/${id}`, dto);
+  }
+
+  toggleSupplierActive(id: string, isActive: boolean): Observable<Supplier> {
+    return this.updateSupplier(id, { isActive });
   }
 
   // ==========================================
@@ -115,8 +119,6 @@ export class SuppliersApiService {
   }
 
   downloadPurchaseOrderPdf(orderId: string): Observable<Blob> {
-    return this.http.get(`/api/v1/suppliers/orders/${orderId}/pdf`, {
-      responseType: 'blob',
-    });
+    return this.client.getBlob(`/suppliers/orders/${orderId}/pdf`);
   }
 }

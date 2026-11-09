@@ -1,16 +1,53 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { BaseApiClient } from '../generated/base-api-client';
-import { CreateCustomerDto } from '../generated/models';
 import { Customer } from '@vhp/shared';
+
+export type CustomerProfileRequest = {
+  fullName: string; customerType: 'PARTICULIER' | 'ENTREPRISE' | 'ASSURANCE'; creditLimitCdf: number; phone?: string; email?: string; companyName?: string; address?: string; medicalNotes?: string;
+  nom?: string; postnom?: string; prenom?: string; sexe?: 'M' | 'F'; dateNaissance?: string; nationalite?: string; telephonePrincipal?: string; telephoneSecondaire?: string; consentementDonnees: boolean;
+  addressDetails?: { province?: string; ville?: string; commune?: string; quartier?: string; avenueRue?: string; numeroParcelle?: string; pointDeRepere?: string; latitude?: number; longitude?: number };
+  identityDocuments?: Array<{ documentType: string; documentNumber: string; issueDate?: string; expirationDate?: string; isPrimary?: boolean }>;
+  contacts?: Array<{ name: string; relationship?: string; phone: string; address?: string }>;
+  insurance?: { insurerId?: string; insurerName?: string; policyNumber?: string; insuredCardNumber?: string; insuredStatus?: string; principalInsuredName?: string; relationshipToPrincipal?: string; subscribingEmployer?: string; coverageRate?: number; ceiling?: number; startDate?: string; endDate?: string };
+  enterprise?: { legalName: string; rccm?: string; nationalId?: string; taxId?: string; representativeName: string; representativeFunction?: string; representativePhone: string; representativeDocumentNumber: string };
+};
+
+export type QuickCustomerRequest = { fullName: string; phone?: string; consentementDonnees: boolean };
 
 export interface CustomerStatement {
   customer: Customer;
   currentBalanceCdf: number;
   availableCreditCdf: number;
   generatedAt?: string;
-  purchases: Array<{ id: string; invoiceNumber: string; date: string; totalCdf: number; creditCdf: number }>;
-  payments: Array<{ id: string; amountPaidCdf: number; currency: string; method: string; receiptReference?: string; createdAt: string; allocations: Array<{ saleId: string; amountCdf: number }> }>;
+  purchases: Array<{
+    id: string;
+    invoiceNumber: string;
+    date: string;
+    totalCdf: number;
+    creditCdf: number;
+    items?: Array<{
+      id?: string;
+      productName: string;
+      dci?: string;
+      dosage?: string;
+      galenicForm?: string;
+      lotNumber?: string;
+      expiryDate?: string;
+      quantity: number;
+      unitPriceCdf: number;
+      totalLineCdf: number;
+    }>;
+  }>;
+  payments: Array<{
+    id: string;
+    amountPaidCdf: number;
+    currency: string;
+    method: string;
+    receiptReference?: string;
+    createdAt: string;
+    allocations: Array<{ saleId: string; invoiceNumber?: string; amountCdf: number }>;
+  }>;
 }
 
 export interface SettleDebtRequest {
@@ -43,8 +80,34 @@ export class CustomersApiService {
     return this.client.get<Customer>(`/customers/${id}`);
   }
 
-  createCustomer(dto: CreateCustomerDto): Observable<Customer> {
+  createCustomer(dto: CustomerProfileRequest): Observable<Customer> {
     return this.client.post<Customer>('/customers', dto);
+  }
+  createQuickCustomer(dto: QuickCustomerRequest): Observable<Customer> { return this.client.post<Customer>('/customers/quick', dto); }
+
+  updateCustomer(id: string, dto: CustomerProfileRequest): Observable<Customer> { return this.client.patch<Customer>(`/customers/${id}`, dto); }
+  uploadProfilePhoto(id: string, file: File): Observable<{ hasPhoto: boolean }> {
+    const form = new FormData(); form.append('file', file); return this.client.post<{ hasPhoto: boolean }>(`/customers/${id}/photo`, form);
+  }
+  getProfilePhoto(id: string): Observable<{ signedUrl: string; expiresAt: string; storageMode?: 'local' | 'supabase' }> { return this.client.get(`/customers/${id}/photo/signed-url`); }
+  getProfilePhotoImage(id: string): Observable<Blob> { return this.client.getBlob(`/customers/${id}/photo/file`); }
+  removeProfilePhoto(id: string): Observable<{ hasPhoto: boolean }> { return this.client.delete<{ hasPhoto: boolean }>(`/customers/${id}/photo`); }
+  getInsurers(): Observable<Array<{ id: string; name: string }>> { return this.client.get<Array<{ id: string; name: string }>>('/customers/insurers'); }
+
+  revealIdentityNumber(documentId: string): Observable<{ number: string }> {
+    return this.client.get<{ number: string }>(`/customers/identity-documents/${documentId}/number`);
+  }
+
+  getIdentityScan(documentId: string): Observable<{ signedUrl: string; expiresAt: string; storageMode?: 'local' | 'supabase' }> {
+    return this.client.get<{ signedUrl: string; expiresAt: string; storageMode?: 'local' | 'supabase' }>(`/customers/identity-documents/${documentId}/signed-url`);
+  }
+
+  getIdentityScanImage(documentId: string): Observable<Blob> {
+    return this.client.getBlob(`/customers/identity-documents/${documentId}/file`);
+  }
+
+  deactivateCustomer(id: string): Observable<{ success: boolean }> {
+    return this.client.patch<{ success: boolean }>(`/customers/${id}/deactivate`, {});
   }
 
   getStatement(id: string): Observable<CustomerStatement> {

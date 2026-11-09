@@ -2,12 +2,16 @@ import {
   IsString,
   IsNotEmpty,
   IsNumber,
+  IsInt,
   IsOptional,
   IsEnum,
   IsDateString,
   Min,
   IsIn,
   IsUUID,
+  IsBoolean,
+  IsArray,
+  ValidateNested,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
@@ -52,6 +56,38 @@ export class CreateCustomerDto {
   @IsString()
   @IsOptional()
   medicalNotes?: string;
+
+  @IsString() @IsOptional() nom?: string;
+  @IsString() @IsOptional() postnom?: string;
+  @IsString() @IsOptional() prenom?: string;
+  @IsIn(['M', 'F']) @IsOptional() sexe?: 'M' | 'F';
+  @IsDateString() @IsOptional() dateNaissance?: string;
+  @IsString() @IsOptional() nationalite?: string;
+  @IsString() @IsOptional() telephonePrincipal?: string;
+  @IsString() @IsOptional() telephoneSecondaire?: string;
+  @IsBoolean({ message: 'Le consentement à la collecte des données est obligatoire.' })
+  consentementDonnees: boolean;
+  @IsOptional() addressDetails?: { province?: string; ville?: string; commune?: string; quartier?: string; avenueRue?: string; numeroParcelle?: string; pointDeRepere?: string; latitude?: number; longitude?: number };
+  @IsOptional() identityDocuments?: Array<{ documentType: string; documentNumber: string; issueDate?: string; expirationDate?: string; fileFrontPath?: string; fileBackPath?: string; isPrimary?: boolean }>;
+  @IsOptional() contacts?: Array<{ name: string; relationship?: string; phone: string; address?: string }>;
+  @IsOptional() insurance?: { insurerId?: string; insurerName?: string; policyNumber?: string; insuredCardNumber?: string; insuredStatus?: string; principalInsuredName?: string; relationshipToPrincipal?: string; subscribingEmployer?: string; coverageRate?: number; ceiling?: number; startDate?: string; endDate?: string };
+  @IsOptional() enterprise?: { legalName: string; rccm?: string; nationalId?: string; taxId?: string; representativeName: string; representativeFunction?: string; representativePhone: string; representativeDocumentNumber: string };
+}
+
+export class CreateQuickCustomerDto {
+  @ApiProperty({ example: 'Jean Mukendi' })
+  @IsString()
+  @IsNotEmpty()
+  fullName: string;
+
+  @ApiProperty({ example: '+243 81 234 56 78', required: false })
+  @IsString()
+  @IsOptional()
+  phone?: string;
+
+  @ApiProperty({ description: 'Consentement recueilli au comptoir' })
+  @IsBoolean({ message: 'Le consentement du client est obligatoire.' })
+  consentementDonnees: boolean;
 }
 
 export class CreatePrescriptionDto {
@@ -84,6 +120,10 @@ export class CreatePrescriptionDto {
   @IsString()
   @IsOptional()
   prescriptionText?: string;
+}
+
+export class UpdateCustomerDto extends CreateCustomerDto {
+  @IsOptional() consentementDonnees: boolean;
 }
 
 export class SettleDebtDto {
@@ -125,5 +165,16 @@ export class CustomerQueryDto {
   @IsOptional()
   @Transform(({ value }) => (!value || value === 'undefined' || value === 'null' || value === '' ? undefined : value))
   customerType?: CustomerType;
+
+  // Pagination parameters
+  @IsInt()
+  @IsOptional()
+  @Min(0)
+  skip?: number;
+
+  @IsInt()
+  @IsOptional()
+  @Min(1)
+  take?: number;
 }
 

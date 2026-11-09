@@ -159,9 +159,12 @@ import { PriceHistoryEntry, Product } from '@vhp/shared';
         margin-top: 12px;
         max-height: 400px;
         overflow-y: auto;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
       }
       .history-table {
         width: 100%;
+        min-width: 580px;
         border-collapse: collapse;
         font-size: 0.875rem;
       }

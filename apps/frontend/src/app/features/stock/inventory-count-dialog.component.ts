@@ -33,6 +33,7 @@ import { AlertService } from '../../core/services/alert.service';
       @if (loading()) {
         <mat-spinner diameter="32"></mat-spinner>
       } @else {
+        <div class="table-container">
         <table class="count-table">
           <thead>
             <tr>
@@ -66,6 +67,7 @@ import { AlertService } from '../../core/services/alert.service';
             }
           </tbody>
         </table>
+        </div>
       }
     </mat-dialog-content>
     <mat-dialog-actions align="end">
@@ -77,7 +79,8 @@ import { AlertService } from '../../core/services/alert.service';
   `,
   styles: [`
     .w-full { width: 100%; }
-    .count-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%; }
+    .count-table { width: 100%; min-width: 520px; border-collapse: collapse; font-size: 0.85rem; }
     .count-table th, .count-table td { padding: 6px 8px; border-bottom: 1px solid #e2e8f0; }
     .qty { width: 72px; }
     .just { width: 140px; }

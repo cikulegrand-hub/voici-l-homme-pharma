@@ -151,6 +151,25 @@ export class NotificationsService {
     return createdCount;
   }
 
+  async createNotification(data: {
+    pharmacyId: string;
+    type: NotificationType;
+    title: string;
+    message: string;
+    severity: NotificationSeverity;
+    targetRole?: RoleName;
+    entityType?: 'PRODUCT_LOT' | 'CUSTOMER' | 'CASH_SESSION' | 'SALE' | 'PURCHASE_ORDER' | string;
+    entityId?: string;
+    metadata?: Record<string, unknown>;
+    dedupKey?: string;
+  }): Promise<boolean> {
+    const dedupKey = data.dedupKey || `${data.type}:${data.entityId || 'general'}:${new Date().toISOString().split('T')[0]}`;
+    return this.createIfNotExists({
+      ...data,
+      dedupKey,
+    });
+  }
+
   private async createIfNotExists(data: {
     pharmacyId: string;
     type: NotificationType;
@@ -158,7 +177,7 @@ export class NotificationsService {
     message: string;
     severity: NotificationSeverity;
     targetRole?: RoleName;
-    entityType?: 'PRODUCT_LOT' | 'CUSTOMER' | 'CASH_SESSION';
+    entityType?: 'PRODUCT_LOT' | 'CUSTOMER' | 'CASH_SESSION' | 'SALE' | 'PURCHASE_ORDER' | string;
     entityId?: string;
     metadata?: Record<string, unknown>;
     dedupKey: string;
@@ -219,6 +238,10 @@ export class NotificationsService {
       where.type = query.type;
     }
 
+    if (query?.severity) {
+      where.severity = query.severity;
+    }
+
     const records = await this.prisma.notifications.findMany({
       where,
       include: {
@@ -257,10 +280,25 @@ export class NotificationsService {
     return items;
   }
 
-  // NOT-02 : Compteur de non lues pour badge d'en-tête
+  // NOT-02 : Compteur de non lues pour badge d'en-tête (optimisé)
   async getUnreadCount(actor: { id: string; role: string; pharmacyId: string }): Promise<number> {
-    const items = await this.getNotifications(actor, { unreadOnly: true });
-    return items.length;
+    const where: any = {
+      pharmacy_id: actor.pharmacyId,
+      notification_reads: {
+        none: {
+          user_id: actor.id,
+        },
+      },
+    };
+
+    if (actor.role !== 'ADMIN') {
+      where.OR = [
+        { target_role: actor.role },
+        { target_role: null },
+      ];
+    }
+
+    return this.prisma.notifications.count({ where });
   }
 
   // NOT-01 : Marquer une notification comme lue pour cet utilisateur
@@ -293,16 +331,42 @@ export class NotificationsService {
     }
   }
 
-  // NOT-01 : Tout marquer comme lu pour cet utilisateur
+  // NOT-01 : Tout marquer comme lu pour cet utilisateur (traitement par lot efficace)
   async markAllAsRead(actor: { id: string; role: string; pharmacyId: string }): Promise<number> {
-    const unread = await this.getNotifications(actor, { unreadOnly: true });
-    let count = 0;
+    const where: any = {
+      pharmacy_id: actor.pharmacyId,
+      notification_reads: {
+        none: {
+          user_id: actor.id,
+        },
+      },
+    };
 
-    for (const notif of unread) {
-      const ok = await this.markAsRead(notif.id, actor.id);
-      if (ok) count++;
+    if (actor.role !== 'ADMIN') {
+      where.OR = [
+        { target_role: actor.role },
+        { target_role: null },
+      ];
     }
 
-    return count;
+    const unreadNotifications = await this.prisma.notifications.findMany({
+      where,
+      select: { id: true },
+    });
+
+    if (unreadNotifications.length === 0) return 0;
+
+    const reads = unreadNotifications.map((n) => ({
+      notification_id: n.id,
+      user_id: actor.id,
+      read_at: new Date(),
+    }));
+
+    await this.prisma.notification_reads.createMany({
+      data: reads,
+      skipDuplicates: true,
+    });
+
+    return unreadNotifications.length;
   }
 }

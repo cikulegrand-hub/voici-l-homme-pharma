@@ -29,7 +29,7 @@ export const routes: Routes = [
       {
         path: 'pos',
         canActivate: [permissionGuard],
-        data: { permission: 'pos.access' },
+        data: { permission: ['pos.access', 'vente.creer'] },
         loadComponent: () =>
           import('./features/pos/pos.component').then((m) => m.PosComponent),
       },
@@ -106,7 +106,7 @@ export const routes: Routes = [
       {
         path: 'cash',
         canActivate: [permissionGuard],
-        data: { permission: 'finances.consulter' },
+        data: { permission: ['caisse.ouvrir', 'caisse.cloturer', 'finances.consulter'] },
         loadComponent: () =>
           import('./features/cash/cash.component').then(
             (m) => m.CashComponent,
@@ -115,7 +115,7 @@ export const routes: Routes = [
       {
         path: 'reports',
         canActivate: [permissionGuard],
-        data: { permission: 'rapports.dashboard' },
+        data: { permission: ['rapports.dashboard', 'rapports.consulter'] },
         loadComponent: () =>
           import('./features/reports/reports.component').then(
             (m) => m.ReportsComponent,
@@ -124,7 +124,7 @@ export const routes: Routes = [
       {
         path: 'reports/:reportKey',
         canActivate: [permissionGuard],
-        data: { permission: 'rapports.dashboard' },
+        data: { permission: ['rapports.dashboard', 'rapports.consulter'] },
         loadComponent: () =>
           import('./features/reports/reports.component').then(
             (m) => m.ReportsComponent,
@@ -151,7 +151,7 @@ export const routes: Routes = [
       {
         path: 'settings/exchange-rates',
         canActivate: [permissionGuard],
-        data: { permission: 'parametres.modifier' },
+        data: { permission: 'taux.modifier' },
         loadComponent: () =>
           import('./features/settings/exchange-rates.component').then(
             (m) => m.ExchangeRatesComponent,
@@ -164,15 +164,6 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/settings/import-wizard.component').then(
             (m) => m.ImportWizardComponent,
-          ),
-      },
-      {
-        path: 'settings/backups',
-        canActivate: [permissionGuard],
-        data: { permission: 'parametres.modifier' },
-        loadComponent: () =>
-          import('./features/settings/backups.component').then(
-            (m) => m.BackupsComponent,
           ),
       },
       // ── Module AUT : Gestion des utilisateurs ──
@@ -203,22 +194,19 @@ export const routes: Routes = [
             (m) => m.UserFormComponent,
           ),
       },
-      // ── Module AUT : Historique des connexions ──
-      {
-        path: 'login-history',
-        canActivate: [permissionGuard],
-        data: { permission: 'admin.audit' },
-        loadComponent: () =>
-          import('./features/auth/login-history.component').then(
-            (m) => m.LoginHistoryComponent,
-          ),
-      },
       // ── Module AUT : Mon profil ──
       {
         path: 'profile',
         loadComponent: () =>
           import('./features/auth/profile.component').then(
             (m) => m.ProfileComponent,
+          ),
+      },
+      {
+        path: 'notifications',
+        loadComponent: () =>
+          import('./features/notifications/notifications.component').then(
+            (m) => m.NotificationsComponent,
           ),
       },
     ],

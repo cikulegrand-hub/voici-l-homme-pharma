@@ -1,7 +1,7 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -10,6 +10,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTableModule } from '@angular/material/table';
 import { SuppliersApiService } from '../../core/api/services/suppliers-api.service';
+import { CashApiService } from '../../core/api/services/cash-api.service';
 import { AlertService } from '../../core/services/alert.service';
 import { ProductAutocompleteComponent } from '../../shared/components/product-autocomplete/product-autocomplete.component';
 import { Supplier, ProductAutocompleteItem } from '@vhp/shared';
@@ -178,7 +179,7 @@ interface OrderLineForm {
   `,
   styles: [`
     .dialog-container {
-      min-width: 780px;
+      width: 100%;
       max-width: 900px;
     }
     .dialog-header {
@@ -227,10 +228,13 @@ interface OrderLineForm {
       border: 1px solid #e2e8f0;
       border-radius: 8px;
       overflow: hidden;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
       margin-top: 8px;
     }
     .order-table {
       width: 100%;
+      min-width: 580px;
       border-collapse: collapse;
       font-size: 0.9rem;
     }
@@ -318,11 +322,25 @@ interface OrderLineForm {
       display: inline-block;
       margin-right: 8px;
     }
+    @media (max-width: 600px) {
+      .order-meta-grid {
+        flex-direction: column;
+      }
+      .flex-2, .flex-1 {
+        width: 100%;
+        flex: none;
+      }
+      .order-summary-bar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
   `],
 })
 export class PurchaseOrderDialogComponent implements OnInit {
   private readonly dialogRef = inject(MatDialogRef<PurchaseOrderDialogComponent>);
   private readonly suppliersApi = inject(SuppliersApiService);
+  private readonly cashApi = inject(CashApiService);
   private readonly alert = inject(AlertService);
 
   readonly suppliers = signal<Supplier[]>([]);
@@ -330,13 +348,20 @@ export class PurchaseOrderDialogComponent implements OnInit {
   readonly totalCdf = signal<number>(0);
   readonly totalUsd = signal<number>(0);
   readonly submitting = signal<boolean>(false);
+  readonly exchangeRate = signal<number>(0);
 
   selectedSupplierId = '';
   expectedDeliveryDate = '';
   notes = '';
 
+  constructor(@Inject(MAT_DIALOG_DATA) public data?: { supplierId?: string }) {}
+
   ngOnInit() {
+    if (this.data?.supplierId) {
+      this.selectedSupplierId = this.data.supplierId;
+    }
     this.loadSuppliers();
+    this.cashApi.getActiveRate().subscribe({ next: (rate) => { this.exchangeRate.set(Number(rate.rate)); this.onLineUpdated(); }, error: () => this.alert.error('Aucun taux de change actif. Saisissez le taux avant de créer une commande.') });
   }
 
   loadSuppliers() {
@@ -344,7 +369,9 @@ export class PurchaseOrderDialogComponent implements OnInit {
       next: (data) => {
         const active = data.filter((s) => s.isActive);
         this.suppliers.set(active);
-        if (active.length > 0) {
+        if (this.data?.supplierId && active.some((s) => s.id === this.data?.supplierId)) {
+          this.selectedSupplierId = this.data.supplierId;
+        } else if (active.length > 0 && !this.selectedSupplierId) {
           this.selectedSupplierId = active[0].id;
         }
       },
@@ -356,9 +383,9 @@ export class PurchaseOrderDialogComponent implements OnInit {
     const current = this.lines();
     const existingIndex = current.findIndex((l) => l.productId === item.id);
     if (existingIndex >= 0) {
-      current[existingIndex].orderedQuantity += 10;
+      current[existingIndex].orderedQuantity += 1;
       this.lines.set([...current]);
-      this.alert.info(`Quantité augmentée pour ${item.name}`);
+      this.alert.info(`Quantité augmentée (+1) pour ${item.name}`);
     } else {
       const estimatedCdf = Math.round(item.sellingPriceCdf * 0.7); // Prix d'achat estimé à 70% du prix de vente
       this.lines.set([
@@ -367,9 +394,9 @@ export class PurchaseOrderDialogComponent implements OnInit {
           productId: item.id,
           productName: item.name,
           dosage: item.dosage,
-          orderedQuantity: 50,
+          orderedQuantity: 10,
           unitPriceCdf: estimatedCdf > 0 ? estimatedCdf : 1000,
-          unitPriceUsd: Number(((estimatedCdf > 0 ? estimatedCdf : 1000) / 2850).toFixed(2)),
+          unitPriceUsd: this.toUsd(estimatedCdf > 0 ? estimatedCdf : 1000),
         },
       ]);
     }
@@ -386,16 +413,22 @@ export class PurchaseOrderDialogComponent implements OnInit {
   onLineUpdated() {
     let sumCdf = 0;
     for (const line of this.lines()) {
-      line.unitPriceUsd = Number((line.unitPriceCdf / 2850).toFixed(2));
+      line.unitPriceUsd = this.toUsd(line.unitPriceCdf);
       sumCdf += line.orderedQuantity * line.unitPriceCdf;
     }
     this.totalCdf.set(sumCdf);
-    this.totalUsd.set(Number((sumCdf / 2850).toFixed(2)));
+    this.totalUsd.set(this.toUsd(sumCdf));
+  }
+
+  private toUsd(amountCdf: number): number {
+    const rate = this.exchangeRate();
+    return rate > 0 ? Number((amountCdf / rate).toFixed(2)) : 0;
   }
 
   isValid(): boolean {
     return (
       !!this.selectedSupplierId &&
+      this.exchangeRate() > 0 &&
       this.lines().length > 0 &&
       this.lines().every((l) => l.orderedQuantity > 0 && l.unitPriceCdf >= 0)
     );

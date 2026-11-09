@@ -25,6 +25,7 @@ import {
   CreateExpenseDto,
   ReverseExpenseDto,
   CreateExpenseCategoryDto,
+  CreateCashMovementDto,
 } from './dto/cash.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -58,6 +59,19 @@ export class CashController {
   @RequirePermission('finances.consulter')
   async getActiveSession(@Req() req: any): Promise<CashSession | null> { return this.cashService.getCurrentSession(req.user.id); }
 
+  @Post('sessions/:id/movements')
+  @ApiOperation({ summary: 'Enregistrer un apport ou un retrait physique de caisse (FIN-05)' })
+  @RequirePermission('finances.mouvement')
+  async createMovement(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CreateCashMovementDto, @Req() req: any) {
+    return this.cashService.createMovement(id, dto, req.user.id, req.user.pharmacyId);
+  }
+
+  @Get('sessions/:id/movements')
+  @RequirePermission('finances.consulter')
+  async listMovements(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    return this.cashService.listMovements(id, req.user.pharmacyId);
+  }
+
   @Patch('sessions/:id/close')
   @ApiOperation({ summary: 'Clôturer la caisse avec réconciliation des écarts obligatoirement justifiée (FIN-02, RG-12)' })
   @RequirePermission('caisse.cloturer')
@@ -70,23 +84,21 @@ async closeSession(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CloseCas
   @Get('exchange-rates/active')
   @ApiOperation({ summary: 'Consulter le taux de change officiel actif (FIN-04, RG-08)' })
   @ApiQuery({ name: 'at', required: false, description: 'Date ISO pour consulter le taux en vigueur à cet instant' })
-  async getActiveRate(@Query('at') at?: string): Promise<ExchangeRate> {
-    return this.cashService.getActiveExchangeRate(undefined, at);
+  async getActiveRate(@Query('at') at: string | undefined, @Req() req: any): Promise<ExchangeRate> {
+    return this.cashService.getActiveExchangeRate(req.user.pharmacyId, at);
   }
 
   @Post('exchange-rates')
   @RequirePermission('taux.modifier')
   @ApiOperation({ summary: 'Saisir un nouveau taux de change CDF / USD (FIN-04, RG-08)' })
   async setExchangeRate(@Body() dto: SetExchangeRateDto, @Req() req: any): Promise<ExchangeRate> {
-    const userId = req.user?.id || 'pharmacien-user-id';
-    const pharmacyId = req.user?.pharmacyId || '11111111-1111-1111-1111-111111111111';
-    return this.cashService.setExchangeRate(dto, userId, pharmacyId);
+    return this.cashService.setExchangeRate(dto, req.user.id, req.user.pharmacyId);
   }
 
   @Get('exchange-rates/history')
   @ApiOperation({ summary: 'Historique des taux de change saisis' })
-  async getRatesHistory(): Promise<ExchangeRate[]> {
-    return this.cashService.getExchangeRatesHistory();
+  async getRatesHistory(@Req() req: any): Promise<ExchangeRate[]> {
+    return this.cashService.getExchangeRatesHistory(req.user.pharmacyId);
   }
 
   // ---------- DÉPENSES OFFICINE (FIN-03) ----------

@@ -47,7 +47,11 @@ function passwordPolicyValidator(control: AbstractControl): ValidationErrors | n
         <mat-card-header>
           <mat-card-title class="form-title">
             <button mat-icon-button (click)="goBack()"><mat-icon>arrow_back</mat-icon></button>
-            {{ isEditMode() ? i18n.users.editUser : i18n.users.newUser }}
+            @if (isEditMode()) {
+              <span>{{ i18n.users.editUser }}</span>
+            } @else {
+              <span>{{ i18n.users.newUser }}</span>
+            }
           </mat-card-title>
         </mat-card-header>
 
@@ -167,6 +171,12 @@ function passwordPolicyValidator(control: AbstractControl): ValidationErrors | n
     .form-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 16px; }
     .loading-center { display: flex; justify-content: center; padding: 48px; }
     .btn-spinner { display: inline-block; margin-right: 6px; }
+
+    @media (max-width: 600px) {
+      .form-page { padding: 8px 4px; }
+      .form-actions { flex-direction: column; }
+      .form-actions button { width: 100%; }
+    }
   `],
 })
 export class UserFormComponent implements OnInit {

@@ -3,6 +3,7 @@ import {
   IsNotEmpty,
   IsNumber,
   IsOptional,
+  IsDateString,
   Min,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
@@ -41,6 +42,10 @@ export class SetExchangeRateDto {
   @IsNumber()
   @Min(1)
   rate: number;
+
+  @ApiProperty({ example: '2026-11-04T08:00:00.000Z', description: 'Date/heure ISO à partir de laquelle le taux devient applicable.' })
+  @IsDateString()
+  effectiveDate: string;
 
   @ApiProperty({ example: 'Ajustement cours officiel Banque Centrale / Marché Limete', required: false })
   @IsString()
@@ -87,5 +92,29 @@ export class CreateExpenseCategoryDto {
   @IsString()
   @IsNotEmpty()
   name: string;
+}
+
+export class CreateCashMovementDto {
+  @ApiProperty({ enum: ['APPORT', 'RETRAIT'] })
+  @IsString()
+  @IsNotEmpty()
+  type: 'APPORT' | 'RETRAIT';
+
+  @ApiProperty({ example: 50000, required: false })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  amountCdf?: number;
+
+  @ApiProperty({ example: 20, required: false })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  amountUsd?: number;
+
+  @ApiProperty({ example: 'Réassort du tiroir principal' })
+  @IsString()
+  @IsNotEmpty()
+  reason: string;
 }
 

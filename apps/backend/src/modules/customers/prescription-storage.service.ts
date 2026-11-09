@@ -1,12 +1,12 @@
-import { BadRequestException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, OnModuleInit, ServiceUnavailableException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { mkdir, readFile, writeFile } from 'fs/promises';
+import { mkdir, readFile, unlink, writeFile } from 'fs/promises';
 import { basename, join, resolve } from 'path';
 
 const MAX_IMAGE_SIZE = 8 * 1024 * 1024;
 
 @Injectable()
-export class PrescriptionStorageService {
+export class PrescriptionStorageService implements OnModuleInit {
   /** Local fallback is durable across restarts when this directory is mounted/persisted. */
   private readonly localRoot = resolve(process.env.PRESCRIPTIONS_STORAGE_PATH || join(process.cwd(), '.data', 'prescriptions'));
   private get config() {
@@ -14,6 +14,38 @@ export class PrescriptionStorageService {
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const bucket = process.env.SUPABASE_PRESCRIPTIONS_BUCKET || 'prescriptions';
     return { url, serviceKey, bucket };
+  }
+
+  /** Production must use the private Supabase bucket; this check is read-only. */
+  async onModuleInit(): Promise<void> {
+    if (process.env.NODE_ENV !== 'production') return;
+
+    if (!this.isStorageConfigured()) {
+      throw new Error(
+        'Configuration invalide : SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY sont obligatoires en production; le stockage local des ordonnances est interdit.',
+      );
+    }
+
+    await this.assertPrivateBucket();
+  }
+
+  private async assertPrivateBucket(): Promise<void> {
+    const { url, serviceKey, bucket } = this.config;
+    try {
+      const response = await fetch(`${url}/storage/v1/bucket/${encodeURIComponent(bucket)}`, {
+        method: 'GET',
+        headers: { authorization: `Bearer ${serviceKey}`, apikey: serviceKey },
+      });
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const metadata = (await response.json()) as { public?: boolean };
+      if (metadata.public === true) throw new Error('public-bucket');
+    } catch (error: any) {
+      const reason = error?.message === 'public-bucket'
+        ? `Le bucket Supabase « ${bucket} » est public.`
+        : `Impossible de vérifier la confidentialité du bucket Supabase « ${bucket} ».`;
+      throw new Error(`Démarrage refusé : ${reason} Aucun stockage local de secours n'est autorisé en production.`);
+    }
   }
 
   /** Returns true only if Supabase Storage is properly configured (non-placeholder values). */
@@ -73,6 +105,26 @@ export class PrescriptionStorageService {
     return path;
   }
 
+  async uploadProfilePhoto(customerId: string, file: Express.Multer.File): Promise<string> {
+    return this.upload(`profiles/${customerId}`, file);
+  }
+
+  async createProfilePhotoSignedUrl(path: string, expiresInSeconds = 300): Promise<{ signedUrl: string; expiresAt: string }> {
+    return this.createSignedUrl(path, expiresInSeconds);
+  }
+
+  async deleteStoredFile(path: string): Promise<void> {
+    if (!path) return;
+    const { url, serviceKey, bucket } = this.config;
+    if (this.isStorageConfigured()) {
+      await fetch(`${url}/storage/v1/object/${encodeURIComponent(bucket)}/${path}`, { method: 'DELETE', headers: { authorization: `Bearer ${serviceKey}`, apikey: serviceKey } }).catch(() => undefined);
+      return;
+    }
+    const normalized = path.replace(/\\/g, '/');
+    if (normalized.startsWith('/') || normalized.includes('..')) return;
+    await unlink(resolve(this.localRoot, normalized)).catch(() => undefined);
+  }
+
   async createSignedUrl(path: string, expiresInSeconds = 300): Promise<{ signedUrl: string; expiresAt: string }> {
     const { url, serviceKey, bucket } = this.config;
 
@@ -120,8 +172,21 @@ export class PrescriptionStorageService {
   }
 
   async readLocal(path: string): Promise<Buffer> {
-    if (!this.usesLocalStorage()) {
-      throw new BadRequestException('Le fichier de l’ordonnance n’est pas disponible.');
+    if (this.isStorageConfigured()) {
+      const { url, serviceKey, bucket } = this.config;
+      try {
+        const response = await fetch(`${url}/storage/v1/object/${encodeURIComponent(bucket)}/${path}`, {
+          headers: { authorization: `Bearer ${serviceKey}`, apikey: serviceKey },
+        });
+        if (!response.ok) {
+          throw new NotFoundException('Fichier introuvable sur le stockage distant.');
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        return Buffer.from(arrayBuffer);
+      } catch (e: any) {
+        if (e instanceof NotFoundException) throw e;
+        throw new ServiceUnavailableException('Impossible de récupérer le fichier depuis le stockage distant.');
+      }
     }
     const normalized = path.replace(/\\/g, '/');
     if (!normalized || normalized.startsWith('/') || normalized.includes('..')) {
@@ -135,7 +200,7 @@ export class PrescriptionStorageService {
       return await readFile(target);
     } catch (error: any) {
       if (error?.code === 'ENOENT') {
-        throw new NotFoundException('Le fichier image de cette ordonnance est introuvable.');
+        throw new NotFoundException('Le fichier image est introuvable.');
       }
       throw error;
     }

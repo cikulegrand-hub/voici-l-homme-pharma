@@ -44,6 +44,7 @@ INSERT INTO permissions (code, category, description) VALUES
 -- Caisse & Finance
 ('caisse.ouvrir', 'FINANCE', 'Ouvrir une session de caisse'),
 ('caisse.cloturer', 'FINANCE', 'Clôturer sa session de caisse avec arrêté d''écart'),
+('finances.mouvement', 'FINANCE', 'Enregistrer un apport ou un retrait de caisse'),
 ('taux.modifier', 'FINANCE', 'Saisir le taux de change quotidien CDF/USD'),
 ('depense.creer', 'FINANCE', 'Enregistrer une dépense d''officine'),
 -- Administration
@@ -72,7 +73,7 @@ INSERT INTO role_permissions (role_id, permission_id)
 SELECT '22222222-2222-2222-2222-222222222223', id FROM permissions
 WHERE code IN (
     'vente.creer', 'vente.remise', 'stock.consulter',
-    'caisse.ouvrir', 'caisse.cloturer'
+    'caisse.ouvrir', 'caisse.cloturer', 'finances.consulter', 'finances.mouvement'
 ) ON CONFLICT DO NOTHING;
 
 -- GESTIONNAIRE STOCK

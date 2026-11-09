@@ -8,6 +8,7 @@ import {
   Min,
   IsDateString,
   IsIn,
+  IsBoolean,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
@@ -86,6 +87,11 @@ export class UpdateSupplierDto {
   @Min(0)
   @IsOptional()
   leadTimeDays?: number;
+
+  @ApiProperty({ required: false, description: 'Statut actif du fournisseur' })
+  @IsBoolean()
+  @IsOptional()
+  isActive?: boolean;
 }
 
 export class OrderItemDto {

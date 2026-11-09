@@ -11,7 +11,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
-import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
+import { MatPaginatorModule, MatPaginator, PageEvent } from '@angular/material/paginator';
 import { MatSortModule, MatSort } from '@angular/material/sort';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -103,6 +103,9 @@ export interface DataTableColumn {
       <mat-paginator
         [pageSizeOptions]="pageSizeOptions"
         [pageSize]="pageSize"
+        [length]="serverPagination ? totalItems : dataSource.data.length"
+        [pageIndex]="serverPagination ? pageIndex : 0"
+        (page)="onPageChange($event)"
         showFirstLastButtons
       ></mat-paginator>
     </div>
@@ -119,10 +122,13 @@ export interface DataTableColumn {
 
     .table-container {
       overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      width: 100%;
     }
 
     .full-width-table {
       width: 100%;
+      min-width: 550px;
     }
 
     .clickable-row {
@@ -136,6 +142,22 @@ export interface DataTableColumn {
     th.mat-header-cell {
       font-weight: 600;
       color: var(--vhp-text-primary, #202124);
+      white-space: nowrap;
+    }
+
+    td.mat-cell {
+      white-space: nowrap;
+    }
+
+    @media (max-width: 600px) {
+      .search-field {
+        max-width: 100%;
+      }
+
+      th.mat-header-cell, td.mat-cell {
+        padding: 8px 8px;
+        font-size: 13px;
+      }
     }
   `],
 })
@@ -148,11 +170,15 @@ export class DataTableComponent implements AfterViewInit, OnChanges {
   @Input() rowClickable = false;
   @Input() pageSize = 20;
   @Input() pageSizeOptions = [10, 20, 50, 100];
+  @Input() serverPagination = false;
+  @Input() totalItems = 0;
+  @Input() pageIndex = 0;
   @Input() emptyTitle = 'Aucune donnée disponible';
   @Input() emptyDescription = '';
   @Input() emptyIcon = 'inbox';
 
   @Output() rowClick = new EventEmitter<any>();
+  @Output() pageChange = new EventEmitter<PageEvent>();
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
@@ -169,13 +195,16 @@ export class DataTableComponent implements AfterViewInit, OnChanges {
   }
 
   ngAfterViewInit(): void {
-    this.dataSource.paginator = this.paginator;
+    this.dataSource.paginator = this.serverPagination ? null : this.paginator;
     this.dataSource.sort = this.sort;
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['data']) {
       this.dataSource.data = this.data || [];
+    }
+    if (changes['serverPagination'] && this.paginator) {
+      this.dataSource.paginator = this.serverPagination ? null : this.paginator;
     }
   }
 
@@ -190,6 +219,10 @@ export class DataTableComponent implements AfterViewInit, OnChanges {
     if (this.rowClickable) {
       this.rowClick.emit(row);
     }
+  }
+
+  onPageChange(event: PageEvent): void {
+    if (this.serverPagination) this.pageChange.emit(event);
   }
 }
 
