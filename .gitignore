@@ -5,6 +5,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+e2e-vte-validation.log
 
 node_modules
 .angular/cache
@@ -14,10 +15,19 @@ dist-ssr
 *.local
 *.tsbuildinfo
 
+# Confidential enterprise documentation & project plans (local only)
+docs/
+docs/*
+
+# Local runtime storage (prescriptions, expense attachments, customer photos)
 .data
 **/.data/
 .data/*
 **/.data/*
+
+# Local scripts with test fixtures or test passwords
+apps/backend/scripts/create-admin-account.js
+apps/backend/scripts/test-*.js
 
 .vscode/*
 !.vscode/extensions.json
