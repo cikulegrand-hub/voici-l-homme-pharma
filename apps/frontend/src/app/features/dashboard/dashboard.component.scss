@@ -382,3 +382,103 @@
 }
 
 
+
+
+.workspace-orientation-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  border: 1px solid transparent;
+
+  &.ws-admin {
+    background: linear-gradient(135deg, #eff6ff, #dbeafe);
+    border-color: #bfdbfe;
+    .ws-icon-circle { background: #2563eb; color: #fff; }
+    .ws-title { color: #1e3a8a; }
+    .ws-status-pill { background: #dbeafe; color: #1d4ed8; }
+  }
+
+  &.ws-pharmacien {
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+    border-color: #a7f3d0;
+    .ws-icon-circle { background: #059669; color: #fff; }
+    .ws-title { color: #064e3b; }
+    .ws-status-pill { background: #d1fae5; color: #047857; }
+  }
+
+  &.ws-comptable {
+    background: linear-gradient(135deg, #faf5ff, #f3e8ff);
+    border-color: #e9d5ff;
+    .ws-icon-circle { background: #7c3aed; color: #fff; }
+    .ws-title { color: #581c87; }
+    .ws-status-pill { background: #f3e8ff; color: #6b21a8; }
+  }
+
+  &.ws-caissier {
+    background: linear-gradient(135deg, #fffbeb, #fef3c7);
+    border-color: #fde68a;
+    .ws-icon-circle { background: #d97706; color: #fff; }
+    .ws-title { color: #78350f; }
+    .ws-status-pill { background: #fef3c7; color: #b45309; }
+  }
+
+  &.ws-stock {
+    background: linear-gradient(135deg, #fef2f2, #fee2e2);
+    border-color: #fecaca;
+    .ws-icon-circle { background: #dc2626; color: #fff; }
+    .ws-title { color: #7f1d1d; }
+    .ws-status-pill { background: #fee2e2; color: #b91c1c; }
+  }
+
+  .ws-icon-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    mat-icon {
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
+    }
+  }
+
+  .ws-content {
+    flex: 1;
+  }
+
+  .ws-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+
+  .ws-title {
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .ws-status-pill {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .ws-desc {
+    margin: 0;
+    font-size: 13px;
+    color: #475569;
+    line-height: 1.4;
+  }
+}

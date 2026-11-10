@@ -184,10 +184,24 @@ export interface NavItem {
             <span>1 {{ rate.baseCurrency }} = {{ rate.rate | number:'1.0-0' }} {{ rate.targetCurrency }}</span>
           </div>
 
+          <!-- Pilule d'Espace & Périmètre Métier -->
+          <button
+            mat-button
+            class="scope-pill"
+            [class]="'scope-' + (currentUser()?.role || '').toLowerCase()"
+            (click)="showScopeModal.set(true)"
+            [matTooltip]="'Cliquez pour afficher les modules autorisés pour votre rôle ' + getRoleName(currentUser()?.role || '')"
+            *ngIf="currentUser() as user"
+          >
+            <mat-icon class="scope-icon">{{ getRoleScopeIcon(user.role) }}</mat-icon>
+            <span class="scope-text">{{ getRoleScopeTitle(user.role) }}</span>
+            <mat-icon class="scope-info-icon">help_outline</mat-icon>
+          </button>
+
           <span class="spacer"></span>
 
           <!-- Badge de caisse ouverte -->
-          <div class="cash-chip" *ngIf="authService.isAuthenticated()">
+          <div class="cash-chip" *ngIf="canViewCashStatus()">
             <span class="cash-dot" [class.open]="cashSessionOpen()"></span>
             <span class="cash-label">{{ cashSessionOpen() ? i18n.header.cashSessionOpen : 'Caisse fermée' }}</span>
           </div>
@@ -251,7 +265,70 @@ export interface NavItem {
           <router-outlet></router-outlet>
         </div>
       </mat-sidenav-content>
-    </mat-sidenav-container>
+    
+        <!-- Modal d'orientation : Périmètre & Droits d'Accès -->
+        @if (showScopeModal()) {
+          <div class="scope-modal-backdrop" (click)="showScopeModal.set(false)">
+            <div class="scope-modal-card" (click)="$event.stopPropagation()">
+              <header class="scope-modal-header" [class]="'header-' + (currentUser()?.role || '').toLowerCase()">
+                <div class="modal-header-icon">
+                  <mat-icon>{{ getRoleScopeIcon(currentUser()?.role) }}</mat-icon>
+                </div>
+                <div class="modal-header-text">
+                  <h3>{{ getRoleScopeTitle(currentUser()?.role) }}</h3>
+                  <span class="role-pill-badge">{{ getRoleName(currentUser()?.role || '') }}</span>
+                </div>
+                <button mat-icon-button (click)="showScopeModal.set(false)" class="modal-close-btn" aria-label="Fermer">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </header>
+
+              <div class="scope-modal-body">
+                <div class="user-greeting-box">
+                  <mat-icon>person</mat-icon>
+                  <div>
+                    <strong>{{ currentUser()?.fullName }}</strong> ({{ currentUser()?.username }})
+                    <p class="role-mission">{{ getRoleMission(currentUser()?.role) }}</p>
+                  </div>
+                </div>
+
+                <div class="scope-section-title">
+                  <mat-icon>check_circle</mat-icon>
+                  <span>Vos modules et fonctionnalités autorisés :</span>
+                </div>
+
+                <div class="scope-modules-grid">
+                  @for (mod of getUserAllowedModules(); track mod.label) {
+                    <div class="module-item">
+                      <mat-icon class="module-check">check</mat-icon>
+                      <mat-icon class="module-icon">{{ mod.icon }}</mat-icon>
+                      <div class="module-info">
+                        <span class="module-name">{{ mod.label }}</span>
+                        <span class="module-desc">{{ mod.description }}</span>
+                      </div>
+                    </div>
+                  }
+                </div>
+
+                <div class="security-notice-box">
+                  <mat-icon>lock</mat-icon>
+                  <span>
+                    <strong>Cloisonnement des accès (CDC & VHP-AUT) :</strong>
+                    Tous les modules, menus et boutons ne relevant pas de vos fonctions sont strictement masqués dans votre interface pour garantir la sécurité et la conformité de l'officine.
+                  </span>
+                </div>
+              </div>
+
+              <footer class="scope-modal-footer">
+                <button mat-flat-button color="primary" (click)="showScopeModal.set(false)">
+                  <mat-icon>done</mat-icon>
+                  Compris
+                </button>
+              </footer>
+            </div>
+          </div>
+        }
+      </mat-sidenav-container>
   `,
   styles: [`
     .layout-container {
@@ -711,6 +788,166 @@ export interface NavItem {
         padding: 12px 8px;
       }
     }
+
+    .scope-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+      height: 32px;
+      line-height: 1;
+    }
+    .scope-pill:hover {
+      filter: brightness(0.95);
+      transform: translateY(-1px);
+    }
+    .scope-pill .scope-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+    .scope-pill .scope-info-icon {
+      font-size: 14px;
+      width: 14px;
+      height: 14px;
+      opacity: 0.7;
+      margin-left: 2px;
+    }
+    .scope-admin { background: #e8f0fe; color: #1a73e8; border-color: #c2e7ff; }
+    .scope-pharmacien { background: #e6f4ea; color: #137333; border-color: #ceead6; }
+    .scope-comptable { background: #f3e8fd; color: #7627bb; border-color: #e9d5ff; }
+    .scope-caissier { background: #fef7e0; color: #b06000; border-color: #feefc3; }
+    .scope-stock { background: #fce8e6; color: #c5221f; border-color: #fad2cf; }
+
+    .scope-modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 16px;
+      animation: fadeIn 0.2s ease;
+    }
+    .scope-modal-card {
+      background: #ffffff;
+      border-radius: 16px;
+      max-width: 620px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+      animation: slideUp 0.25s ease;
+    }
+    .scope-modal-header {
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border-top-left-radius: 16px;
+      border-top-right-radius: 16px;
+      color: #ffffff;
+    }
+    .scope-modal-header.header-admin { background: linear-gradient(135deg, #1e3a8a, #2563eb); }
+    .scope-modal-header.header-pharmacien { background: linear-gradient(135deg, #065f46, #059669); }
+    .scope-modal-header.header-comptable { background: linear-gradient(135deg, #581c87, #7c3aed); }
+    .scope-modal-header.header-caissier { background: linear-gradient(135deg, #9a3412, #d97706); }
+    .scope-modal-header.header-stock { background: linear-gradient(135deg, #991b1b, #dc2626); }
+
+    .modal-header-icon mat-icon { font-size: 36px; width: 36px; height: 36px; }
+    .modal-header-text { flex: 1; }
+    .modal-header-text h3 { margin: 0; font-size: 18px; font-weight: 700; }
+    .role-pill-badge {
+      display: inline-block;
+      margin-top: 4px;
+      padding: 2px 10px;
+      background: rgba(255, 255, 255, 0.25);
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    .modal-close-btn { color: #ffffff; }
+    .scope-modal-body { padding: 24px; }
+    .user-greeting-box {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: #f8fafc;
+      border-left: 4px solid var(--vhp-primary, #0f766e);
+      padding: 14px 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .user-greeting-box mat-icon { color: var(--vhp-primary, #0f766e); font-size: 24px; }
+    .role-mission { margin: 4px 0 0; font-size: 13px; color: #475569; line-height: 1.4; }
+    .scope-section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+    .scope-section-title mat-icon { color: #10b981; font-size: 20px; width: 20px; height: 20px; }
+    .scope-modules-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .module-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+    .module-check { color: #16a34a; font-size: 18px; width: 18px; height: 18px; }
+    .module-icon { color: #0f766e; font-size: 20px; width: 20px; height: 20px; }
+    .module-info { display: flex; flex-direction: column; }
+    .module-name { font-weight: 600; font-size: 13px; color: #0f172a; }
+    .module-desc { font-size: 11px; color: #64748b; }
+    .security-notice-box {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: #fffbeb;
+      border: 1px solid #fef3c7;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 12px;
+      color: #92400e;
+      line-height: 1.45;
+    }
+    .security-notice-box mat-icon { color: #d97706; font-size: 20px; width: 20px; height: 20px; flex-shrink: 0; }
+    .scope-modal-footer {
+      padding: 16px 24px;
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: flex-end;
+      border-bottom-left-radius: 16px;
+      border-bottom-right-radius: 16px;
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
   `],
 })
 export class MainLayoutComponent implements OnInit {
@@ -788,4 +1025,77 @@ export class MainLayoutComponent implements OnInit {
   onLogout(): void {
     this.authService.logout();
   }
+
+  readonly showScopeModal = signal(false);
+
+  canViewCashStatus(): boolean {
+    const role = this.currentUser()?.role;
+    return role === 'CAISSIER' || role === 'PHARMACIEN' || role === 'ADMIN';
+  }
+
+  getRoleScopeTitle(role?: string): string {
+    switch (role) {
+      case 'ADMIN': return 'Espace Administration';
+      case 'PHARMACIEN': return 'Espace Pharmacien Responsable';
+      case 'COMPTABLE': return 'Espace Comptabilité & Finances';
+      case 'CAISSIER': return 'Espace Caisse & Ventes';
+      case 'STOCK': return 'Espace Gestion de Stock';
+      default: return 'Espace Utilisateur';
+    }
+  }
+
+  getRoleScopeIcon(role?: string): string {
+    switch (role) {
+      case 'ADMIN': return 'admin_panel_settings';
+      case 'PHARMACIEN': return 'medical_services';
+      case 'COMPTABLE': return 'account_balance';
+      case 'CAISSIER': return 'point_of_sale';
+      case 'STOCK': return 'inventory_2';
+      default: return 'badge';
+    }
+  }
+
+  getRoleMission(role?: string): string {
+    switch (role) {
+      case 'ADMIN': return 'Supervision générale, gestion des comptes utilisateurs, audit inaltérable et configuration de l’officine.';
+      case 'PHARMACIEN': return 'Validation pharmaceutique des ordonnances, délivrance, ajustements de stocks et conformité.';
+      case 'COMPTABLE': return 'Gestion financière, suivi des créances clients, justification des dépenses, clôtures de caisse et audit des opérations.';
+      case 'CAISSIER': return 'Ventes comptoir, encaissements multidevises (CDF/USD), délivrance des tickets et tenue de la caisse.';
+      case 'STOCK': return 'Réception des livraisons fournisseurs, suivi des lots, contrôle des péremptions et inventaires physiques.';
+      default: return 'Accès sécurisé selon votre affectation.';
+    }
+  }
+
+  getUserAllowedModules(): Array<{ icon: string; label: string; description: string }> {
+    const items = this.filteredNavItems();
+    return items
+      .filter((it) => it.route !== '/notifications')
+      .map((it) => ({
+        icon: it.icon,
+        label: it.label,
+        description: this.getModuleDescription(it.route),
+      }));
+  }
+
+  getModuleDescription(route: string): string {
+    switch (route) {
+      case '/dashboard': return 'Indicateurs clés et résumé d’activité';
+      case '/pos': return 'Point de Vente comptoir et encaissements';
+      case '/sales': return 'Historique des factures, tickets et avoirs';
+      case '/catalog': return 'Catalogue des médicaments et tarification';
+      case '/stock': return 'Niveaux de stock, fiches de lots et seuils';
+      case '/reception': return 'Réception des livraisons fournisseurs';
+      case '/customers': return 'Fiches clients, encours et règlements de crédit';
+      case '/suppliers': return 'Fiches et coordonnées des fournisseurs';
+      case '/cash': return 'Mouvements de caisse, dépenses et clôtures';
+      case '/reports': return 'Rapports d’activité et états comptables';
+      case '/audit': return 'Journal d’audit inaltérable et traçabilité';
+      case '/users': return 'Gestion des utilisateurs et rôles';
+      case '/settings': return 'Configuration générale de l’officine';
+      case '/settings/exchange-rates': return 'Taux de change officiel CDF/USD';
+      case '/settings/import': return 'Assistant d’import de données';
+      default: return 'Fonctionnalité autorisée';
+    }
+  }
+
 }

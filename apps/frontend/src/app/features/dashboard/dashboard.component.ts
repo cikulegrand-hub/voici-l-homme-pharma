@@ -44,6 +44,20 @@ import { DashboardMetric, ReportFilters } from '@vhp/shared';
         </div>
       </header>
 
+      <!-- Bandeau d'orientation et de périmètre de travail -->
+      <div class="workspace-orientation-card" [class]="'ws-' + (currentUser()?.role || '').toLowerCase()">
+        <div class="ws-icon-circle">
+          <mat-icon>{{ getRoleScopeIcon(currentUser()?.role) }}</mat-icon>
+        </div>
+        <div class="ws-content">
+          <div class="ws-title-row">
+            <span class="ws-title">{{ getRoleScopeTitle(currentUser()?.role) }}</span>
+            <span class="ws-status-pill">Périmètre Actif</span>
+          </div>
+          <p class="ws-desc">{{ getRoleMission(currentUser()?.role) }}</p>
+        </div>
+      </div>
+
       <!-- 1. TABLEAU DE BORD VENDEUR & COMPTOIR (CDC V2) -->
       <section class="vendor-desk-card" *hasPermission="['pos.access', 'vente.creer']">
         <div class="vendor-desk-header">
@@ -132,7 +146,7 @@ import { DashboardMetric, ReportFilters } from '@vhp/shared';
       </section>
 
       <!-- Section des rapports et indicateurs d'activité -->
-      <section class="rpt-section" *hasPermission="'rapports.dashboard'">
+      <section class="rpt-section" *hasPermission="['rapports.dashboard', 'rapports.consulter']">
         <div class="section-heading">
           <div>
             <h3>Indicateurs de l’activité</h3>
@@ -198,7 +212,7 @@ import { DashboardMetric, ReportFilters } from '@vhp/shared';
             <span>Point de Vente (Comptoir)</span>
           </a>
 
-          <a mat-stroked-button class="shortcut-btn" routerLink="/sales" *hasPermission="'vente.creer'">
+          <a mat-stroked-button class="shortcut-btn" routerLink="/sales" *hasPermission="['vente.consulter', 'vente.creer']">
             <mat-icon>receipt_long</mat-icon>
             <span>Historique & Avoirs</span>
           </a>
@@ -345,4 +359,38 @@ export class DashboardComponent implements OnInit {
   isSuperAdmin(): boolean {
     return this.authService.userPermissions().includes('*');
   }
+
+  getRoleScopeTitle(role?: string): string {
+    switch (role) {
+      case 'ADMIN': return 'Espace Administration';
+      case 'PHARMACIEN': return 'Espace Pharmacien Responsable';
+      case 'COMPTABLE': return 'Espace Comptabilité & Finances';
+      case 'CAISSIER': return 'Espace Caisse & Ventes';
+      case 'STOCK': return 'Espace Gestion de Stock';
+      default: return 'Espace Utilisateur';
+    }
+  }
+
+  getRoleScopeIcon(role?: string): string {
+    switch (role) {
+      case 'ADMIN': return 'admin_panel_settings';
+      case 'PHARMACIEN': return 'medical_services';
+      case 'COMPTABLE': return 'account_balance';
+      case 'CAISSIER': return 'point_of_sale';
+      case 'STOCK': return 'inventory_2';
+      default: return 'badge';
+    }
+  }
+
+  getRoleMission(role?: string): string {
+    switch (role) {
+      case 'ADMIN': return 'Supervision générale, gestion des comptes utilisateurs, audit inaltérable et configuration de l’officine.';
+      case 'PHARMACIEN': return 'Validation pharmaceutique des ordonnances, délivrance, ajustements de stocks et conformité.';
+      case 'COMPTABLE': return 'Gestion financière, suivi des créances clients, justification des dépenses, clôtures de caisse et audit des opérations.';
+      case 'CAISSIER': return 'Ventes comptoir, encaissements multidevises (CDF/USD), délivrance des tickets et tenue de la caisse.';
+      case 'STOCK': return 'Réception des livraisons fournisseurs, suivi des lots, contrôle des péremptions et inventaires physiques.';
+      default: return 'Accès sécurisé selon votre affectation.';
+    }
+  }
+
 }
