@@ -15,7 +15,9 @@ dist-ssr
 *.local
 *.tsbuildinfo
 
-# Confidential enterprise documentation & project plans (local only)
+# Confidential enterprise documentation & all markdown files (local only)
+*.md
+**/*.md
 docs/
 docs/*
 
