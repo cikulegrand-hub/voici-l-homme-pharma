@@ -19,9 +19,15 @@ async function runMigrations() {
   let pool;
   if (connectionString && connectionString !== 'postgresql://postgres:postgres@localhost:5432/voici_lhomme_pharma') {
     console.log(`[Config] Connexion via DATABASE_URL : ${connectionString.replace(/:[^:@]+@/, ':****@')}`);
+    let cleanConnectionString = connectionString;
+    let sslConfig = isSsl ? { rejectUnauthorized: false } : undefined;
+    if (connectionString.includes('supabase.com') || connectionString.includes('sslmode=') || connectionString.includes('render.com')) {
+      cleanConnectionString = connectionString.replace(/(\?|&)sslmode=[^&]*/g, '').replace(/\?&/, '?').replace(/\?$/, '');
+      sslConfig = { rejectUnauthorized: false };
+    }
     pool = new Pool({
-      connectionString,
-      ssl: isSsl ? { rejectUnauthorized: false } : undefined,
+      connectionString: cleanConnectionString,
+      ssl: sslConfig,
     });
   } else {
     console.log(`[Config] Connexion via paramètres individuels :`);

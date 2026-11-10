@@ -25,8 +25,25 @@ export class PrismaService
       process.env.DATABASE_URL ||
       '';
 
+    let cleanConnectionString = connectionString;
+    let sslConfig: boolean | { rejectUnauthorized: boolean } | undefined = undefined;
+
+    if (
+      connectionString.includes('supabase.com') ||
+      connectionString.includes('sslmode=') ||
+      connectionString.includes('render.com') ||
+      process.env.NODE_ENV === 'production'
+    ) {
+      cleanConnectionString = connectionString
+        .replace(/(\?|&)sslmode=[^&]*/g, '')
+        .replace(/\?&/, '?')
+        .replace(/\?$/, '');
+      sslConfig = { rejectUnauthorized: false };
+    }
+
     const pool = new Pool({
-      connectionString,
+      connectionString: cleanConnectionString,
+      ssl: sslConfig,
       max: 10,
       idleTimeoutMillis: 20000,
       connectionTimeoutMillis: 10000,
