@@ -217,6 +217,74 @@ export class NotificationsService {
     return true;
   }
 
+
+  /**
+   * Construit la clause WHERE de filtrage strict selon le rôle métier de l'utilisateur (VHP-AUT, NOT-01).
+   * - ADMIN : accès absolu à 100% des notifications de l'officine.
+   * - Autres rôles : cloisonnement strict par périmètre de responsabilité.
+   */
+  private getRoleNotificationWhere(actor: { role: string; pharmacyId: string }): any {
+    if (actor.role === 'ADMIN') {
+      return { pharmacy_id: actor.pharmacyId };
+    }
+
+    let allowedTypes: string[] = [];
+
+    switch (actor.role) {
+      case 'PHARMACIEN':
+        // Validation clinique, ruptures, péremptions, ordonnances, litiges caisse
+        allowedTypes = [
+          'STOCK_BAS',
+          'PEREMPTION',
+          'STOCK_RUPTURE',
+          'ORDONNANCE',
+          'ANNULATION_VENTE',
+          'ECART_CAISSE',
+          'CREANCE_RETARD',
+        ];
+        break;
+
+      case 'COMPTABLE':
+        // Finances pures, écarts aux clôtures, règlements & retards créances
+        allowedTypes = [
+          'ECART_CAISSE',
+          'CREANCE_RETARD',
+          'DEPENSE',
+          'AVOIR',
+        ];
+        break;
+
+      case 'STOCK':
+        // Gestion logistique, réceptions, seuils de réapprovisionnement, péremptions
+        allowedTypes = [
+          'STOCK_BAS',
+          'PEREMPTION',
+          'STOCK_RUPTURE',
+          'COMMANDE_FOURNISSEUR',
+        ];
+        break;
+
+      case 'CAISSIER':
+        // Alertes directement liées aux sessions de caisse ou ventes comptoir
+        allowedTypes = [
+          'SESSION_CAISSE',
+          'VENTE_ALERTE',
+        ];
+        break;
+
+      default:
+        allowedTypes = [];
+    }
+
+    return {
+      pharmacy_id: actor.pharmacyId,
+      OR: [
+        { target_role: actor.role },
+        { type: { in: allowedTypes } },
+      ],
+    };
+  }
+
   // NOT-01 : Consultation des notifications avec statut lu/non-lu par utilisateur
   async getNotifications(
     actor: { id: string; role: string; pharmacyId: string },

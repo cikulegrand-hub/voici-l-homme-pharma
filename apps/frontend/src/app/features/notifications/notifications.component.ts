@@ -9,6 +9,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { NotificationStateService } from '../../core/notifications/notification-state.service';
 import { NotificationItem } from '../../core/api/services/notifications-api.service';
+import { AuthService } from '../../core/auth/auth.service';
 
 type FilterCategory = 'ALL' | 'UNREAD' | 'STOCK' | 'FINANCE' | 'CUSTOMER';
 type FilterSeverity = 'ALL' | 'DANGER' | 'WARNING' | 'INFO';
@@ -122,6 +123,7 @@ type FilterSeverity = 'ALL' | 'DANGER' | 'WARNING' | 'INFO';
           <button
             type="button"
             class="tab-btn"
+            *ngIf="canSeeStockCategory()"
             [class.active]="selectedCategory() === 'STOCK'"
             (click)="setCategory('STOCK')"
           >
@@ -131,6 +133,7 @@ type FilterSeverity = 'ALL' | 'DANGER' | 'WARNING' | 'INFO';
           <button
             type="button"
             class="tab-btn"
+            *ngIf="canSeeFinanceCategory()"
             [class.active]="selectedCategory() === 'FINANCE'"
             (click)="setCategory('FINANCE')"
           >
@@ -140,6 +143,7 @@ type FilterSeverity = 'ALL' | 'DANGER' | 'WARNING' | 'INFO';
           <button
             type="button"
             class="tab-btn"
+            *ngIf="canSeeCustomerCategory()"
             [class.active]="selectedCategory() === 'CUSTOMER'"
             (click)="setCategory('CUSTOMER')"
           >
@@ -1029,4 +1033,22 @@ export class NotificationsComponent implements OnInit {
       timeStyle: 'short',
     }).format(date);
   }
+
+  readonly authService = inject(AuthService);
+
+  canSeeStockCategory(): boolean {
+    const role = this.authService.currentUser()?.role;
+    return role === 'ADMIN' || role === 'PHARMACIEN' || role === 'STOCK';
+  }
+
+  canSeeFinanceCategory(): boolean {
+    const role = this.authService.currentUser()?.role;
+    return role === 'ADMIN' || role === 'COMPTABLE' || role === 'PHARMACIEN';
+  }
+
+  canSeeCustomerCategory(): boolean {
+    const role = this.authService.currentUser()?.role;
+    return role === 'ADMIN' || role === 'COMPTABLE' || role === 'PHARMACIEN';
+  }
+
 }
