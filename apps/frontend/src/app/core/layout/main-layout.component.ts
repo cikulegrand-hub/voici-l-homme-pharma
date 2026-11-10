@@ -758,7 +758,7 @@ export class MainLayoutComponent implements OnInit {
     { section: 'Accueil', icon: 'dashboard', label: this.i18n.navigation.dashboard, route: '/dashboard' },
     { section: 'Accueil', icon: 'notifications', label: 'Notifications & Alertes', route: '/notifications' },
     { section: 'Ventes', icon: 'point_of_sale', label: this.i18n.navigation.pos, route: '/pos', permission: ['pos.access', 'vente.creer'] },
-    { section: 'Ventes', icon: 'receipt_long', label: 'Ventes & Avoirs', route: '/sales', permission: 'vente.creer' },
+    { section: 'Ventes', icon: 'receipt_long', label: 'Ventes & Avoirs', route: '/sales', permission: ['vente.consulter', 'vente.creer'] },
     { section: 'Catalogue & Stock', icon: 'medication', label: this.i18n.navigation.catalog, route: '/catalog', permission: 'catalogue.consulter' },
     { section: 'Catalogue & Stock', icon: 'inventory_2', label: this.i18n.navigation.stock, route: '/stock', permission: 'stock.consulter' },
     { section: 'Catalogue & Stock', icon: 'input', label: 'Réceptions', route: '/reception', permission: 'stock.recevoir' },

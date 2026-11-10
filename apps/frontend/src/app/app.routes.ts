@@ -36,7 +36,7 @@ export const routes: Routes = [
       {
         path: 'sales',
         canActivate: [permissionGuard],
-        data: { permission: 'vente.creer' },
+        data: { permission: ['vente.consulter', 'vente.creer'] },
         loadComponent: () =>
           import('./features/sales/sales-history.component').then((m) => m.SalesHistoryComponent),
       },
