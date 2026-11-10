@@ -26,3 +26,13 @@ services:
       - key: KEEP_ALIVE_URL
         sync: false
 
+  - type: static
+    name: voici-l-homme-pharma-frontend
+    plan: free
+    buildCommand: npm install && npm run build --workspace=@vhp/frontend
+    staticPublishPath: ./apps/frontend/dist/frontend/browser
+    autoDeploy: true
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
