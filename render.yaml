@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     region: frankfurt
-    buildCommand: npm install && npm run prisma:generate && npm run build --workspace=@vhp/backend
+    buildCommand: npm install --include=dev && npm run prisma:generate && npm run build --workspace=@vhp/backend
     startCommand: npm run start:prod --workspace=@vhp/backend
     healthCheckPath: /api/v1/health
     autoDeploy: true
