@@ -10,9 +10,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons|Material+Icons+Outlined" rel="stylesheet">
+  <script>
+    if (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')) {
+      window.__VHP_API_BASE__ = 'https://voici-l-homme-pharma-backend.onrender.com/api/v1';
+    }
+  </script>
 </head>
 <body class="mat-typography">
   <app-root></app-root>
 </body>
 </html>
-

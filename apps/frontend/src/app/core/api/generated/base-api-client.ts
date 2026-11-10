@@ -15,8 +15,13 @@ export interface RequestOptions {
 export class BaseApiClient {
   protected readonly http = inject(HttpClient);
   protected get baseUrl(): string {
-    if (typeof window !== 'undefined' && (window as any).__VHP_API_BASE__) {
-      return (window as any).__VHP_API_BASE__;
+    if (typeof window !== 'undefined') {
+      if ((window as any).__VHP_API_BASE__) {
+        return (window as any).__VHP_API_BASE__;
+      }
+      if (window.location.hostname.includes('onrender.com')) {
+        return 'https://voici-l-homme-pharma-backend.onrender.com/api/v1';
+      }
     }
     return '/api/v1';
   }
@@ -49,14 +54,8 @@ export class BaseApiClient {
     return this.http.delete<T>(this.formatUrl(endpoint), options);
   }
 
-  private formatUrl(endpoint: string): string {
-    if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
-      return endpoint;
-    }
+  protected formatUrl(endpoint: string): string {
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    if (cleanEndpoint.startsWith('/api/v1/')) {
-      return cleanEndpoint;
-    }
     return `${this.baseUrl}${cleanEndpoint}`;
   }
 }

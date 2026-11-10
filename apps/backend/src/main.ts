@@ -16,22 +16,15 @@ async function bootstrap() {
   app.use(json({ limit: '15mb' }));
   app.use(urlencoded({ limit: '15mb', extended: true }));
 
-  // 2. En-têtes HTTP de sécurité renforcés (standards OWASP & CSP)
+  // 2. En-têtes HTTP de sécurité renforcés
   app.use((req: any, res: any, next: any) => {
     res.removeHeader('X-Powered-By');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('X-XSS-Protection', '0');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-    res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-
-    // Content Security Policy
-    res.setHeader(
-      'Content-Security-Policy',
-      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'",
-    );
 
     if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
       res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
@@ -51,27 +44,30 @@ async function bootstrap() {
     }),
   );
 
-  // 5. Configuration CORS restrictive (protection Cross-Origin)
+  // 5. Configuration CORS sécurisée (protection Cross-Origin)
   const configuredOrigins = process.env.CORS_ORIGIN
-    ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+    ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim().replace(/\/+$/, ''))
     : ['http://localhost:4200', 'http://127.0.0.1:4200'];
 
   app.enableCors({
     origin: (origin, callback) => {
-      if (!origin && !isProduction) {
-        return callback(null, true);
-      }
       if (!origin) {
-        return callback(null, false);
-      }
-      if (configuredOrigins.includes(origin) || (!isProduction && origin.includes('localhost'))) {
         return callback(null, true);
       }
-      return callback(new Error('Origine non autorisée par la politique de sécurité CORS (SEC-CORS).'));
+      const cleanOrigin = origin.replace(/\/+$/, '');
+      if (
+        configuredOrigins.includes(cleanOrigin) ||
+        cleanOrigin.endsWith('.onrender.com') ||
+        cleanOrigin.includes('localhost') ||
+        cleanOrigin.includes('127.0.0.1')
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, false);
     },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
-    allowedHeaders: ['Authorization', 'Content-Type', 'Idempotency-Key', 'X-Requested-With'],
+    allowedHeaders: ['Authorization', 'Content-Type', 'Idempotency-Key', 'X-Requested-With', 'Accept'],
   });
 
   const port = process.env.PORT || 3000;
@@ -80,9 +76,9 @@ async function bootstrap() {
   const enableSwagger = process.env.ENABLE_SWAGGER === 'true' || !isProduction;
   if (enableSwagger) {
     const config = new DocumentBuilder()
-      .setTitle('Voici l’Homme Pharma API')
+      .setTitle('API Officine')
       .setDescription(
-        'API REST de gestion d’officine conforme au cahier des charges VHP-CDC-001',
+        'API REST de gestion d’officine',
       )
       .setVersion('1.0')
       .addBearerAuth()
