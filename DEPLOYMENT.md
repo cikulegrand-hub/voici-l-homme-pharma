@@ -104,3 +104,4 @@ Une fois la base de données migrée et l'API déployée, connectez-vous en SSH 
 node apps/backend/scripts/create-initial-admin.js
 ```
 Saisissez votre mot de passe administrateur fort et votre code PIN. Vous pouvez maintenant vous connecter sur le frontend !
+

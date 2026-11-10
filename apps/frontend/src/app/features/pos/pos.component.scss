@@ -128,7 +128,7 @@
 .stock-info-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .stock-info-table th { background: #f3f4f6; padding: 6px 8px; text-align: left; border-bottom: 1px solid #e5e7eb; }
 .stock-info-table td { padding: 6px 8px; border-bottom: 1px solid #f3f4f6; }
-.cart-table-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.cart-table-container { width: 100%; overflow-x: auto; }
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { 100% { transform: rotate(360deg); } }
 

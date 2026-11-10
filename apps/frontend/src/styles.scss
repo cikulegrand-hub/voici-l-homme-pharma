@@ -159,18 +159,14 @@ h1, h2, h3, h4, h5, h6 {
   .table-container,
   .mat-mdc-table-container {
     overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
   }
 }
 
 /* Utilitaires globaux de layout */
 .overflow-x-auto {
   overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 .w-full {
   width: 100%;
 }
-
-
