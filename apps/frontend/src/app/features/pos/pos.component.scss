@@ -95,6 +95,8 @@
 .pay-currency { width: 68px !important; flex: none !important; font-weight: 700; }
 .pay-amount-input { display: flex; gap: 6px; }
 .pay-amount-input input { flex: 1; height: 32px; border: 1px solid #d1d5db; border-radius: 4px; padding: 0 8px; font-weight: 800; font-size: 14px; }
+.btn-exact { background: #e0f2fe; border: 1px solid #bae6fd; color: #0369a1; border-radius: 4px; padding: 0 8px; height: 32px; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.btn-exact:hover { background: #bae6fd; }
 .btn-remove-pay { background: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; border-radius: 4px; width: 30px; height: 32px; cursor: pointer; }
 .mobile-money-fields { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
 .mobile-money-fields select, .mobile-money-fields input { height: 28px; font-size: 11px; border: 1px solid #d1d5db; border-radius: 4px; padding: 0 6px; }

@@ -305,7 +305,7 @@ export class LoginComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.authService.isAuthenticated()) {
-      this.router.navigate(['/dashboard']);
+      this.router.navigate([this.authService.getUserHomeRoute()]);
       return;
     }
 
@@ -350,8 +350,10 @@ export class LoginComponent implements OnInit {
     this.authService.login({ username: username.trim(), password }).subscribe({
       next: (session) => {
         this.isLoading.set(false);
-        this.alertService.success(`Bienvenue, ${session.user.fullName} !`);
-        this.router.navigateByUrl(this.returnUrl);
+        const roleName = (this.i18n.roles as Record<string, string>)[session.user.role] || session.user.role;
+        this.alertService.success(`Bienvenue, ${session.user.fullName} (${roleName}) !`);
+        const targetUrl = (this.returnUrl && this.returnUrl !== '/dashboard') ? this.returnUrl : this.authService.getUserHomeRoute();
+        this.router.navigateByUrl(targetUrl);
       },
       error: (err) => {
         this.isLoading.set(false);

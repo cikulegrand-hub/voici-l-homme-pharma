@@ -75,7 +75,7 @@ export class CatalogService implements OnModuleInit {
       const userByName = await this.prisma.users.findFirst({ where: { username: userId } });
       if (userByName) return userByName.id;
     }
-    throw new UnauthorizedException('Utilisateur non authentifié ou session invalide.');
+    throw new BadRequestException('Utilisateur introuvable ou session invalide.');
   }
 
   private async ensureSeedProducts() {
@@ -1037,14 +1037,23 @@ export class CatalogService implements OnModuleInit {
   // ==========================================
 
   async exportCsv(pharmacyId = '11111111-1111-1111-1111-111111111111'): Promise<string> {
-    const result = await this.searchProducts({ limit: 10000, isActive: undefined }, pharmacyId);
+    const products = await this.prisma.products.findMany({
+      where: { pharmacy_id: pharmacyId },
+      include: {
+        product_barcodes: true,
+        product_categories: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+
     const headers =
       'ID,Nom,DCI,Dosage,Forme_Galenique,Unite_Vente,Prix_CDF,Prix_USD,TVA,Seuil_Alerte,Sur_Ordonnance,Controle,Froid,Actif,Codes_Barres\n';
-    const rows = result.data
-      .map(
-        (p) =>
-          `"${p.id}","${p.name}","${p.dci}","${p.dosage || ''}","${p.galenicForm || ''}","${p.sellingUnit}","${p.sellingPriceCdf}","${p.sellingPriceUsd}","${p.taxRate}","${p.minAlertThreshold}","${p.requiresPrescription}","${p.isControlledSubstance}","${p.isColdChain}","${p.isActive}","${p.barcodes.join(';')}"`,
-      )
+    const rows = products
+      .map((p) => {
+        const barcodes = (p.product_barcodes || []).map((b) => b.barcode).join(';');
+        const esc = (val: any) => String(val ?? '').replace(/"/g, '""');
+        return `"${esc(p.id)}","${esc(p.name)}","${esc(p.dci)}","${esc(p.dosage)}","${esc(p.galenic_form)}","Boîte","${Number(p.selling_price_cdf || 0)}","${Number(p.selling_price_usd || 0)}","${Number(p.tax_rate || 0)}","${p.min_alert_threshold ?? 10}","${Boolean(p.requires_prescription)}","${Boolean(p.is_controlled_substance)}","${Boolean(p.is_cold_chain)}","${Boolean(p.is_active)}","${esc(barcodes)}"`;
+      })
       .join('\n');
     return headers + rows;
   }

@@ -74,7 +74,14 @@ export class SalesController {
     @Req() req?: any,
   ): Promise<Sale[]> {
     const user = this.getAuthenticatedUser(req);
-    return this.salesService.listSales(user.pharmacyId, { query, startDate, endDate, status });
+    return this.salesService.listSales(user.pharmacyId, {
+      query,
+      startDate,
+      endDate,
+      status,
+      userId: user.id,
+      userRole: user.role,
+    });
   }
 
   @Post('sync')
@@ -115,57 +122,69 @@ export class SalesController {
     );
   }
 
-  // Routes statiques avant les routes paramétrées.
+  // Routes d'impression et export de facture / ticket thermique
   @Get('invoice/:invoiceNumber/duplicata')
-  @RequirePermission('vente.creer')
+  @RequirePermission('vente.creer', 'vente.consulter')
   @ApiOperation({ summary: 'Réimpression d’une facture marquée DUPLICATA' })
   async getDuplicata(@Param('invoiceNumber') invoiceNumber: string, @Req() req: any): Promise<any> {
     const user = this.getAuthenticatedUser(req);
     return this.salesService.getDuplicata(invoiceNumber, user.id, user.pharmacyId);
   }
 
-  @Get('invoice/:invoiceNumber/receipt/html')
-  @RequirePermission('vente.creer')
+  // 1. Ticket de caisse thermique 80 mm (HTML)
+  @Get(['invoice/:invoiceNumber/ticket-html', 'invoice/:invoiceNumber/receipt/html'])
+  @RequirePermission('vente.creer', 'vente.consulter')
+  @ApiOperation({ summary: 'Ticket 80 mm format HTML direct pour impression thermique' })
   async renderReceiptHtml(@Param('invoiceNumber') invoiceNumber: string, @Res() response: Response, @Req() req: any) {
     const user = this.getAuthenticatedUser(req);
     const html = await this.salesService.renderDocument(invoiceNumber, true, false, user.pharmacyId);
     response.type('text/html').send(html);
   }
 
-  @Get('invoice/:invoiceNumber/receipt/pdf')
-  @RequirePermission('vente.creer')
+  // 2. Ticket de caisse thermique 80 mm (PDF)
+  @Get(['invoice/:invoiceNumber/ticket', 'invoice/:invoiceNumber/receipt/pdf'])
+  @RequirePermission('vente.creer', 'vente.consulter')
+  @ApiOperation({ summary: 'Ticket 80 mm format PDF' })
   async renderReceiptPdf(@Param('invoiceNumber') invoiceNumber: string, @Res() response: Response, @Req() req: any) {
     const user = this.getAuthenticatedUser(req);
     const pdf = await this.salesService.renderPdf(invoiceNumber, true, false, user.pharmacyId);
     response.type('application/pdf').setHeader('Content-Disposition', `inline; filename="${invoiceNumber}-ticket.pdf"`).send(pdf);
   }
 
+  // 3. Facture officielle A4 (HTML)
   @Get('invoice/:invoiceNumber/html')
-  @RequirePermission('vente.creer')
+  @RequirePermission('vente.creer', 'vente.consulter')
+  @ApiOperation({ summary: 'Facture format HTML' })
   async renderInvoiceHtml(@Param('invoiceNumber') invoiceNumber: string, @Res() response: Response, @Req() req: any) {
     const user = this.getAuthenticatedUser(req);
     const html = await this.salesService.renderDocument(invoiceNumber, false, false, user.pharmacyId);
     response.type('text/html').send(html);
   }
 
-  @Get('invoice/:invoiceNumber/pdf')
-  @RequirePermission('vente.creer')
+  // 4. Facture officielle A4 (PDF)
+  @Get(['invoice/:invoiceNumber/document', 'invoice/:invoiceNumber/pdf'])
+  @RequirePermission('vente.creer', 'vente.consulter')
+  @ApiOperation({ summary: 'Facture format PDF' })
   async renderInvoicePdf(@Param('invoiceNumber') invoiceNumber: string, @Res() response: Response, @Req() req: any) {
     const user = this.getAuthenticatedUser(req);
     const pdf = await this.salesService.renderPdf(invoiceNumber, false, false, user.pharmacyId);
     response.type('application/pdf').setHeader('Content-Disposition', `inline; filename="${invoiceNumber}.pdf"`).send(pdf);
   }
 
+  // 5. Duplicata (HTML)
   @Get('invoice/:invoiceNumber/duplicata/html')
-  @RequirePermission('vente.creer')
+  @RequirePermission('vente.creer', 'vente.consulter')
+  @ApiOperation({ summary: 'Duplicata format HTML' })
   async duplicateDocumentHtml(@Param('invoiceNumber') invoiceNumber: string, @Res() response: Response, @Req() req: any) {
     const user = this.getAuthenticatedUser(req);
     const html = await this.salesService.renderDocument(invoiceNumber, false, true, user.pharmacyId);
     response.type('text/html').send(html);
   }
 
-  @Get('invoice/:invoiceNumber/duplicata/pdf')
-  @RequirePermission('vente.creer')
+  // 6. Duplicata (PDF)
+  @Get(['invoice/:invoiceNumber/duplicata/document', 'invoice/:invoiceNumber/duplicata/pdf'])
+  @RequirePermission('vente.creer', 'vente.consulter')
+  @ApiOperation({ summary: 'Duplicata format PDF' })
   async duplicateDocument(@Param('invoiceNumber') invoiceNumber: string, @Res() response: Response, @Req() req: any) {
     const user = this.getAuthenticatedUser(req);
     const pdf = await this.salesService.renderPdf(invoiceNumber, false, true, user.pharmacyId);
@@ -248,10 +267,10 @@ export class SalesController {
   }
 
   @Get(':id')
-  @RequirePermission('vente.creer')
+  @RequirePermission('vente.consulter', 'vente.creer')
   @ApiOperation({ summary: 'Consulter le détail d’une facture par ID' })
   async getSale(@Param('id', ParseUUIDPipe) id: string, @Req() req: any): Promise<Sale> {
     const user = this.getAuthenticatedUser(req);
-    return this.salesService.getSaleById(id, user.pharmacyId);
+    return this.salesService.getSaleById(id, user.pharmacyId, { id: user.id, role: user.role });
   }
 }

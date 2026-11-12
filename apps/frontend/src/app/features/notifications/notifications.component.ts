@@ -1037,18 +1037,15 @@ export class NotificationsComponent implements OnInit {
   readonly authService = inject(AuthService);
 
   canSeeStockCategory(): boolean {
-    const role = this.authService.currentUser()?.role;
-    return role === 'ADMIN' || role === 'PHARMACIEN' || role === 'STOCK';
+    return this.authService.hasPermission('stock.consulter');
   }
 
   canSeeFinanceCategory(): boolean {
-    const role = this.authService.currentUser()?.role;
-    return role === 'ADMIN' || role === 'COMPTABLE' || role === 'PHARMACIEN';
+    return this.authService.hasPermission('finances.consulter');
   }
 
   canSeeCustomerCategory(): boolean {
-    const role = this.authService.currentUser()?.role;
-    return role === 'ADMIN' || role === 'COMPTABLE' || role === 'PHARMACIEN';
+    return this.authService.hasPermission(['client.consulter', 'clients.consulter']);
   }
 
 }

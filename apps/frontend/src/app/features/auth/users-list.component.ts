@@ -159,6 +159,10 @@ import { UserProfile, RoleName } from '@vhp/shared';
                   <mat-icon>edit</mat-icon>
                   <span>{{ i18n.actions.edit }}</span>
                 </button>
+                <button mat-menu-item (click)="navigateToPermissions(user.id)">
+                  <mat-icon>security</mat-icon>
+                  <span>Accès personnels</span>
+                </button>
                 <button mat-menu-item (click)="openResetPasswordDialog(user)">
                   <mat-icon>lock_reset</mat-icon>
                   <span>{{ i18n.users.resetPassword }}</span>
@@ -304,6 +308,10 @@ export class UsersListComponent implements OnInit {
 
   navigateToEdit(userId: string): void {
     this.router.navigate(['/users', userId, 'edit']);
+  }
+
+  navigateToPermissions(userId: string): void {
+    this.router.navigate(['/users', userId, 'permissions']);
   }
 
   openResetPasswordDialog(user: UserProfile): void {

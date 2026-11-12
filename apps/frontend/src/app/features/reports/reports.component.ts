@@ -404,16 +404,22 @@ export class ReportsComponent implements OnInit {
   }
 
   canExport(): boolean {
-    const role = this.auth.userRole();
-    if (role === 'ADMIN') return true;
-    const permissions = (this.auth as any).userPermissions;
-    return typeof permissions === 'function' && permissions()?.includes('rapports.exporter');
+    return this.auth.hasPermission('rapports.exporter');
   }
 
   visibleReports(): ReportCard[] {
-    const role = this.auth.userRole();
-    if (role === 'CAISSIER') return this.reports.filter((report) => ['sales-journal', 'best-sellers'].includes(report.key));
-    if (role === 'STOCK') return this.reports.filter((report) => ['stock-movements', 'stock-entries-exits', 'valued-inventory', 'expiries', 'low-rotation'].includes(report.key));
-    return this.reports;
+    if (this.auth.hasPermission('rapports.consulter') || this.auth.hasPermission('*')) {
+      return this.reports;
+    }
+    return this.reports.filter((report) => {
+      const isSales = ['sales-journal', 'best-sellers', 'seller-performance'].includes(report.key);
+      const isStock = ['stock-movements', 'stock-entries-exits', 'valued-inventory', 'expiries', 'low-rotation'].includes(report.key);
+      const isFinance = ['expenses', 'receivables', 'treasury'].includes(report.key);
+
+      if (isSales && this.auth.hasPermission('rapports.ventes')) return true;
+      if (isStock && this.auth.hasPermission('rapports.stock')) return true;
+      if (isFinance && this.auth.hasPermission('rapports.financiers')) return true;
+      return false;
+    });
   }
 }

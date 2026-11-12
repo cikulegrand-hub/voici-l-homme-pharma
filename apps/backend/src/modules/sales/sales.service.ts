@@ -58,7 +58,7 @@ export class SalesService {
       const userByName = await this.prisma.users.findFirst({ where: { username: userId } });
       if (userByName) return userByName.id;
     }
-    throw new UnauthorizedException('Utilisateur non authentifié ou session invalide.');
+    throw new BadRequestException('Utilisateur introuvable ou session invalide.');
   }
 
   async processSale(
@@ -177,7 +177,7 @@ export class SalesService {
       return sum + inCdf;
     }, 0);
 
-    const outstandingCdf = Math.max(0, totalCdf - totalPaidInCdf);
+    const outstandingCdf = (totalCdf - totalPaidInCdf > 1) ? Math.max(0, totalCdf - totalPaidInCdf) : 0;
     const totalCreditNeededCdf = creditAmountCdf + outstandingCdf;
 
     if (totalCreditNeededCdf > 0) {
@@ -402,7 +402,7 @@ export class SalesService {
     };
   }
 
-  async getSaleById(id: string, pharmacyId?: string): Promise<Sale> {
+  async getSaleById(id: string, pharmacyId?: string, requestingUser?: { id: string; role: string }): Promise<Sale> {
     const sale = await this.prisma.sales.findFirst({
       where: { id, ...(pharmacyId ? { pharmacy_id: pharmacyId } : {}) },
       include: {
@@ -418,6 +418,12 @@ export class SalesService {
       },
     });
     if (!sale) throw new NotFoundException('Facture introuvable.');
+
+    // Discrétion absolue : si un Caissier tente d'accéder à la vente d'un confrère, répondre 404
+    if (requestingUser?.role === 'CAISSIER' && sale.user_id !== requestingUser.id) {
+      throw new NotFoundException('Facture introuvable.');
+    }
+
     return this.mapToSale(sale);
   }
 
@@ -439,12 +445,26 @@ export class SalesService {
         await this.authService.verifySupervisorPin(supervisorPin);
       }
       if (item.lotId) {
-        const isAuthorizedRole = ['PHARMACIEN', 'GESTIONNAIRE_STOCK', 'ADMIN'].includes(userRole);
-        if (!isAuthorizedRole && !supervisorPin) {
-          throw new UnauthorizedException('Le changement manuel de lot est réservé aux profils habilités ou exige un code PIN superviseur.');
-        }
-        if (!isAuthorizedRole && supervisorPin) {
-          await this.authService.verifySupervisorPin(supervisorPin);
+        // Vérifier si le lot spécifié correspond au premier lot FEFO (attribution automatique normale)
+        const firstFefoLot = await this.prisma.product_lots.findFirst({
+          where: {
+            product_id: item.productId,
+            expiry_date: { gt: new Date() },
+            is_quarantined: false,
+            current_quantity: { gt: 0 },
+          },
+          orderBy: [{ expiry_date: 'asc' }, { created_at: 'asc' }],
+        });
+
+        const isManualOverride = firstFefoLot && firstFefoLot.id !== item.lotId;
+        if (isManualOverride) {
+          const isAuthorizedRole = ['PHARMACIEN', 'GESTIONNAIRE_STOCK', 'ADMIN'].includes(userRole);
+          if (!isAuthorizedRole && !supervisorPin) {
+            throw new ForbiddenException('Le changement manuel de lot est réservé aux profils habilités ou exige un code PIN superviseur.');
+          }
+          if (!isAuthorizedRole && supervisorPin) {
+            await this.authService.verifySupervisorPin(supervisorPin);
+          }
         }
       }
       return { ...item, unitPriceCdf, discountCdf, product, taxAmountCdf: (raw - discountCdf) * Number(product.tax_rate || 0) / 100 };
@@ -537,9 +557,14 @@ export class SalesService {
 
   async listSales(
     pharmacyId = '11111111-1111-1111-1111-111111111111',
-    filters?: { query?: string; startDate?: string; endDate?: string; status?: string },
+    filters?: { query?: string; startDate?: string; endDate?: string; status?: string; userId?: string; userRole?: string },
   ): Promise<Sale[]> {
     const where: any = { pharmacy_id: pharmacyId };
+
+    // Cloisonnement strict : le Caissier ne voit que ses propres ventes
+    if (filters?.userRole === 'CAISSIER' && filters?.userId) {
+      where.user_id = filters.userId;
+    }
 
     // Angular/legacy clients may serialize omitted optional values as the
     // literal string "undefined" (or "null"). Treat those as absent and

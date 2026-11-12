@@ -155,7 +155,7 @@ export class StockService {
       const userByName = await this.prisma.users.findFirst({ where: { username: userId } });
       if (userByName) return userByName.id;
     }
-    throw new UnauthorizedException('Utilisateur authentifié valide requis pour une opération de stock.');
+    throw new BadRequestException('Utilisateur authentifié valide requis pour une opération de stock.');
   }
 
   // ==========================================

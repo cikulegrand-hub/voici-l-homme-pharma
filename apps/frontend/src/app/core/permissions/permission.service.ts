@@ -34,6 +34,10 @@ export class PermissionService {
     }
   }
 
+  peut(required: string | string[], requireAll = false): boolean {
+    return this.hasPermission(required, requireAll);
+  }
+
   /**
    * Renvoie la liste brute des permissions de l'utilisateur courant.
    */

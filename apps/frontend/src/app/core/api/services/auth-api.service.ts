@@ -77,4 +77,28 @@ export class AuthApiService {
   verifyPin(dto: VerifyPinDto): Observable<PinAuthResult> {
     return this.client.post<PinAuthResult>('/auth/verify-pin', dto);
   }
+
+  getUserPermissions(userId: string): Observable<{
+    role: string;
+    categories: Array<{
+      category: string;
+      permissions: Array<{
+        code: string;
+        label: string;
+        isGrantedByRole: boolean;
+        isOverridden: boolean;
+        overrideType: 'GRANT' | 'DENY' | null;
+        isEffective: boolean;
+      }>;
+    }>;
+  }> {
+    return this.client.get(`/auth/users/${userId}/permissions`);
+  }
+
+  updateUserPermissions(
+    userId: string,
+    overrides: Array<{ permission: string; overrideType: 'GRANT' | 'DENY' | null }>
+  ): Observable<{ success: boolean; effectivePermissions: string[] }> {
+    return this.client.put(`/auth/users/${userId}/permissions`, { overrides });
+  }
 }

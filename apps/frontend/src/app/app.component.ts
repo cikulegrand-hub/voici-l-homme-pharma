@@ -35,6 +35,7 @@ export class AppComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     if (this.authService.isAuthenticated()) {
       this.inactivityService.startWatcher();
+      this.authService.loadMe().subscribe({ error: () => {} });
     }
   }
 

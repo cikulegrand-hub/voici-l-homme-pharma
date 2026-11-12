@@ -50,13 +50,13 @@ export class CashController {
 
   @Get('sessions/current')
   @ApiOperation({ summary: 'Consulter la session de caisse en cours de l’utilisateur' })
-  @RequirePermission('finances.consulter')
+  @RequirePermission('caisse.consulter', 'finances.consulter')
   async getCurrentSession(@Req() req: any): Promise<CashSession | null> {
     return this.cashService.getCurrentSession(req.user.id);
   }
 
   @Get('sessions/active')
-  @RequirePermission('finances.consulter')
+  @RequirePermission('caisse.consulter', 'finances.consulter')
   async getActiveSession(@Req() req: any): Promise<CashSession | null> { return this.cashService.getCurrentSession(req.user.id); }
 
   @Post('sessions/:id/movements')
@@ -67,16 +67,16 @@ export class CashController {
   }
 
   @Get('sessions/:id/movements')
-  @RequirePermission('finances.consulter')
+  @RequirePermission('caisse.consulter', 'finances.consulter')
   async listMovements(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
-    return this.cashService.listMovements(id, req.user.pharmacyId);
+    return this.cashService.listMovements(id, req.user.pharmacyId, req.user.id, req.user.role);
   }
 
   @Patch('sessions/:id/close')
   @ApiOperation({ summary: 'Clôturer la caisse avec réconciliation des écarts obligatoirement justifiée (FIN-02, RG-12)' })
   @RequirePermission('caisse.cloturer')
 async closeSession(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CloseCashSessionDto, @Req() req: any): Promise<CashSession> {
-    return this.cashService.closeSession(id, dto, req.user.id);
+    return this.cashService.closeSession(id, dto, req.user.id, req.user.role);
   }
 
   // ---------- TAUX DE CHANGE CDF / USD (FIN-04, RG-08) ----------
@@ -84,6 +84,7 @@ async closeSession(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CloseCas
   @Get('exchange-rates/active')
   @ApiOperation({ summary: 'Consulter le taux de change officiel actif (FIN-04, RG-08)' })
   @ApiQuery({ name: 'at', required: false, description: 'Date ISO pour consulter le taux en vigueur à cet instant' })
+  @RequirePermission('caisse.consulter', 'vente.creer', 'finances.consulter', 'stock.consulter', 'produit.consulter')
   async getActiveRate(@Query('at') at: string | undefined, @Req() req: any): Promise<ExchangeRate> {
     return this.cashService.getActiveExchangeRate(req.user.pharmacyId, at);
   }
@@ -97,6 +98,7 @@ async closeSession(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CloseCas
 
   @Get('exchange-rates/history')
   @ApiOperation({ summary: 'Historique des taux de change saisis' })
+  @RequirePermission('finances.consulter')
   async getRatesHistory(@Req() req: any): Promise<ExchangeRate[]> {
     return this.cashService.getExchangeRatesHistory(req.user.pharmacyId);
   }
@@ -159,7 +161,7 @@ async closeSession(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CloseCas
   async varianceAlerts(@Req() req: any) { return this.cashService.getVarianceAlerts(req.user.pharmacyId); }
 
   @Get('profitability')
-  @RequirePermission('rapports.consulter')
+  @RequirePermission('rapport.financier', 'finances.consulter')
   async profitability(@Req() req: any, @Query('from') from?: string, @Query('to') to?: string) { return this.cashService.getProfitability(req.user.pharmacyId, from, to); }
 
   // ---------- BALANCE ÂGÉE DES CRÉANCES (FIN-06) ----------

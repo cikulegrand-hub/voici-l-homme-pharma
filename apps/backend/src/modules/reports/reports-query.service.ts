@@ -106,7 +106,7 @@ export class ReportsQueryService {
       moneyMetric('cash-variance', cashVariance, cashVariance, 'treasury'),
       { key: 'out-of-stock-rate', valuesByCurrency: { CDF: { value: outOfStock.rate, previousValue: outOfStock.rate, variationPercent: null } }, reportLink: salesLink('valued-inventory') },
     ];
-    const allowedMetrics: Record<string, string[]> = { CAISSIER: ['revenue', 'average-basket', 'out-of-stock-rate'], STOCK: ['stock-rotation', 'stock-value', 'near-expiry-value', 'out-of-stock-rate'], GESTIONNAIRE: ['stock-rotation', 'stock-value', 'near-expiry-value', 'out-of-stock-rate'] };
+    const allowedMetrics: Record<string, string[]> = { CAISSIER: ['revenue', 'average-basket'], STOCK: ['stock-rotation', 'stock-value', 'near-expiry-value', 'out-of-stock-rate'], GESTIONNAIRE: ['stock-rotation', 'stock-value', 'near-expiry-value', 'out-of-stock-rate'] };
     const visibleMetrics = allowedMetrics[role] ? metrics.filter((metric) => allowedMetrics[role].includes(metric.key)) : metrics;
     return {
       filters: this.stripInternalFilter(filters),

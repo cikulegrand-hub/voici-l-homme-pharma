@@ -96,7 +96,7 @@ export class CashService {
       const userByName = await this.prisma.users.findFirst({ where: { username: userId } });
       if (userByName) return userByName.id;
     }
-    throw new UnauthorizedException('Utilisateur non authentifié ou session invalide.');
+    throw new BadRequestException('Utilisateur introuvable ou session invalide.');
   }
 
   async setExchangeRate(dto: SetExchangeRateDto, userId: string, pharmacyId: string): Promise<ExchangeRate> {
@@ -242,7 +242,10 @@ export class CashService {
     return { id: movement.id, sessionId, type: movement.type, amountCdf, amountUsd, reason: movement.reason, createdAt: movement.created_at.toISOString() };
   }
 
-  async listMovements(sessionId: string, pharmacyId: string) {
+  async listMovements(sessionId: string, pharmacyId: string, userId?: string, role?: string) {
+    const session = await this.prisma.cash_sessions.findUnique({ where: { id: sessionId } });
+    if (!session || session.pharmacy_id !== pharmacyId) throw new NotFoundException('Session de caisse introuvable.');
+    if (role === 'CAISSIER' && userId && session.user_id !== userId) throw new NotFoundException('Session de caisse introuvable.');
     const rows = await this.prisma.cash_movements.findMany({ where: { cash_session_id: sessionId, pharmacy_id: pharmacyId }, orderBy: { created_at: 'desc' } });
     return rows.map((row) => ({ id: row.id, sessionId: row.cash_session_id, type: row.type, amountCdf: Number(row.amount_cdf), amountUsd: Number(row.amount_usd), reason: row.reason, createdAt: row.created_at.toISOString() }));
   }
@@ -263,15 +266,15 @@ export class CashService {
 
   // ---------- FIN-02 & RG-12 : Clôture de caisse avec arrêté d'écart ----------
 
-  async closeSession(sessionId: string, dto: CloseCashSessionDto, userId?: string): Promise<CashSession> {
+  async closeSession(sessionId: string, dto: CloseCashSessionDto, userId?: string, role?: string): Promise<CashSession> {
     const session = await this.prisma.cash_sessions.findUnique({
       where: { id: sessionId },
       include: { sales: { where: { status: { in: ['VALIDEE', 'PARTIELLEMENT_PAYEE', 'AVOIR', 'RETOURNEE'] } }, include: { sale_payments: true, credit_notes: true } }, customer_payments: true, expenses: true, cash_movements: true },
     });
 
     if (!session) throw new NotFoundException('Session de caisse introuvable.');
-    if (userId && session.user_id !== userId) {
-      throw new BadRequestException('Seul le caissier propriétaire peut clôturer sa session.');
+    if (userId && session.user_id !== userId && role === 'CAISSIER') {
+      throw new NotFoundException('Session de caisse introuvable.');
     }
     if (session.status !== 'OUVERTE') {
       throw new BadRequestException('Cette session de caisse est déjà clôturée.');

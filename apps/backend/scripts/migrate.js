@@ -78,6 +78,7 @@ async function runMigrations() {
       ['20261105110000_customer_profile_photo', path.join(prismaMigrationsDir, '20261105110000_customer_profile_photo', 'migration.sql')],
       ['20261106120000_cash_movements', path.join(prismaMigrationsDir, '20261106120000_cash_movements', 'migration.sql')],
       ['20261107100000_persist_sale_cancellation_requests', path.join(prismaMigrationsDir, '20261107100000_persist_sale_cancellation_requests', 'migration.sql')],
+      ['20261111130000_user_personal_permissions', path.join(prismaMigrationsDir, '20261111130000_user_personal_permissions', 'migration.sql')],
     ];
 
     await client.query(`

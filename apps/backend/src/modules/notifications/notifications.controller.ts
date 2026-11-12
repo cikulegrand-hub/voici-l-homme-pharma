@@ -3,15 +3,18 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { NotificationsService } from './notifications.service';
 import { NotificationQueryDto } from './dto/notifications.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { RequirePermission } from '../auth/decorators/auth.decorators';
 
 @ApiTags('Centre de Notifications internes (NOT)')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('notifications')
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
   @Get()
+  @RequirePermission('notifications.consulter')
   @ApiOperation({ summary: 'Lister les notifications avec statut lu/non-lu pour l’utilisateur (NOT-01)' })
   @ApiResponse({ status: 200, description: 'Liste des notifications' })
   async getNotifications(@Req() req: any, @Query() query: NotificationQueryDto) {
@@ -24,6 +27,7 @@ export class NotificationsController {
   }
 
   @Get('unread-count')
+  @RequirePermission('notifications.consulter')
   @ApiOperation({ summary: 'Compteur de notifications non lues pour badge d’en-tête (NOT-02)' })
   @ApiResponse({ status: 200, description: 'Compteur d’alertes non lues' })
   async getUnreadCount(@Req() req: any) {
@@ -37,6 +41,7 @@ export class NotificationsController {
   }
 
   @Patch(':id/read')
+  @RequirePermission('notifications.consulter')
   @ApiOperation({ summary: 'Marquer une alerte comme lue par l’utilisateur connecté (NOT-01)' })
   @ApiResponse({ status: 200, description: 'Statut mis à jour' })
   async markAsRead(@Param('id') id: string, @Req() req: any) {
@@ -45,6 +50,7 @@ export class NotificationsController {
   }
 
   @Patch('mark-all-read')
+  @RequirePermission('notifications.consulter')
   @ApiOperation({ summary: 'Marquer toutes les alertes comme lues (NOT-01)' })
   @ApiResponse({ status: 200, description: 'Nombre d’alertes marquées lues' })
   async markAllAsRead(@Req() req: any) {
@@ -58,6 +64,7 @@ export class NotificationsController {
   }
 
   @Post('sync')
+  @RequirePermission('notifications.consulter')
   @ApiOperation({ summary: 'Déclencher la détection et génération des alertes (stock bas, péremptions, créances, écarts)' })
   @ApiResponse({ status: 200, description: 'Nombre d’alertes créées' })
   async syncAlerts(@Req() req: any) {
@@ -66,4 +73,3 @@ export class NotificationsController {
     return { createdAlertsCount: count };
   }
 }
-

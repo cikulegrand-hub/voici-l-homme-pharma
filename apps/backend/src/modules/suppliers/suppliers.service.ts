@@ -49,7 +49,7 @@ export class SuppliersService implements OnModuleInit {
       const userByName = await this.prisma.users.findFirst({ where: { username: userId } });
       if (userByName) return userByName.id;
     }
-    throw new UnauthorizedException('Utilisateur non authentifié ou session invalide.');
+    throw new BadRequestException('Utilisateur introuvable ou session invalide.');
   }
 
   private async getCurrentExchangeRate(pharmacyId: string): Promise<number> {

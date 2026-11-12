@@ -41,6 +41,7 @@ export class SettingsController {
   }
 
   @Get()
+  @RequirePermission('parametres.modifier', 'parametres.consulter')
   @ApiOperation({ summary: 'Consulter l’ensemble des paramètres de l’officine' })
   getAllSettings() {
     return {
@@ -54,6 +55,7 @@ export class SettingsController {
   // ---------- 1. IDENTITÉ DE L'OFFICINE (PAR-01) ----------
 
   @Get('identity')
+  @RequirePermission('parametres.modifier', 'parametres.consulter')
   @ApiOperation({ summary: 'Consulter l’identité et les coordonnées de l’officine (PAR-01)' })
   getPharmacyIdentity() {
     return this.settingsService.getPharmacyIdentity();
@@ -77,6 +79,7 @@ export class SettingsController {
   // ---------- 2. RÈGLES FINANCIÈRES & TAXES (PAR-02, PAR-03, RG-07, RG-08) ----------
 
   @Get('financial')
+  @RequirePermission('parametres.modifier', 'parametres.consulter')
   @ApiOperation({ summary: 'Consulter les devises, règles d’arrondi, taxes et plafonds de remise (PAR-02, PAR-03)' })
   getFinancialRules() {
     return this.settingsService.getFinancialRules();
@@ -92,6 +95,7 @@ export class SettingsController {
   // ---------- 3. SEUILS D'ALERTE & SÉCURITÉ (PAR-04, AUT-03, STK-09) ----------
 
   @Get('alerts')
+  @RequirePermission('parametres.modifier', 'parametres.consulter')
   @ApiOperation({ summary: 'Consulter les seuils d’alerte de péremption et timeout session (PAR-04, AUT-03)' })
   getAlertThresholds() {
     return this.settingsService.getAlertThresholds();
@@ -107,6 +111,7 @@ export class SettingsController {
   // ---------- 4. MODÈLES D'IMPRESSION (PAR-05, PAR-06) ----------
 
   @Get('print-templates')
+  @RequirePermission('parametres.modifier', 'parametres.consulter')
   @ApiOperation({ summary: 'Consulter les modèles de ticket de caisse et de facture (PAR-05, PAR-06)' })
   getPrintTemplates() {
     return this.settingsService.getPrintTemplates();

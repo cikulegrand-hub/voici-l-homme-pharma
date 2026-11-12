@@ -93,6 +93,51 @@ export interface Permission {
   code: string;
   description: string;
   category: string;
+  label?: string;
+}
+
+export interface UserPermissionOverride {
+  id?: string;
+  userId: string;
+  permissionId?: string;
+  permissionCode: string;
+  permissionLabel?: string;
+  category?: string;
+  granted: boolean;
+  reason?: string;
+  changedAt?: string;
+}
+
+export interface UserPersonalAccessItem {
+  code: string;
+  label: string;
+  category: string;
+  fromRole: boolean;
+  isOverridden: boolean;
+  effectiveGranted: boolean;
+  reason?: string;
+}
+
+export interface UpdateUserAccessDto {
+  overrides: {
+    permissionCode: string;
+    granted: boolean;
+    reason?: string;
+  }[];
+}
+
+export interface AllowedModuleInfo {
+  id: string;
+  label: string;
+  route: string;
+  icon: string;
+}
+
+export interface UserSpaceResponse {
+  user: UserProfile;
+  permissions: string[];
+  allowedModules: AllowedModuleInfo[];
+  activeRate?: ExchangeRate;
 }
 
 export interface UserProfile {
@@ -103,6 +148,7 @@ export interface UserProfile {
   fullName: string;
   email?: string;
   permissions: string[];
+  overrides?: UserPermissionOverride[];
   isActive: boolean;
 }
 

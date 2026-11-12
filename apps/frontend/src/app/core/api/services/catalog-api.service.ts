@@ -103,7 +103,7 @@ export class CatalogApiService {
   }
 
   exportCsv(): Observable<string> {
-    return this.client.get<string>('/catalog/export-csv');
+    return this.client.getText('/catalog/export-csv');
   }
 
   simulateImport(csvContent: string): Observable<any> {

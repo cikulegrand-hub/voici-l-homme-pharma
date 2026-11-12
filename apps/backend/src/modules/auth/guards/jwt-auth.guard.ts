@@ -3,21 +3,27 @@ import {
   CanActivate,
   ExecutionContext,
   UnauthorizedException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuthService } from '../auth.service';
+import { IS_PUBLIC_KEY } from '../decorators/auth.decorators';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  // Durée de validité d'un jeton d'accès court : 15 minutes (900 000 ms) selon AUT-03
-  private readonly TOKEN_LIFETIME_MS = 15 * 60 * 1000;
   private readonly jwtSecret: string;
 
   constructor(
+    private readonly reflector: Reflector,
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    @Inject(forwardRef(() => AuthService))
+    private readonly authService: AuthService,
   ) {
     const configuredSecret =
       this.configService.get<string>('JWT_SECRET') || process.env.JWT_SECRET;
@@ -33,65 +39,62 @@ export class JwtAuthGuard implements CanActivate {
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    // 1. Si la route est marquée @Public(), pas besoin de JWT
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (isPublic) {
+      return true;
+    }
+
     const request = context.switchToHttp().getRequest();
     const authHeader = request.headers['authorization'];
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new UnauthorizedException('Votre session est invalide. Veuillez vous reconnecter.');
+      throw new UnauthorizedException('Session utilisateur invalide.');
     }
 
     const token = authHeader.substring(7).trim();
     if (!token) {
-      throw new UnauthorizedException('Votre session est invalide. Veuillez vous reconnecter.');
+      throw new UnauthorizedException('Session utilisateur invalide.');
     }
 
     let userId: string | null = null;
 
-    // 1. Vérification cryptographique stricte du jeton JWT (HMAC-SHA256)
+    // 2. Vérification cryptographique stricte du jeton JWT
     try {
       const payload = await this.jwtService.verifyAsync(token, {
         secret: this.jwtSecret,
       });
       userId = payload.sub || payload.id;
-    } catch (jwtErr: any) {
-      if (jwtErr?.name === 'TokenExpiredError') {
-        throw new UnauthorizedException('Votre session a expiré. Veuillez vous reconnecter.');
-      }
-      throw new UnauthorizedException('Votre session est invalide ou a expiré. Veuillez vous reconnecter.');
+    } catch {
+      throw new UnauthorizedException('Session utilisateur invalide.');
     }
 
     if (!userId) {
-      throw new UnauthorizedException('Votre session est invalide. Veuillez vous reconnecter.');
+      throw new UnauthorizedException('Session utilisateur invalide.');
     }
 
+    // 3. Rechargement de l'utilisateur en base de données pour vérifier l'état actif en temps réel
     const user = await this.prisma.users.findUnique({
       where: { id: userId },
       include: {
-        roles: {
-          include: {
-            role_permissions: {
-              include: {
-                permissions: true,
-              },
-            },
-          },
-        },
+        roles: true,
       },
     });
 
     if (!user || !user.is_active) {
-      throw new UnauthorizedException('Utilisateur inactif ou introuvable.');
+      throw new UnauthorizedException('Session utilisateur invalide.');
     }
 
     // Verrouillage de sécurité actif
     if (user.locked_until && user.locked_until > new Date()) {
-      throw new UnauthorizedException('Votre compte est temporairement verrouillé. Veuillez réessayer plus tard.');
+      throw new UnauthorizedException('Compte temporairement verrouillé.');
     }
 
-    const permissions: string[] = user.roles.role_permissions.map((rp) => rp.permissions.code);
-    if (user.roles.name === 'ADMIN') {
-      permissions.push('*');
-    }
+    // 4. Calcul des droits effectifs en temps réel (Rôle + Accès personnels)
+    const effectivePermissions = await this.authService.getEffectivePermissions(user.id);
 
     request.user = {
       id: user.id,
@@ -100,12 +103,10 @@ export class JwtAuthGuard implements CanActivate {
       fullName: user.full_name,
       role: user.roles.name,
       email: user.email,
-      permissions,
+      permissions: effectivePermissions,
       isActive: user.is_active,
     };
 
     return true;
   }
 }
-
-

@@ -47,15 +47,15 @@ export class CustomersController {
   listInsurers(@Req() req: any) { return this.customersService.listInsurers(this.actor(req)); }
 
   @Get('identity-documents/:documentId/number')
-  @RequirePermission('client.consulter', 'clients.consulter')
+  @RequirePermission('client.identite_complete')
   revealIdentityNumber(@Param('documentId', ParseUUIDPipe) documentId: string, @Req() req: any) { return this.customersService.revealIdentityNumber(documentId, this.actor(req)); }
 
   @Get('identity-documents/:documentId/signed-url')
-  @RequirePermission('client.consulter', 'clients.consulter')
+  @RequirePermission('client.identite_complete')
   identityScanSignedUrl(@Param('documentId', ParseUUIDPipe) documentId: string, @Req() req: any) { return this.customersService.getIdentityScan(documentId, this.actor(req)); }
 
   @Get('identity-documents/:documentId/file')
-  @RequirePermission('client.consulter', 'clients.consulter')
+  @RequirePermission('client.identite_complete')
   @ApiOperation({ summary: 'Lire le fichier scan d’une pièce d’identité locale via une requête authentifiée' })
   async identityScanFile(@Param('documentId', ParseUUIDPipe) documentId: string, @Req() req: any, @Res() response: Response) {
     const result = await this.customersService.getIdentityDocumentFile(documentId, this.actor(req));
@@ -93,7 +93,7 @@ export class CustomersController {
   }
 
   @Post('prescriptions')
-  @RequirePermission('ordonnance.creer', 'ordonnances.creer', 'client.consulter', 'clients.consulter')
+  @RequirePermission('ordonnance.creer')
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 8 * 1024 * 1024, files: 1 } }))
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Téléverser une ordonnance dans le stockage privé (CLI-05, CLI-06)' })
@@ -102,14 +102,14 @@ export class CustomersController {
   }
 
   @Get('prescriptions/:prescriptionId/signed-url')
-  @RequirePermission('ordonnance.consulter', 'ordonnances.consulter', 'client.consulter', 'clients.consulter')
+  @RequirePermission('ordonnance.consulter')
   @ApiOperation({ summary: 'Obtenir à la demande un lien signé temporaire, journalisé (CLI-06, RG-17)' })
   signedUrl(@Param('prescriptionId', ParseUUIDPipe) prescriptionId: string, @Req() req: any) {
     return this.customersService.getPrescriptionSignedUrl(prescriptionId, this.actor(req));
   }
 
   @Get('prescriptions/:prescriptionId/file')
-  @RequirePermission('ordonnance.consulter', 'ordonnances.consulter', 'client.consulter', 'clients.consulter')
+  @RequirePermission('ordonnance.consulter')
   @ApiOperation({ summary: 'Lire une image d’ordonnance locale via une requête authentifiée' })
   async file(@Param('prescriptionId', ParseUUIDPipe) prescriptionId: string, @Req() req: any, @Res() response: Response) {
     const result = await this.customersService.getPrescriptionFile(prescriptionId, this.actor(req));
@@ -118,7 +118,7 @@ export class CustomersController {
   }
 
   @Get(':id/prescriptions')
-  @RequirePermission('ordonnance.consulter', 'ordonnances.consulter', 'client.consulter', 'clients.consulter')
+  @RequirePermission('ordonnance.consulter')
   @ApiOperation({ summary: 'Lister les métadonnées des ordonnances, sans URL (CLI-06)' })
   getCustomerPrescriptions(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
     return this.customersService.getPrescriptionsByCustomer(id, this.actor(req));

@@ -394,10 +394,11 @@ export interface PaymentLine {
                     <input
                       type="number"
                       [(ngModel)]="p.amount"
-                      (input)="onPaymentChanged()"
+                      (input)="onPaymentAmountInput(p)"
                       placeholder="Montant perçu"
                       min="0"
                     />
+                    <button type="button" class="btn-exact" (click)="setExactAmount(p)" title="Ajuster au montant exact de la vente">Exact</button>
                     @if (paymentLines.length > 1) {
                       <button type="button" class="btn-remove-pay" (click)="removePaymentLine(idx)" title="Supprimer">✕</button>
                     }
@@ -655,6 +656,7 @@ export class PosComponent implements OnInit {
 
   cart = signal<CartItem[]>([]);
   paymentLines: PaymentLine[] = [{ method: 'ESPECES', amount: 0, currency: 'CDF' }];
+  isPaymentAmountManual = false;
   supervisorPin = '';
   isProcessing = signal<boolean>(false);
 
@@ -706,9 +708,8 @@ export class PosComponent implements OnInit {
   });
 
   userDiscountCeiling = computed(() => {
-    const role = this.authService.userRole();
-    if (role === 'ADMIN') return 100;
-    if (role === 'PHARMACIEN') return 15;
+    if (this.authService.hasPermission('vente.remise_plafond')) return 100;
+    if (this.authService.hasPermission('vente.remise')) return 15;
     return 5;
   });
 
@@ -851,7 +852,9 @@ export class PosComponent implements OnInit {
     this.selectedCurrency = curr;
     if (this.paymentLines.length === 1) {
       this.paymentLines[0].currency = curr;
-      this.paymentLines[0].amount = curr === 'USD' ? this.totalUsd() : this.totalCdf();
+      if (!this.isPaymentAmountManual) {
+        this.paymentLines[0].amount = curr === 'USD' ? this.totalUsd() : this.totalCdf();
+      }
     }
     this.onCartChanged();
   }
@@ -876,6 +879,7 @@ export class PosComponent implements OnInit {
     this.selectedPrescription = null;
     this.supervisorPin = '';
     this.globalDiscountPercent.set(0);
+    this.isPaymentAmountManual = false;
     this.paymentLines = [{ method: 'ESPECES', amount: 0, currency: this.selectedCurrency }];
     this.currentIdempotencyKey.set(crypto.randomUUID());
     this.focusBarcodeInput();
@@ -1045,13 +1049,28 @@ export class PosComponent implements OnInit {
     this.onCartChanged();
   }
 
+  onPaymentAmountInput(p: PaymentLine) {
+    this.isPaymentAmountManual = true;
+    this.onPaymentChanged();
+  }
+
+  setExactAmount(p: PaymentLine) {
+    this.isPaymentAmountManual = false;
+    p.amount = this.selectedCurrency === 'USD' ? this.totalUsd() : this.totalCdf();
+    this.onPaymentChanged();
+  }
+
   addPaymentLine() {
+    this.isPaymentAmountManual = true;
     this.paymentLines.push({ method: 'ESPECES', amount: 0, currency: this.selectedCurrency });
   }
 
   removePaymentLine(index: number) {
     if (this.paymentLines.length > 1) {
       this.paymentLines.splice(index, 1);
+      if (this.paymentLines.length === 1 && (!this.paymentLines[0].amount || this.paymentLines[0].amount === 0)) {
+        this.isPaymentAmountManual = false;
+      }
       this.onPaymentChanged();
     }
   }
@@ -1067,7 +1086,22 @@ export class PosComponent implements OnInit {
       this.serverLineTotals.set({});
       this.serverChangeCdf.set(0);
       this.serverOutstandingCdf.set(0);
+      this.isPaymentAmountManual = false;
+      if (this.paymentLines.length === 1) {
+        this.paymentLines[0].amount = 0;
+      }
       return;
+    }
+
+    if (this.paymentLines.length === 1 && !this.isPaymentAmountManual) {
+      let estSubtotalCdf = 0;
+      for (const item of this.cart()) {
+        const lineTotal = item.quantity * Number(item.product.sellingPriceCdf) - (item.discountCdf || 0);
+        estSubtotalCdf += Math.max(0, lineTotal);
+      }
+      const rate = this.activeRate();
+      const estTotal = this.selectedCurrency === 'USD' ? (rate > 0 ? Number((estSubtotalCdf / rate).toFixed(2)) : 0) : estSubtotalCdf;
+      this.paymentLines[0].amount = estTotal;
     }
 
     if (!this.offlineSync.isOnline()) {
@@ -1093,8 +1127,10 @@ export class PosComponent implements OnInit {
         this.serverOutstandingCdf.set(sumCdf - paidCdf);
       }
 
-      if (this.paymentLines.length === 1 && (!this.paymentLines[0].amount || this.paymentLines[0].amount === 0)) {
+      if (this.paymentLines.length === 1 && !this.isPaymentAmountManual) {
         this.paymentLines[0].amount = this.selectedCurrency === 'USD' ? this.serverTotalUsd() : sumCdf;
+        this.serverChangeCdf.set(0);
+        this.serverOutstandingCdf.set(0);
       }
       return;
     }
@@ -1127,8 +1163,10 @@ export class PosComponent implements OnInit {
         this.serverLineTotals.set(lineMap);
         this.cart.set(updatedCart);
 
-        if (this.paymentLines.length === 1 && (!this.paymentLines[0].amount || this.paymentLines[0].amount === 0)) {
-          this.paymentLines[0].amount = this.selectedCurrency === 'USD' ? p.totalUsd : p.totalCdf;
+        if (this.paymentLines.length === 1 && !this.isPaymentAmountManual) {
+          this.paymentLines[0].amount = this.selectedCurrency === 'USD' ? Number(p.totalUsd) : Number(p.totalCdf);
+          this.serverChangeCdf.set(0);
+          this.serverOutstandingCdf.set(0);
         }
       },
       error: (err) => {
@@ -1155,13 +1193,19 @@ export class PosComponent implements OnInit {
         discountCdf: i.discountCdf || 0,
         lotId: i.lotId,
       })),
-      payments: this.paymentLines.map((p) => ({
-        method: p.method,
-        amountPaid: Number(p.amount) || 0,
-        currency: p.currency,
-        mobileMoneyProvider: p.method === 'MOBILE_MONEY' ? p.mobileMoneyProvider : undefined,
-        transactionReference: (p.method === 'MOBILE_MONEY' || p.method === 'CARTE_BANCAIRE' || p.method === 'VIREMENT') ? p.transactionReference?.trim() : undefined,
-      })),
+      payments: this.paymentLines.map((p) => {
+        let amount = Number(p.amount) || 0;
+        if (this.paymentLines.length === 1 && !this.isPaymentAmountManual) {
+          amount = p.currency === 'USD' ? (this.totalUsd() || amount) : (this.totalCdf() || amount);
+        }
+        return {
+          method: p.method,
+          amountPaid: amount,
+          currency: p.currency,
+          mobileMoneyProvider: p.method === 'MOBILE_MONEY' ? p.mobileMoneyProvider : undefined,
+          transactionReference: (p.method === 'MOBILE_MONEY' || p.method === 'CARTE_BANCAIRE' || p.method === 'VIREMENT') ? p.transactionReference?.trim() : undefined,
+        };
+      }),
     };
   }
 
@@ -1265,6 +1309,29 @@ export class PosComponent implements OnInit {
       return;
     }
 
+    // Priorité à l'HTML optimisé pour imprimante thermique 80 mm
+    this.salesApi.getInvoiceHtml(invoiceNumber, true).subscribe({
+      next: (html) => {
+        const printWindow = window.open('', '_blank', 'width=420,height=600');
+        if (printWindow) {
+          printWindow.document.open();
+          printWindow.document.write(html);
+          printWindow.document.close();
+          setTimeout(() => {
+            printWindow.focus();
+            printWindow.print();
+          }, 250);
+        } else {
+          this.fallbackPrintPdf(invoiceNumber);
+        }
+      },
+      error: () => {
+        this.fallbackPrintPdf(invoiceNumber);
+      },
+    });
+  }
+
+  private fallbackPrintPdf(invoiceNumber: string) {
     this.salesApi.getInvoiceDocument(invoiceNumber, true).subscribe({
       next: (blob) => {
         const url = URL.createObjectURL(blob);

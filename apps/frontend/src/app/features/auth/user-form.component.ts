@@ -9,6 +9,10 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatChipsModule } from '@angular/material/chips';
 
 import { AuthApiService } from '../../core/api/services/auth-api.service';
 import { AlertService } from '../../core/services/alert.service';
@@ -40,6 +44,10 @@ function passwordPolicyValidator(control: AbstractControl): ValidationErrors | n
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatSlideToggleModule,
+    MatDividerModule,
+    MatTooltipModule,
+    MatChipsModule,
   ],
   template: `
     <div class="form-page">
@@ -142,8 +150,57 @@ function passwordPolicyValidator(control: AbstractControl): ValidationErrors | n
               <mat-error *ngIf="form.get('pinCode')?.hasError('pattern')">{{ i18n.users.pinInvalid }}</mat-error>
             </mat-form-field>
 
+            
+            <!-- Accès personnels & Dérogations par module (CDC VHP-AUT) -->
+            <div *ngIf="isEditMode()" class="personal-perms-section">
+              <mat-divider class="section-divider"></mat-divider>
+              <div class="perms-section-header">
+                <div>
+                  <h3 class="perms-section-title">
+                    <mat-icon class="title-icon">security</mat-icon>
+                    Accès personnels & dérogations
+                  </h3>
+                  <p class="perms-section-desc">
+                    Ajustez les droits effectifs de l'utilisateur. En cas de conflit, le refus l'emporte toujours.
+                  </p>
+                </div>
+              </div>
+
+              <div *ngIf="loadingPerms()" class="perms-loading">
+                <mat-spinner diameter="24"></mat-spinner>
+                <span>Chargement des accès…</span>
+              </div>
+
+              <div *ngIf="!loadingPerms() && permCategories().length > 0" class="perm-categories-container">
+                <div *ngFor="let cat of permCategories()" class="perm-category-block">
+                  <h4 class="cat-title">{{ cat.category }}</h4>
+                  <div class="cat-perms-grid">
+                    <div *ngFor="let p of cat.permissions" class="perm-toggle-row" [class.perm-revoked]="!p.toggled">
+                      <div class="perm-text-col">
+                        <span class="perm-title-text">{{ p.label }}</span>
+                        <div class="perm-status-badges">
+                          <span *ngIf="p.isGrantedByRole && p.toggled" class="badge-role">Inclus dans le rôle</span>
+                          <span *ngIf="!p.isGrantedByRole && p.toggled" class="badge-added">Ajouté</span>
+                          <span *ngIf="p.isGrantedByRole && !p.toggled" class="badge-removed">Retiré</span>
+                        </div>
+                      </div>
+                      <mat-slide-toggle
+                        [checked]="p.toggled"
+                        (change)="togglePermission(p, $event.checked)"
+                        [matTooltip]="p.toggled ? 'Retirer cet accès' : 'Rétablir cet accès'"
+                      ></mat-slide-toggle>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- Boutons -->
             <div class="form-actions">
+              <button *ngIf="isEditMode()" mat-stroked-button type="button" (click)="goToPermissions()" class="btn-perms">
+                <mat-icon>security</mat-icon>
+                Accès personnels
+              </button>
               <button mat-button type="button" (click)="goBack()">{{ i18n.actions.cancel }}</button>
               <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid || isSubmitting()">
                 <mat-spinner *ngIf="isSubmitting()" diameter="18" class="btn-spinner"></mat-spinner>
@@ -156,6 +213,26 @@ function passwordPolicyValidator(control: AbstractControl): ValidationErrors | n
     </div>
   `,
   styles: [`
+    .section-divider { margin: 24px 0 16px; }
+    .personal-perms-section { margin-top: 8px; }
+    .perms-section-header { margin-bottom: 16px; }
+    .perms-section-title { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: #0f766e; margin: 0; }
+    .perms-section-title .title-icon { color: #0f766e; font-size: 20px; width: 20px; height: 20px; }
+    .perms-section-desc { font-size: 12px; color: #5f6368; margin: 4px 0 0; }
+    .perms-loading { display: flex; align-items: center; gap: 10px; padding: 16px 0; color: #5f6368; font-size: 13px; }
+    .perm-categories-container { display: flex; flex-direction: column; gap: 16px; }
+    .perm-category-block { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 16px; }
+    .cat-title { font-size: 13px; font-weight: 700; color: #1e3a2f; margin: 0 0 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .cat-perms-grid { display: flex; flex-direction: column; gap: 8px; }
+    .perm-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #ffffff; padding: 8px 12px; border-radius: 6px; border: 1px solid #e5e7eb; transition: all 0.2s; }
+    .perm-toggle-row.perm-revoked { background: #fef2f2; border-color: #fecaca; }
+    .perm-text-col { flex: 1; min-width: 0; }
+    .perm-title-text { font-size: 13px; font-weight: 500; color: #1e293b; display: block; }
+    .perm-status-badges { display: flex; gap: 6px; margin-top: 2px; }
+    .badge-role { font-size: 10px; padding: 1px 6px; border-radius: 4px; background: #e8f0fe; color: #1a73e8; font-weight: 600; }
+    .badge-added { font-size: 10px; padding: 1px 6px; border-radius: 4px; background: #e6f4ea; color: #137333; font-weight: 600; }
+    .badge-removed { font-size: 10px; padding: 1px 6px; border-radius: 4px; background: #fce8e6; color: #c5221f; font-weight: 600; }
+
     .form-page { padding: 24px; max-width: 640px; margin: 0 auto; }
     .form-card { padding: 8px; }
     .form-title { display: flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 700; color: #1e3a2f; }
@@ -194,6 +271,10 @@ export class UserFormComponent implements OnInit {
   readonly availableRoles: RoleName[] = ['ADMIN', 'PHARMACIEN', 'CAISSIER', 'STOCK', 'COMPTABLE'];
 
   private editUserId = '';
+  readonly loadingPerms = signal(false);
+  readonly permCategories = signal<Array<{ category: string; permissions: any[] }>>([]);
+  private initialPermState = new Map<string, boolean>();
+
 
   form: FormGroup = this.fb.group({
     username: ['', [Validators.required]],
@@ -226,7 +307,53 @@ export class UserFormComponent implements OnInit {
       this.form.get('password')?.clearValidators();
       this.form.get('password')?.updateValueAndValidity();
       this.loadUser(id);
+      this.loadPermissions(id);
     }
+  }
+
+  
+  loadPermissions(userId: string): void {
+    this.loadingPerms.set(true);
+    this.authApi.getUserPermissions(userId).subscribe({
+      next: (data) => {
+        const cats = data.categories.map((c) => ({
+          category: c.category,
+          permissions: c.permissions.map((p) => ({ ...p, toggled: p.isEffective })),
+        }));
+        this.permCategories.set(cats);
+        this.initialPermState.clear();
+        for (const cat of cats) {
+          for (const p of cat.permissions) {
+            this.initialPermState.set(p.code, p.toggled);
+          }
+        }
+        this.loadingPerms.set(false);
+      },
+      error: () => this.loadingPerms.set(false),
+    });
+  }
+
+  togglePermission(perm: any, checked: boolean): void {
+    perm.toggled = checked;
+  }
+
+  private collectPermissionOverrides(): Array<{ permission: string; overrideType: 'GRANT' | 'DENY' | null }> {
+    const overrides: Array<{ permission: string; overrideType: 'GRANT' | 'DENY' | null }> = [];
+    for (const cat of this.permCategories()) {
+      for (const p of cat.permissions) {
+        const original = this.initialPermState.get(p.code) ?? p.isEffective;
+        if (p.toggled !== original) {
+          if (p.isGrantedByRole && !p.toggled) {
+            overrides.push({ permission: p.code, overrideType: 'DENY' });
+          } else if (!p.isGrantedByRole && p.toggled) {
+            overrides.push({ permission: p.code, overrideType: 'GRANT' });
+          } else {
+            overrides.push({ permission: p.code, overrideType: null });
+          }
+        }
+      }
+    }
+    return overrides;
   }
 
   loadUser(id: string): void {
@@ -293,6 +420,10 @@ export class UserFormComponent implements OnInit {
         },
       });
     }
+  }
+
+  goToPermissions(): void {
+    this.router.navigate(['/users', this.editUserId, 'permissions']);
   }
 
   goBack(): void {

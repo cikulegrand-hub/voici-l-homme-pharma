@@ -12,6 +12,7 @@
     "prisma:generate": "prisma generate",
     "db:migrate": "node scripts/migrate.js",
     "seed:admin": "node scripts/create-initial-admin.js",
+    "seed:demo": "node scripts/seed-demo-accounts.js",
     "test": "node scripts/create-admin-account.js && node test/e2e/run_all_e2e_with_server.js",
     "test:jest": "jest --config ../../jest.config.js --runInBand",
     "test:rpt": "npm run build && node test/rpt-rec06.test.js",

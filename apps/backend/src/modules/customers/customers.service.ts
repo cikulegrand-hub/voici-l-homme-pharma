@@ -280,7 +280,7 @@ export class CustomersService {
   async listInsurers(actor: Actor) { return this.prisma.insurers.findMany({ where: { pharmacy_id: actor.pharmacyId, is_active: true }, orderBy: { name: 'asc' } }); }
 
   async revealIdentityNumber(documentId: string, actor: Actor) {
-    if (!['ADMIN', 'PHARMACIEN'].includes(actor.role)) throw new ForbiddenException('Seuls l’Administrateur et le Pharmacien peuvent afficher le numéro complet de la pièce.');
+    if (!['ADMIN', 'PHARMACIEN'].includes(actor.role)) throw new ForbiddenException('Action non disponible');
     const document = await this.prisma.identity_documents.findFirst({ where: { id: documentId, pharmacy_id: actor.pharmacyId } });
     if (!document) throw new NotFoundException('Pièce d’identité introuvable.');
     await this.audit(actor, 'CONSULTATION_NUMERO_PIECE', 'IDENTITY_DOCUMENT', document.id, undefined, { customerId: document.customer_id });
@@ -288,7 +288,7 @@ export class CustomersService {
   }
 
   async getIdentityScan(documentId: string, actor: Actor) {
-    if (!['ADMIN', 'PHARMACIEN'].includes(actor.role)) throw new ForbiddenException('Seuls l’Administrateur et le Pharmacien peuvent consulter le scan de la pièce.');
+    if (!['ADMIN', 'PHARMACIEN'].includes(actor.role)) throw new ForbiddenException('Action non disponible');
     const document = await this.prisma.identity_documents.findFirst({ where: { id: documentId, pharmacy_id: actor.pharmacyId } });
     if (!document || !document.file_front_path) throw new NotFoundException('Scan de pièce indisponible.');
     const signed = await this.storage.createSignedUrl(document.file_front_path);
@@ -297,7 +297,7 @@ export class CustomersService {
   }
 
   async getIdentityDocumentFile(documentId: string, actor: Actor) {
-    if (!['ADMIN', 'PHARMACIEN'].includes(actor.role)) throw new ForbiddenException('Seuls l’Administrateur et le Pharmacien peuvent consulter le scan de la pièce.');
+    if (!['ADMIN', 'PHARMACIEN'].includes(actor.role)) throw new ForbiddenException('Action non disponible');
     const document = await this.prisma.identity_documents.findFirst({ where: { id: documentId, pharmacy_id: actor.pharmacyId } });
     if (!document || !document.file_front_path) throw new NotFoundException('Scan de pièce indisponible.');
     const file = await this.storage.readLocal(document.file_front_path);
@@ -676,7 +676,7 @@ export class CustomersService {
       customerType: customer.customer_type,
       creditLimitCdf: Number(customer.credit_limit_cdf),
       currentBalanceCdf: balance,
-      medicalNotes: customer.medical_notes ?? undefined,
+      medicalNotes: privileged ? (customer.medical_notes ?? undefined) : undefined,
       nom: customer.nom,
       postnom: customer.postnom,
       prenom: customer.prenom,

@@ -80,7 +80,7 @@ import { Product, ProductCategory } from '@vhp/shared';
             <mat-card-header>
               <mat-icon mat-card-avatar class="section-icon">medication</mat-icon>
               <mat-card-title>1. Identification et caractéristiques</mat-card-title>
-              <mat-card-subtitle>Informations fondamentales de la molécule et du conditionnement</mat-card-subtitle>
+              <mat-card-subtitle>Tarifs officiels en vigueur</mat-card-subtitle>
             </mat-card-header>
 
             <mat-card-content class="section-content">
@@ -165,12 +165,7 @@ import { Product, ProductCategory } from '@vhp/shared';
             </mat-card-header>
 
             <mat-card-content class="section-content">
-              @if (!canEditPrice()) {
-                <div class="permission-alert">
-                  <mat-icon>lock</mat-icon>
-                  <span>Les prix de vente sont verrouillés. Seul un pharmacien autorisé peut réviser les tarifs officiels.</span>
-                </div>
-              }
+              
 
               <div class="row-3">
                 <mat-form-field appearance="outline" class="w-full">

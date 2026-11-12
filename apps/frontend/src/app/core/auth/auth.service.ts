@@ -25,11 +25,35 @@ export class AuthService {
   readonly userRole = computed<RoleName | null>(() => this.currentUser()?.role ?? null);
   readonly userPermissions = computed<string[]>(() => this.currentUser()?.permissions ?? []);
 
-  hasPermission(permission: string): boolean {
+  hasPermission(permission: string | string[]): boolean {
     const user = this.currentUser();
     if (!user) return false;
-    if (user.role === 'ADMIN' || (user.permissions && user.permissions.includes('*'))) return true;
+    if (user.permissions && user.permissions.includes('*')) return true;
+    if (Array.isArray(permission)) {
+      return permission.some((p) => user.permissions?.includes(p) ?? false);
+    }
     return user.permissions?.includes(permission) ?? false;
+  }
+
+  peut(permission: string | string[]): boolean {
+    return this.hasPermission(permission);
+  }
+
+  getUserHomeRoute(): string {
+    const user = this.currentUser();
+    if (!user) return '/login';
+    switch (user.role) {
+      case 'CAISSIER':
+        return '/pos';
+      case 'STOCK':
+        return '/stock';
+      case 'COMPTABLE':
+        return '/reports';
+      case 'PHARMACIEN':
+      case 'ADMIN':
+      default:
+        return '/dashboard';
+    }
   }
 
   login(dto: LoginDto): Observable<AuthSession> {

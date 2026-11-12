@@ -3,6 +3,7 @@ import {
   Post,
   Get,
   Patch,
+  Put,
   Body,
   Req,
   HttpCode,
@@ -25,13 +26,15 @@ import {
 } from './dto/auth.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
-import { RequirePermission } from './decorators/auth.decorators';
+import { RequirePermission, Public } from './decorators/auth.decorators';
+import { UpdateUserAccessDto } from '@vhp/shared';
 
 @ApiTags('Authentification & Utilisateurs (AUT)')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Connexion utilisateur avec contrôle de verrouillage (AUT-01, AUT-02, SEC-03)' })
@@ -44,6 +47,7 @@ export class AuthController {
     return this.authService.login(dto, ip, userAgent);
   }
 
+  @Public()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Renouveler le jeton de session court avec un refresh token (AUT-03)' })
@@ -66,8 +70,8 @@ export class AuthController {
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Obtenir le profil complet de l’utilisateur connecté et ses permissions (AUT-03, AUT-05)' })
-  @ApiResponse({ status: 200, description: 'Utilisateur, rôle, permissions et taux actif' })
+  @ApiOperation({ summary: 'Point d\'entrée mon espace : droits effectifs et modules autorisés uniquement' })
+  @ApiResponse({ status: 200, description: 'Utilisateur, permissions effectives et modules autorisés' })
   @ApiResponse({ status: 401, description: 'Non authentifié ou jeton expiré' })
   async getMe(@Req() req: any) {
     return this.authService.getMe(req.user.id);
@@ -83,12 +87,34 @@ export class AuthController {
     return this.authService.getAllUsers();
   }
 
+  @Get('users/:id/permissions')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission('admin.utilisateurs')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Consulter la liste complète des accès et personnalisations d’un utilisateur' })
+  async getUserPermissions(@Param('id', ParseUUIDPipe) id: string) {
+    return this.authService.getUserPermissionsOverview(id);
+  }
+
+  @Put('users/:id/permissions')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission('admin.utilisateurs')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Définir des accès personnels (retrait ou ajout) avec garde-fous stricts' })
+  async updateUserPermissions(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateUserAccessDto,
+    @Req() req: any,
+  ) {
+    return this.authService.updateUserPermissions(id, dto, req.user?.id);
+  }
+
   @Get('users/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @RequirePermission('admin.utilisateurs')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Consulter les détails d’un utilisateur (AUT-04)' })
-async getUserById(@Param('id', ParseUUIDPipe) id: string) {
+  async getUserById(@Param('id', ParseUUIDPipe) id: string) {
     return this.authService.getUserById(id);
   }
 
@@ -110,7 +136,7 @@ async getUserById(@Param('id', ParseUUIDPipe) id: string) {
   @RequirePermission('admin.utilisateurs')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Modifier les informations d’un utilisateur (AUT-04)' })
-async updateUser(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateUserDto, @Req() req: any) {
+  async updateUser(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateUserDto, @Req() req: any) {
     return this.authService.updateUser(id, dto, req.user?.id);
   }
 

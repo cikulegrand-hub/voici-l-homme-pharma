@@ -44,19 +44,7 @@ import { DashboardMetric, ReportFilters } from '@vhp/shared';
         </div>
       </header>
 
-      <!-- Bandeau d'orientation et de périmètre de travail -->
-      <div class="workspace-orientation-card" [class]="'ws-' + (currentUser()?.role || '').toLowerCase()">
-        <div class="ws-icon-circle">
-          <mat-icon>{{ getRoleScopeIcon(currentUser()?.role) }}</mat-icon>
-        </div>
-        <div class="ws-content">
-          <div class="ws-title-row">
-            <span class="ws-title">{{ getRoleScopeTitle(currentUser()?.role) }}</span>
-            <span class="ws-status-pill">Périmètre Actif</span>
-          </div>
-          <p class="ws-desc">{{ getRoleMission(currentUser()?.role) }}</p>
-        </div>
-      </div>
+      
 
       <!-- 1. TABLEAU DE BORD VENDEUR & COMPTOIR (CDC V2) -->
       <section class="vendor-desk-card" *hasPermission="['pos.access', 'vente.creer']">
@@ -127,22 +115,7 @@ import { DashboardMetric, ReportFilters } from '@vhp/shared';
           </mat-card-content>
         </mat-card>
 
-        <!-- Rôle et Niveau d'accès -->
-        <mat-card class="kpi-card">
-          <mat-card-header>
-            <mat-icon mat-card-avatar class="kpi-icon role">verified_user</mat-icon>
-            <mat-card-title>Niveau d'Autorisation</mat-card-title>
-            <mat-card-subtitle>Profil connecté</mat-card-subtitle>
-          </mat-card-header>
-          <mat-card-content>
-            <div class="kpi-value role-name">
-              {{ getRoleName(currentUser()?.role || '') }}
-            </div>
-            <p class="kpi-subtext">
-              {{ isSuperAdmin() ? 'Accès complet pharmacien' : (currentUser()?.permissions?.length || 0) + ' droits accordés' }}
-            </p>
-          </mat-card-content>
-        </mat-card>
+        
       </section>
 
       <!-- Section des rapports et indicateurs d'activité -->
@@ -177,7 +150,7 @@ import { DashboardMetric, ReportFilters } from '@vhp/shared';
             <div class="rpt-card skeleton" *ngFor="let item of [1,2,3,4,5,6]"><span></span><span></span><span></span></div>
           </ng-template>
         </div>
-        <div class="rpt-charts" *ngIf="!rptLoading() && !rptError()">
+        <div class="rpt-charts" *ngIf="!rptLoading() && !rptError() && (rptSalesChart().length > 0 || rptBestSellersChart().length > 0)">
           <div class="chart-card">
             <h4>Ventes sur la période</h4>
             <div class="bars">

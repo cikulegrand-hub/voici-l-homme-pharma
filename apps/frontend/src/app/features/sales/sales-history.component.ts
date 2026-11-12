@@ -178,16 +178,17 @@ import { PermissionService } from '../../core/permissions/permission.service';
                     >
                       <mat-icon>assignment_return</mat-icon>
                     </button>
-                    <!-- Demander annulation (Caissier) -->
-                    <button
-                      *hasPermission="'vente.creer'"
-                      mat-icon-button
-                      [disabled]="sale.status === 'ANNULEE'"
-                      (click)="openRequestCancelModal(sale)"
-                      title="Demander annulation au pharmacien"
-                    >
-                      <mat-icon>help_outline</mat-icon>
-                    </button>
+                    <!-- Demander annulation (Caissier : uniquement si vente.demande_annulation et pas vente.annuler) -->
+                    @if (!permissions.hasPermission('vente.annuler') && permissions.hasPermission('vente.demande_annulation')) {
+                      <button
+                        mat-icon-button
+                        [disabled]="sale.status === 'ANNULEE'"
+                        (click)="openRequestCancelModal(sale)"
+                        title="Demander annulation au pharmacien"
+                      >
+                        <mat-icon>help_outline</mat-icon>
+                      </button>
+                    }
                   </td>
                 </tr>
               } @empty {

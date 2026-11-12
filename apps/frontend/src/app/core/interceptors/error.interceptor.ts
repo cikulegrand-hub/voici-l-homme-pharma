@@ -3,6 +3,7 @@ import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { AlertService } from '../services/alert.service';
+import { AuthService } from '../auth/auth.service';
 import { I18N_FR } from '../i18n/translations.fr';
 
 export interface BackendErrorPayload {
@@ -23,6 +24,7 @@ function toUserMessage(message: string): string {
 
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const alertService = inject(AlertService);
+  const authService = inject(AuthService);
 
   return next(req).pipe(
     catchError((error: unknown) => {
@@ -57,7 +59,8 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
             break;
 
           case 403:
-            alertService.error(displayMessage || I18N_FR.errors.forbidden);
+            alertService.error('Action non disponible');
+            authService.loadMe().subscribe({ error: () => {} });
             break;
 
           case 404:

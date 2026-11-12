@@ -1,12 +1,14 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { PrismaService } from '../prisma/prisma.service';
+import { Public } from '../auth/decorators/auth.decorators';
 
 @ApiTags('Supervision & Santé système (OBS-01)')
 @Controller('health')
 export class HealthController {
   constructor(private readonly prisma: PrismaService) {}
 
+  @Public()
   @Get()
   @ApiOperation({
     summary:
@@ -17,7 +19,6 @@ export class HealthController {
     let dbResponseTimeMs = -1;
 
     try {
-      // Timeout de 3s pour éviter de bloquer la sonde si le réseau est inaccessible
       const result = await Promise.race([
         this.prisma.healthCheck(),
         new Promise<{ status: string; responseTimeMs: number }>((_, reject) =>
