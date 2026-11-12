@@ -9,6 +9,7 @@ const ACCESS_TOKEN_KEY = 'vhp_access_token';
 const REFRESH_TOKEN_KEY = 'vhp_refresh_token';
 const USER_KEY = 'vhp_user_profile';
 const RATE_KEY = 'vhp_active_rate';
+const ACTIVE_PHARMACY_KEY = 'vhp_active_pharmacy_id';
 
 @Injectable({
   providedIn: 'root',
@@ -20,6 +21,16 @@ export class AuthService {
   readonly currentUser = signal<UserProfile | null>(this.loadStoredUser());
   readonly activeRate = signal<ExchangeRate | null>(this.loadStoredRate());
   readonly token = signal<string | null>(this.loadStoredToken());
+  readonly activePharmacyId = signal<string | null>(localStorage.getItem(ACTIVE_PHARMACY_KEY));
+
+  setActivePharmacy(pharmacyId: string | null): void {
+    if (pharmacyId) {
+      localStorage.setItem(ACTIVE_PHARMACY_KEY, pharmacyId);
+    } else {
+      localStorage.removeItem(ACTIVE_PHARMACY_KEY);
+    }
+    this.activePharmacyId.set(pharmacyId);
+  }
 
   readonly isAuthenticated = computed(() => !!this.token() && !!this.currentUser());
   readonly userRole = computed<RoleName | null>(() => this.currentUser()?.role ?? null);

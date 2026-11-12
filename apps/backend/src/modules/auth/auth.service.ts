@@ -903,7 +903,28 @@ export class AuthService implements OnModuleInit {
     const user = await this.prisma.users.findUnique({ where: { id }, include: { roles: true } });
     if (!user) throw new NotFoundException('Utilisateur introuvable.');
 
-    // Garde-fou : si changement de rôle d'un admin vers autre chose, vérifier qu'il reste un admin actif
+    // Garde-fou 0 : si modification d'un compte SUPER_ADMIN, seul un SUPER_ADMIN peut l'effectuer
+    if (user.roles?.name === 'SUPER_ADMIN' && authorId) {
+      const author = await this.prisma.users.findUnique({ where: { id: authorId }, include: { roles: true } });
+      if (!author || author.roles.name !== 'SUPER_ADMIN') {
+        throw new ForbiddenException('Seul un Super-Administrateur peut modifier le profil d\'un autre Super-Administrateur.');
+      }
+    }
+
+    // Garde-fou 1 : si changement de rôle d'un SUPER_ADMIN vers autre chose, vérifier qu'il reste un SUPER_ADMIN actif
+    if (user.roles?.name === 'SUPER_ADMIN' && dto.role && dto.role !== 'SUPER_ADMIN') {
+      const activeSuperAdminCount = await this.prisma.users.count({
+        where: {
+          is_active: true,
+          roles: { name: 'SUPER_ADMIN' },
+        },
+      });
+      if (activeSuperAdminCount <= 1) {
+        throw new BadRequestException('Action impossible : il doit toujours rester au moins un Super-Administrateur actif.');
+      }
+    }
+
+    // Garde-fou 2 : si changement de rôle d'un admin vers autre chose, vérifier qu'il reste un admin actif
     if (user.roles?.name === 'ADMIN' && dto.role && dto.role !== 'ADMIN') {
       const activeAdminCount = await this.prisma.users.count({
         where: {
@@ -970,7 +991,26 @@ export class AuthService implements OnModuleInit {
       throw new BadRequestException('Vous ne pouvez pas désactiver votre propre compte.');
     }
 
-    // Garde-fou 2 : il doit toujours rester au moins un administrateur actif
+    // Garde-fou 2 : hiérarchie et dernier SUPER_ADMIN
+    if (user.roles.name === 'SUPER_ADMIN') {
+      if (authorId) {
+        const author = await this.prisma.users.findUnique({ where: { id: authorId }, include: { roles: true } });
+        if (!author || author.roles.name !== 'SUPER_ADMIN') {
+          throw new ForbiddenException('Seul un Super-Administrateur peut désactiver un autre Super-Administrateur.');
+        }
+      }
+      const activeSuperAdminCount = await this.prisma.users.count({
+        where: {
+          is_active: true,
+          roles: { name: 'SUPER_ADMIN' },
+        },
+      });
+      if (activeSuperAdminCount <= 1) {
+        throw new BadRequestException('Action impossible : il doit toujours rester au moins un Super-Administrateur actif.');
+      }
+    }
+
+    // Garde-fou 3 : il doit toujours rester au moins un administrateur actif
     if (user.roles.name === 'ADMIN') {
       const activeAdminCount = await this.prisma.users.count({
         where: {
@@ -987,6 +1027,12 @@ export class AuthService implements OnModuleInit {
       where: { id: user.id },
       data: { is_active: false },
     });
+
+    // Révocation immédiate de tous les refresh tokens en base
+    await this.prisma.refresh_tokens.updateMany({
+      where: { user_id: user.id, is_revoked: false },
+      data: { is_revoked: true },
+    }).catch(() => {});
 
     // Invalidation immédiate du cache de permissions pour couper toute session ouverte
     this.invalidatePermissions(user.id);

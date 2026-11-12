@@ -48,12 +48,14 @@ export class AuthTokenRefreshQueue {
     }
   }
 
-  addTokenHeader(req: HttpRequest<unknown>, token: string): HttpRequest<unknown> {
-    return req.clone({
-      setHeaders: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+  addTokenHeader(req: HttpRequest<unknown>, token: string, pharmacyId?: string | null): HttpRequest<unknown> {
+    const setHeaders: Record<string, string> = {
+      Authorization: `Bearer ${token}`,
+    };
+    if (pharmacyId) {
+      setHeaders['X-Pharmacy-Id'] = pharmacyId;
+    }
+    return req.clone({ setHeaders });
   }
 
   isRefreshingInProgress(): boolean {
@@ -69,9 +71,11 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const isAuthEndpoint = req.url.includes('/auth/login') || req.url.includes('/auth/refresh');
   const token = authService.getAccessToken();
 
+  const activePharmacyId = authService.activePharmacyId();
+
   let authReq = req;
   if (token && !isAuthEndpoint) {
-    authReq = queue.addTokenHeader(req, token);
+    authReq = queue.addTokenHeader(req, token, activePharmacyId);
   }
 
   return next(authReq).pipe(

@@ -96,9 +96,20 @@ export class JwtAuthGuard implements CanActivate {
     // 4. Calcul des droits effectifs en temps réel (Rôle + Accès personnels)
     const effectivePermissions = await this.authService.getEffectivePermissions(user.id);
 
+    // Contexte d'officine active : le Super Admin peut cibler n'importe quelle officine via l'en-tête X-Pharmacy-Id
+    let activePharmacyId = user.pharmacy_id;
+    if (user.roles.name === 'SUPER_ADMIN') {
+      const headerPharmacyId = request.headers['x-pharmacy-id'];
+      if (headerPharmacyId && typeof headerPharmacyId === 'string' && headerPharmacyId.trim().length > 0) {
+        activePharmacyId = headerPharmacyId.trim();
+      } else if (!activePharmacyId) {
+        activePharmacyId = '11111111-1111-1111-1111-111111111111';
+      }
+    }
+
     request.user = {
       id: user.id,
-      pharmacyId: user.pharmacy_id,
+      pharmacyId: activePharmacyId,
       username: user.username,
       fullName: user.full_name,
       role: user.roles.name,
