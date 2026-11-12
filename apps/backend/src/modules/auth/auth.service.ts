@@ -4,6 +4,7 @@ import {
   UnauthorizedException,
   BadRequestException,
   NotFoundException,
+  ForbiddenException,
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
@@ -19,6 +20,9 @@ import {
   UserSpaceResponse,
   UserPersonalAccessItem,
   UpdateUserAccessDto,
+  RoleItem,
+  CreateRoleDto,
+  UpdateRoleDto,
 } from '@vhp/shared';
 import {
   LoginDto,
@@ -174,8 +178,8 @@ export class AuthService implements OnModuleInit {
       return [];
     }
 
-    // Administrateur : wildcard '*'
-    if (user.roles.name === 'ADMIN') {
+    // Super-Administrateur ou Administrateur : wildcard '*'
+    if (user.roles.name === 'SUPER_ADMIN' || user.roles.name === 'ADMIN') {
       const adminPerms = ['*'];
       this.permissionsCache.set(userId, { perms: adminPerms, expiresAt: Date.now() + 60000 });
       return adminPerms;
@@ -240,7 +244,8 @@ export class AuthService implements OnModuleInit {
       { id: 'cash', label: 'Caisse & Mouvements', route: '/cash', icon: 'account_balance_wallet', perm: ['caisse.ouvrir', 'caisse.cloturer', 'caisse.consulter', 'finances.consulter'] },
       { id: 'reports', label: 'Rapports & Statistiques', route: '/reports', icon: 'assessment', perm: ['rapports.dashboard', 'rapports.consulter', 'rapports.financiers'] },
       { id: 'audit', label: 'Journal d\'audit', route: '/audit', icon: 'history', perm: 'audit.consulter' },
-      { id: 'users', label: 'Utilisateurs & Droits', route: '/users', icon: 'admin.utilisateurs' },
+      { id: 'users', label: 'Utilisateurs & Droits', route: '/users', icon: 'admin.utilisateurs', perm: 'admin.utilisateurs' },
+      { id: 'roles', label: 'Gestion des Rôles', route: '/roles', icon: 'shield', perm: 'admin.roles' },
       { id: 'settings', label: 'Paramètres', route: '/settings', icon: 'settings', perm: 'parametres.modifier' },
     ];
 
@@ -263,7 +268,7 @@ export class AuthService implements OnModuleInit {
     if (!user) throw new NotFoundException('Utilisateur introuvable.');
 
     const roleName = user.roles.name as RoleName;
-    const isSuperAdmin = roleName === 'ADMIN';
+    const isSuperAdmin = roleName === 'SUPER_ADMIN' || roleName === 'ADMIN';
     const roleDefaultCodes = new Set<string>(ROLE_PERMISSIONS[roleName] || []);
 
     let overrides: any[] = [];
@@ -332,8 +337,19 @@ export class AuthService implements OnModuleInit {
     });
     if (!targetUser) throw new NotFoundException('Utilisateur introuvable.');
 
+    // Garde-fou 0 (hiérarchie SUPER_ADMIN) : seul un SUPER_ADMIN peut modifier les accès d'un autre SUPER_ADMIN
+    if (targetUser.roles.name === 'SUPER_ADMIN') {
+      const author = await this.prisma.users.findUnique({
+        where: { id: authorId },
+        include: { roles: true },
+      });
+      if (!author || author.roles.name !== 'SUPER_ADMIN') {
+        throw new ForbiddenException('Seul un Super-Administrateur peut modifier les accès d\'un autre Super-Administrateur.');
+      }
+    }
+
     // Garde-fou 1 : un administrateur ne peut pas se retirer ses propres droits d'administration
-    if (authorId === targetUserId && targetUser.roles.name === 'ADMIN') {
+    if (authorId === targetUserId && (targetUser.roles.name === 'ADMIN' || targetUser.roles.name === 'SUPER_ADMIN')) {
       const selfAdminDenials = dto.overrides.filter(
         (o) => !o.granted && (o.permissionCode === 'admin.utilisateurs' || o.permissionCode === 'parametres.modifier' || o.permissionCode === '*'),
       );
@@ -1190,5 +1206,247 @@ export class AuthService implements OnModuleInit {
         entityId: userId,
       });
     }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // GESTION DYNAMIQUE DES RÔLES (RBAC)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  async getAllRoles(): Promise<RoleItem[]> {
+    const roles = await this.prisma.roles.findMany({
+      include: {
+        role_permissions: {
+          include: { permissions: true },
+        },
+        _count: {
+          select: { users: true },
+        },
+      },
+      orderBy: { created_at: 'asc' },
+    });
+
+    return roles.map((r) => ({
+      id: r.id,
+      name: r.name,
+      description: r.description || undefined,
+      maxDiscountPercent: Number(r.max_discount_percent),
+      isSystem: r.is_system,
+      userCount: r._count?.users || 0,
+      permissionCodes: r.name === 'SUPER_ADMIN' || r.name === 'ADMIN'
+        ? ['*']
+        : r.role_permissions.map((rp) => rp.permissions.code),
+      createdAt: r.created_at.toISOString(),
+    }));
+  }
+
+  async getRoleById(id: string): Promise<RoleItem> {
+    const role = await this.prisma.roles.findUnique({
+      where: { id },
+      include: {
+        role_permissions: {
+          include: { permissions: true },
+        },
+        _count: {
+          select: { users: true },
+        },
+      },
+    });
+    if (!role) throw new NotFoundException('Rôle introuvable.');
+
+    return {
+      id: role.id,
+      name: role.name,
+      description: role.description || undefined,
+      maxDiscountPercent: Number(role.max_discount_percent),
+      isSystem: role.is_system,
+      userCount: role._count?.users || 0,
+      permissionCodes: role.name === 'SUPER_ADMIN' || role.name === 'ADMIN'
+        ? ['*']
+        : role.role_permissions.map((rp) => rp.permissions.code),
+      createdAt: role.created_at.toISOString(),
+    };
+  }
+
+  async createRole(dto: CreateRoleDto, authorId?: string): Promise<RoleItem> {
+    const normalizedName = dto.name.trim().toUpperCase().replace(/\s+/g, '_');
+    if (!normalizedName) {
+      throw new BadRequestException('Le nom du rôle est obligatoire.');
+    }
+
+    const existing = await this.prisma.roles.findFirst({
+      where: { name: normalizedName },
+    });
+    if (existing) {
+      throw new BadRequestException(`Un rôle portant le nom "${normalizedName}" existe déjà.`);
+    }
+
+    const maxDiscount = dto.maxDiscountPercent !== undefined
+      ? Math.min(Math.max(0, dto.maxDiscountPercent), 100)
+      : 0;
+
+    const newRole = await this.prisma.roles.create({
+      data: {
+        name: normalizedName,
+        description: dto.description || null,
+        max_discount_percent: maxDiscount,
+        is_system: false,
+      },
+    });
+
+    if (dto.permissionCodes && dto.permissionCodes.length > 0) {
+      const perms = await this.prisma.permissions.findMany({
+        where: { code: { in: dto.permissionCodes } },
+      });
+      for (const p of perms) {
+        await this.prisma.role_permissions.create({
+          data: {
+            role_id: newRole.id,
+            permission_id: p.id,
+          },
+        }).catch(() => {});
+      }
+    }
+
+    await this.auditService.logAction({
+      userId: authorId,
+      action: 'ROLE_CREE',
+      entityName: 'ROLE',
+      entityId: newRole.id,
+      newValues: { name: normalizedName, description: dto.description, maxDiscount, permissions: dto.permissionCodes },
+    });
+
+    return this.getRoleById(newRole.id);
+  }
+
+  async updateRole(id: string, dto: UpdateRoleDto, authorId?: string): Promise<RoleItem> {
+    const role = await this.prisma.roles.findUnique({ where: { id } });
+    if (!role) throw new NotFoundException('Rôle introuvable.');
+
+    if (role.is_system && (role.name === 'SUPER_ADMIN' || role.name === 'ADMIN')) {
+      if (dto.name && dto.name.trim().toUpperCase() !== role.name) {
+        throw new BadRequestException(`Impossible de renommer le rôle système ${role.name}.`);
+      }
+    }
+
+    const dataToUpdate: any = {};
+    if (dto.name && !role.is_system) {
+      const normalizedName = dto.name.trim().toUpperCase().replace(/\s+/g, '_');
+      if (normalizedName !== role.name) {
+        const existing = await this.prisma.roles.findFirst({ where: { name: normalizedName } });
+        if (existing) throw new BadRequestException(`Un rôle portant le nom "${normalizedName}" existe déjà.`);
+        dataToUpdate.name = normalizedName;
+      }
+    }
+    if (dto.description !== undefined) {
+      dataToUpdate.description = dto.description;
+    }
+    if (dto.maxDiscountPercent !== undefined) {
+      dataToUpdate.max_discount_percent = Math.min(Math.max(0, dto.maxDiscountPercent), 100);
+    }
+
+    if (Object.keys(dataToUpdate).length > 0) {
+      await this.prisma.roles.update({
+        where: { id },
+        data: dataToUpdate,
+      });
+    }
+
+    if (dto.permissionCodes && role.name !== 'SUPER_ADMIN' && role.name !== 'ADMIN') {
+      await this.prisma.role_permissions.deleteMany({
+        where: { role_id: id },
+      });
+
+      const perms = await this.prisma.permissions.findMany({
+        where: { code: { in: dto.permissionCodes } },
+      });
+      for (const p of perms) {
+        await this.prisma.role_permissions.create({
+          data: {
+            role_id: id,
+            permission_id: p.id,
+          },
+        }).catch(() => {});
+      }
+
+      const affectedUsers = await this.prisma.users.findMany({
+        where: { role_id: id },
+        select: { id: true },
+      });
+      for (const u of affectedUsers) {
+        this.invalidatePermissions(u.id);
+      }
+    }
+
+    await this.auditService.logAction({
+      userId: authorId,
+      action: 'ROLE_MODIFIE',
+      entityName: 'ROLE',
+      entityId: id,
+      newValues: { ...dto },
+    });
+
+    return this.getRoleById(id);
+  }
+
+  async deleteRole(id: string, authorId?: string): Promise<{ success: boolean; message: string }> {
+    const role = await this.prisma.roles.findUnique({
+      where: { id },
+      include: {
+        _count: { select: { users: true } },
+      },
+    });
+    if (!role) throw new NotFoundException('Rôle introuvable.');
+
+    if (role.is_system) {
+      throw new BadRequestException(`Le rôle système "${role.name}" est protégé et ne peut pas être supprimé.`);
+    }
+
+    if (role._count.users > 0) {
+      throw new BadRequestException(
+        `Impossible de supprimer le rôle "${role.name}" car ${role._count.users} utilisateur(s) lui sont encore affecté(s). Veuillez d'abord réassigner ces utilisateurs.`,
+      );
+    }
+
+    await this.prisma.role_permissions.deleteMany({
+      where: { role_id: id },
+    });
+
+    await this.prisma.roles.delete({
+      where: { id },
+    });
+
+    await this.auditService.logAction({
+      userId: authorId,
+      action: 'ROLE_SUPPRIME',
+      entityName: 'ROLE',
+      entityId: id,
+      newValues: { name: role.name },
+    });
+
+    return { success: true, message: `Rôle "${role.name}" supprimé avec succès.` };
+  }
+
+  getPermissionsCatalog(): { categories: { category: string; label: string; permissions: any[] }[] } {
+    const byCategory: Record<string, any[]> = {};
+
+    for (const p of PERMISSIONS_CATALOG) {
+      if (!byCategory[p.category]) {
+        byCategory[p.category] = [];
+      }
+      byCategory[p.category].push({
+        code: p.code,
+        label: p.label,
+        category: p.category,
+        description: p.description,
+      });
+    }
+
+    const categories = Object.keys(byCategory).map((catKey) => ({
+      category: catKey,
+      label: PERMISSION_CATEGORY_LABELS[catKey] || catKey,
+      permissions: byCategory[catKey],
+    }));
+
+    return { categories };
   }
 }

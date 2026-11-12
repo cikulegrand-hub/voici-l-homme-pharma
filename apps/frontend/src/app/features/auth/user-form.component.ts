@@ -97,8 +97,8 @@ function passwordPolicyValidator(control: AbstractControl): ValidationErrors | n
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>{{ i18n.users.role }}</mat-label>
               <mat-select formControlName="role">
-                @for (role of availableRoles; track role) {
-                  <mat-option [value]="role">{{ getRoleName(role) }}</mat-option>
+                @for (role of availableRoles(); track role.name) {
+                  <mat-option [value]="role.name">{{ role.label }}</mat-option>
                 }
               </mat-select>
               <mat-error *ngIf="form.get('role')?.hasError('required')">{{ i18n.common.required }}</mat-error>
@@ -268,7 +268,7 @@ export class UserFormComponent implements OnInit {
   readonly isLoadingUser = signal(false);
   readonly isSubmitting = signal(false);
   readonly hidePassword = signal(true);
-  readonly availableRoles: RoleName[] = ['ADMIN', 'PHARMACIEN', 'CAISSIER', 'STOCK', 'COMPTABLE'];
+  readonly availableRoles = signal<Array<{ name: string; label: string }>>([]);
 
   private editUserId = '';
   readonly loadingPerms = signal(false);
@@ -300,6 +300,7 @@ export class UserFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.loadAvailableRoles();
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.isEditMode.set(true);
@@ -312,6 +313,28 @@ export class UserFormComponent implements OnInit {
   }
 
   
+  loadAvailableRoles(): void {
+    this.authApi.getAllRoles().subscribe({
+      next: (roles) => {
+        const formatted = roles.map((r) => ({
+          name: r.name,
+          label: (this.i18n.roles as Record<string, string>)[r.name] || r.name,
+        }));
+        this.availableRoles.set(formatted);
+      },
+      error: () => {
+        this.availableRoles.set([
+          { name: 'SUPER_ADMIN', label: 'Super-Administrateur' },
+          { name: 'ADMIN', label: 'Administrateur' },
+          { name: 'PHARMACIEN', label: 'Pharmacien' },
+          { name: 'CAISSIER', label: 'Caissier' },
+          { name: 'STOCK', label: 'Gestionnaire de stock' },
+          { name: 'COMPTABLE', label: 'Comptable' },
+        ]);
+      },
+    });
+  }
+
   loadPermissions(userId: string): void {
     this.loadingPerms.set(true);
     this.authApi.getUserPermissions(userId).subscribe({

@@ -39,10 +39,8 @@ export class CreateUserDto {
   @Matches(PASSWORD_REGEX, { message: PASSWORD_POLICY_MESSAGE })
   password: string;
 
-  @ApiProperty({ example: 'CAISSIER', enum: ['ADMIN', 'PHARMACIEN', 'CAISSIER', 'STOCK', 'COMPTABLE'] })
-  @IsEnum(['ADMIN', 'PHARMACIEN', 'CAISSIER', 'STOCK', 'COMPTABLE'], {
-    message: 'Rôle invalide. Choisissez parmi : ADMIN, PHARMACIEN, CAISSIER, STOCK, COMPTABLE.',
-  })
+  @ApiProperty({ example: 'CAISSIER', description: 'Nom du rôle assigné' })
+  @IsString({ message: 'Le rôle est obligatoire.' })
   role: RoleName;
 
   @ApiProperty({ example: '1234', description: 'Code PIN à 4 chiffres pour actions sensibles (AUT-08)' })
@@ -63,8 +61,8 @@ export class UpdateUserDto {
   @IsOptional()
   email?: string;
 
-  @ApiProperty({ example: 'PHARMACIEN', enum: ['ADMIN', 'PHARMACIEN', 'CAISSIER', 'STOCK', 'COMPTABLE'], required: false })
-  @IsEnum(['ADMIN', 'PHARMACIEN', 'CAISSIER', 'STOCK', 'COMPTABLE'])
+  @ApiProperty({ example: 'PHARMACIEN', description: 'Nom du rôle assigné', required: false })
+  @IsString()
   @IsOptional()
   role?: RoleName;
 

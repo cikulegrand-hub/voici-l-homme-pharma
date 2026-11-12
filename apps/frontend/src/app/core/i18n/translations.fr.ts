@@ -104,6 +104,7 @@ export const I18N_FR = {
     profile: 'Mon Profil',
   },
   roles: {
+    SUPER_ADMIN: 'Super-Administrateur',
     ADMIN: 'Administrateur',
     PHARMACIEN: 'Pharmacien Titulaire',
     CAISSIER: 'Caissier / Vendeur',

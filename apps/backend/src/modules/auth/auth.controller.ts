@@ -4,6 +4,7 @@ import {
   Get,
   Patch,
   Put,
+  Delete,
   Body,
   Req,
   HttpCode,
@@ -27,7 +28,7 @@ import {
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { RequirePermission, Public } from './decorators/auth.decorators';
-import { UpdateUserAccessDto } from '@vhp/shared';
+import { UpdateUserAccessDto, CreateRoleDto, UpdateRoleDto } from '@vhp/shared';
 
 @ApiTags('Authentification & Utilisateurs (AUT)')
 @Controller('auth')
@@ -200,5 +201,64 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Autorisation accordée pour 5 minutes avec token éphémère' })
   async verifyPin(@Body() dto: VerifyPinDto) {
     return this.authService.verifySupervisorPin(dto.pinCode, dto.action);
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // GESTION DYNAMIQUE DES RÔLES (RBAC)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  @Get('roles')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission('admin.roles', 'admin.utilisateurs')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Lister tous les rôles (système + personnalisés) avec nombre d\'utilisateurs et permissions' })
+  async getAllRoles() {
+    return this.authService.getAllRoles();
+  }
+
+  @Get('roles/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission('admin.roles', 'admin.utilisateurs')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Consulter le détail d\'un rôle et ses permissions associées' })
+  async getRoleById(@Param('id', ParseUUIDPipe) id: string) {
+    return this.authService.getRoleById(id);
+  }
+
+  @Post('roles')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission('admin.roles')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Créer un nouveau rôle personnalisé avec permissions' })
+  @ApiResponse({ status: 201, description: 'Rôle créé avec succès' })
+  async createRole(@Body() dto: CreateRoleDto, @Req() req: any) {
+    return this.authService.createRole(dto, req.user?.id);
+  }
+
+  @Put('roles/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission('admin.roles')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Modifier un rôle personnalisé (nom, description, plafond de remise, permissions)' })
+  async updateRole(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateRoleDto, @Req() req: any) {
+    return this.authService.updateRole(id, dto, req.user?.id);
+  }
+
+  @Delete('roles/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission('admin.roles')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Supprimer un rôle personnalisé (interdit si des utilisateurs y sont rattachés)' })
+  async deleteRole(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    return this.authService.deleteRole(id, req.user?.id);
+  }
+
+  @Get('permissions/catalog')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @RequirePermission('admin.roles', 'admin.utilisateurs')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Catalogue complet des permissions disponibles, groupées par catégorie' })
+  async getPermissionsCatalog() {
+    return this.authService.getPermissionsCatalog();
   }
 }

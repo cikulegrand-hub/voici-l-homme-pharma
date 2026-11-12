@@ -83,6 +83,7 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
 
   // ── ADMINISTRATION ──
   { code: 'admin.utilisateurs',      category: 'ADMIN',        label: 'Gérer les utilisateurs et les accès personnels' },
+  { code: 'admin.roles',             category: 'ADMIN',        label: 'Créer, modifier et gérer les rôles dynamiques' },
   { code: 'parametres.modifier',     category: 'ADMIN',        label: 'Modifier les paramètres de l\'officine' },
   { code: 'parametres.consulter',    category: 'ADMIN',        label: 'Consulter les paramètres' },
 
@@ -112,6 +113,7 @@ export function getPermissionsByCategory(): Record<string, PermissionDefinition[
 // ==============================================================================
 
 export const ROLE_PERMISSIONS: Record<string, string[]> = {
+  SUPER_ADMIN: ['*'],
   ADMIN: ['*'],
 
   PHARMACIEN: [

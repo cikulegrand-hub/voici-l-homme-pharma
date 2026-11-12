@@ -775,6 +775,7 @@ export class MainLayoutComponent implements OnInit {
     { section: 'Finance', icon: 'assessment', label: this.i18n.navigation.reports, route: '/reports', permission: ['rapports.dashboard', 'rapports.consulter', 'rapports.ventes', 'rapports.stock', 'rapports.financiers'] },
     { section: 'Administration', icon: 'history', label: this.i18n.navigation.audit, route: '/audit', permission: 'audit.consulter' },
     { section: 'Administration', icon: 'manage_accounts', label: this.i18n.navigation.users, route: '/users', permission: 'admin.utilisateurs' },
+    { section: 'Administration', icon: 'shield', label: 'Rôles & Habilitations', route: '/roles', permission: 'admin.roles' },
     { section: 'Administration', icon: 'settings', label: this.i18n.navigation.settings, route: '/settings', permission: 'parametres.modifier' },
     { section: 'Administration', icon: 'currency_exchange', label: 'Taux de Change', route: '/settings/exchange-rates', permission: 'taux.modifier' },
     { section: 'Administration', icon: 'upload_file', label: 'Assistant d’Import', route: '/settings/import', permission: 'parametres.modifier' },

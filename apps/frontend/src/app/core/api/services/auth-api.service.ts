@@ -10,7 +10,7 @@ import {
   ChangeMyPasswordDto,
   ChangeMyPinDto,
 } from '../generated/models';
-import { AuthSession, UserProfile, ExchangeRate } from '@vhp/shared';
+import { AuthSession, UserProfile, ExchangeRate, RoleItem, CreateRoleDto, UpdateRoleDto } from '@vhp/shared';
 
 export interface PinAuthResult {
   valid: boolean;
@@ -100,5 +100,40 @@ export class AuthApiService {
     overrides: Array<{ permission: string; overrideType: 'GRANT' | 'DENY' | null }>
   ): Observable<{ success: boolean; effectivePermissions: string[] }> {
     return this.client.put(`/auth/users/${userId}/permissions`, { overrides });
+  }
+
+  getAllRoles(): Observable<RoleItem[]> {
+    return this.client.get<RoleItem[]>('/auth/roles');
+  }
+
+  getRoleById(id: string): Observable<RoleItem> {
+    return this.client.get<RoleItem>(`/auth/roles/${id}`);
+  }
+
+  createRole(dto: CreateRoleDto): Observable<RoleItem> {
+    return this.client.post<RoleItem>('/auth/roles', dto);
+  }
+
+  updateRole(id: string, dto: UpdateRoleDto): Observable<RoleItem> {
+    return this.client.put<RoleItem>(`/auth/roles/${id}`, dto);
+  }
+
+  deleteRole(id: string): Observable<{ success: boolean; message: string }> {
+    return this.client.delete<{ success: boolean; message: string }>(`/auth/roles/${id}`);
+  }
+
+  getPermissionsCatalog(): Observable<{
+    categories: Array<{
+      category: string;
+      label: string;
+      permissions: Array<{
+        code: string;
+        label: string;
+        category: string;
+        description?: string;
+      }>;
+    }>;
+  }> {
+    return this.client.get('/auth/permissions/catalog');
   }
 }

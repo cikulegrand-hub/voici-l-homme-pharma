@@ -194,6 +194,15 @@ export const routes: Routes = [
             (m) => m.UserFormComponent,
           ),
       },
+      {
+        path: 'roles',
+        canActivate: [permissionGuard],
+        data: { permission: 'admin.roles' },
+        loadComponent: () =>
+          import('./features/auth/roles-list.component').then(
+            (m) => m.RolesListComponent,
+          ),
+      },
       // ── Module AUT : Mon profil ──
       {
         path: 'profile',

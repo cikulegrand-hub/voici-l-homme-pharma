@@ -60,6 +60,11 @@ export class RolesGuard implements CanActivate {
       throw new UnauthorizedException('Session utilisateur invalide.');
     }
 
+    // SUPER_ADMIN : accès racine absolu et inconditionnel à toutes les routes
+    if (user.role === 'SUPER_ADMIN') {
+      return true;
+    }
+
     // Récupération des métadonnées déclarées
     const requiredRoles = this.reflector.getAllAndOverride<RoleName[]>(ROLES_KEY, [
       context.getHandler(),
@@ -80,7 +85,7 @@ export class RolesGuard implements CanActivate {
     // 2. Vérification des rôles (si spécifiés)
     if (requiredRoles && requiredRoles.length > 0) {
       const hasRole = requiredRoles.includes(user.role);
-      if (!hasRole && user.role !== 'ADMIN') {
+      if (!hasRole && user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
         await this.handleAccessDenial(request, user, `Rôle requis : ${requiredRoles.join(', ')}`);
         throw new ForbiddenException('Action non disponible');
       }
@@ -90,8 +95,8 @@ export class RolesGuard implements CanActivate {
     if (requiredPermissions && requiredPermissions.length > 0) {
       const userPerms: string[] = user.permissions || [];
 
-      // Wildcard administrateur
-      if (userPerms.includes('*') || user.role === 'ADMIN') {
+      // Wildcard administrateur ou super-administrateur
+      if (userPerms.includes('*') || user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {
         return true;
       }
 

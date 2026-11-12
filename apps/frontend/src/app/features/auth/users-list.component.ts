@@ -209,6 +209,7 @@ import { UserProfile, RoleName } from '@vhp/shared';
       display: inline-block; padding: 4px 10px; border-radius: 12px;
       font-size: 12px; font-weight: 600; text-transform: uppercase;
     }
+    .role-super_admin { background: #f3e8ff; color: #6b21a8; font-weight: 700; border: 1px solid #d8b4fe; }
     .role-admin { background: #e8f0fe; color: #1a73e8; }
     .role-pharmacien { background: #e6f4ea; color: #137333; }
     .role-caissier { background: #fef7e0; color: #b06000; }
@@ -249,7 +250,7 @@ export class UsersListComponent implements OnInit {
   readonly isLoading = signal(true);
   readonly allUsers = signal<UserProfile[]>([]);
   readonly displayedColumns = ['username', 'fullName', 'email', 'role', 'status', 'actions'];
-  readonly availableRoles: RoleName[] = ['ADMIN', 'PHARMACIEN', 'CAISSIER', 'STOCK', 'COMPTABLE'];
+  readonly availableRoles: RoleName[] = ['SUPER_ADMIN', 'ADMIN', 'PHARMACIEN', 'CAISSIER', 'STOCK', 'COMPTABLE'];
 
   readonly searchTerm = signal('');
   readonly roleFilter = signal('');

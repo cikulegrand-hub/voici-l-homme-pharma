@@ -86,7 +86,32 @@ export interface ExchangeRate {
 }
 
 // 2. UTILISATEURS & DROITS (AUT-01 à AUT-07)
-export type RoleName = 'ADMIN' | 'PHARMACIEN' | 'CAISSIER' | 'STOCK' | 'COMPTABLE';
+export type RoleName = 'SUPER_ADMIN' | 'ADMIN' | 'PHARMACIEN' | 'CAISSIER' | 'STOCK' | 'COMPTABLE' | string;
+
+export interface RoleItem {
+  id: string;
+  name: string;
+  description?: string;
+  maxDiscountPercent: number;
+  isSystem: boolean;
+  userCount?: number;
+  permissionCodes: string[];
+  createdAt?: string;
+}
+
+export interface CreateRoleDto {
+  name: string;
+  description?: string;
+  maxDiscountPercent?: number;
+  permissionCodes: string[];
+}
+
+export interface UpdateRoleDto {
+  name?: string;
+  description?: string;
+  maxDiscountPercent?: number;
+  permissionCodes?: string[];
+}
 
 export interface Permission {
   id: string;

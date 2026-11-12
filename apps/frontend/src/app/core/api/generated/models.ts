@@ -20,7 +20,7 @@ export interface CreateUserDto {
   email: string;
   /** Mot de passe conforme à la politique de sécurité */
   password: string;
-  role: 'ADMIN' | 'PHARMACIEN' | 'CAISSIER' | 'STOCK' | 'COMPTABLE';
+  role: string;
   /** Code PIN à 4 chiffres pour actions sensibles (AUT-08) */
   pinCode: string;
 }
@@ -28,7 +28,7 @@ export interface CreateUserDto {
 export interface UpdateUserDto {
   fullName?: string;
   email?: string;
-  role?: 'ADMIN' | 'PHARMACIEN' | 'CAISSIER' | 'STOCK' | 'COMPTABLE';
+  role?: string;
   /** Nouveau code PIN à 4 chiffres */
   pinCode?: string;
 }
