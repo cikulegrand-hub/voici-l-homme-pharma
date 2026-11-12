@@ -60,7 +60,7 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
 
           case 403:
             alertService.error('Action non disponible');
-            authService.loadMe().subscribe({ error: () => {} });
+            authService.syncPermissions();
             break;
 
           case 404:

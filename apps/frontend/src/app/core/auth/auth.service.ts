@@ -4,6 +4,7 @@ import { Observable, tap, catchError, throwError } from 'rxjs';
 import { AuthApiService } from '../api/services/auth-api.service';
 import { LoginDto } from '../api/generated/models';
 import { UserProfile, ExchangeRate, AuthSession, RoleName } from '@vhp/shared';
+import { AlertService } from '../services/alert.service';
 
 const ACCESS_TOKEN_KEY = 'vhp_access_token';
 const REFRESH_TOKEN_KEY = 'vhp_refresh_token';
@@ -17,11 +18,16 @@ const ACTIVE_PHARMACY_KEY = 'vhp_active_pharmacy_id';
 export class AuthService {
   private readonly authApi = inject(AuthApiService);
   private readonly router = inject(Router);
+  private readonly alertService = inject(AlertService);
 
   readonly currentUser = signal<UserProfile | null>(this.loadStoredUser());
   readonly activeRate = signal<ExchangeRate | null>(this.loadStoredRate());
   readonly token = signal<string | null>(this.loadStoredToken());
   readonly activePharmacyId = signal<string | null>(localStorage.getItem(ACTIVE_PHARMACY_KEY));
+
+  private syncTimer: any = null;
+  private focusListener: (() => void) | null = null;
+  private isSyncing = false;
 
   setActivePharmacy(pharmacyId: string | null): void {
     if (pharmacyId) {
@@ -92,6 +98,98 @@ export class AuthService {
     );
   }
 
+  /**
+   * Démarre la synchronisation temps réel des habilitations :
+   * 1. Polling périodique (15 secondes)
+   * 2. Synchronisation instantanée au focus de la fenêtre/onglet
+   */
+  startPermissionSync(): void {
+    if (this.syncTimer) return;
+
+    this.syncTimer = setInterval(() => {
+      if (this.isAuthenticated()) {
+        this.syncPermissions();
+      }
+    }, 15000);
+
+    if (typeof window !== 'undefined') {
+      this.focusListener = () => {
+        if (this.isAuthenticated()) {
+          this.syncPermissions();
+        }
+      };
+      window.addEventListener('focus', this.focusListener);
+    }
+
+    this.syncPermissions();
+  }
+
+  stopPermissionSync(): void {
+    if (this.syncTimer) {
+      clearInterval(this.syncTimer);
+      this.syncTimer = null;
+    }
+    if (typeof window !== 'undefined' && this.focusListener) {
+      window.removeEventListener('focus', this.focusListener);
+      this.focusListener = null;
+    }
+  }
+
+  /**
+   * Synchronise les droits effectifs de l'utilisateur avec la base de données.
+   * Si le Super-Admin a retiré des droits ou modifié le rôle :
+   * - Les signaux réactifs Angular se mettent à jour instantanément (menus masqués immédiatement)
+   * - Une alerte discrète est notifiée
+   * - Si l'employé est sur un écran auquel il n'a plus droit, il est immédiatement redirigé.
+   */
+  syncPermissions(): void {
+    if (!this.isAuthenticated() || this.isSyncing) return;
+    this.isSyncing = true;
+
+    this.authApi.getMe().subscribe({
+      next: (res) => {
+        this.isSyncing = false;
+        const oldUser = this.currentUser();
+        const oldPerms = (oldUser?.permissions || []).slice().sort().join(',');
+        const newPerms = (res.user?.permissions || []).slice().sort().join(',');
+        const roleChanged = oldUser?.role !== res.user?.role;
+        const permissionsChanged = oldPerms !== newPerms;
+
+        this.currentUser.set(res.user);
+        this.activeRate.set(res.activeRate);
+        localStorage.setItem(USER_KEY, JSON.stringify(res.user));
+        localStorage.setItem(RATE_KEY, JSON.stringify(res.activeRate));
+
+        if ((permissionsChanged || roleChanged) && oldUser) {
+          this.alertService.info("Vos habilitations d'accès ont été actualisées en temps réel.");
+          this.checkCurrentRouteAccess();
+        }
+      },
+      error: (err) => {
+        this.isSyncing = false;
+        if (err?.status === 401 || err?.status === 403) {
+          this.logout('session_expired');
+        }
+      },
+    });
+  }
+
+  checkCurrentRouteAccess(): void {
+    try {
+      let route = this.router.routerState.snapshot.root;
+      while (route.firstChild) {
+        route = route.firstChild;
+      }
+      const requiredPermission = route.data?.['permission'] as string | string[] | undefined;
+      if (requiredPermission && !this.hasPermission(requiredPermission)) {
+        this.alertService.warning("Accès révoqué : vous n'avez plus accès à cette section.");
+        this.router.navigate([this.getUserHomeRoute()]);
+      }
+    } catch {
+      // Ignorer si router non encore prêt
+    }
+  }
+
   refreshToken(): Observable<{ token: string; refreshToken: string }> {
     const currentRefreshToken = this.getRefreshToken();
     if (!currentRefreshToken) {
@@ -111,6 +209,8 @@ export class AuthService {
   }
 
   logout(reason?: string): void {
+    this.stopPermissionSync();
+
     sessionStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
@@ -146,6 +246,8 @@ export class AuthService {
 
     this.currentUser.set(session.user);
     this.activeRate.set(session.activeRate || null);
+
+    this.startPermissionSync();
   }
 
   private updateTokens(accessToken: string, refreshToken: string): void {

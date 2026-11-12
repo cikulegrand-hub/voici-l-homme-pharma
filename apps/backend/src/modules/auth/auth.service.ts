@@ -109,25 +109,26 @@ export class AuthService implements OnModuleInit {
       }
 
       // 2. Synchronisation de la matrice par défaut rôle × permissions
+      // UNIQUEMENT lors du premier démarrage si le rôle ne possède aucune permission configurée
       for (const [roleName, codes] of Object.entries(ROLE_PERMISSIONS)) {
-        if (roleName === 'ADMIN') continue;
+        if (roleName === 'ADMIN' || roleName === 'SUPER_ADMIN') continue;
         const role = await this.prisma.roles.findFirst({ where: { name: roleName } });
         if (!role) continue;
+
+        const count = await this.prisma.role_permissions.count({ where: { role_id: role.id } });
+        if (count > 0) {
+          // Ce rôle a déjà été initialisé ou personnalisé par le Super-Admin : ne pas écraser ses choix
+          continue;
+        }
+
         const perms = await this.prisma.permissions.findMany({ where: { code: { in: codes } } });
         for (const p of perms) {
-          await this.prisma.role_permissions.upsert({
-            where: {
-              role_id_permission_id: {
-                role_id: role.id,
-                permission_id: p.id,
-              },
-            },
-            create: {
+          await this.prisma.role_permissions.create({
+            data: {
               role_id: role.id,
               permission_id: p.id,
             },
-            update: {},
-          });
+          }).catch(() => {});
         }
       }
     } catch {
@@ -186,9 +187,10 @@ export class AuthService implements OnModuleInit {
     }
 
     // 1. Droits de base conférés par le rôle
+    // La table `role_permissions` en base de données est l'UNIQUE source de vérité.
+    // Le catalogue statique initial ne sert qu'au premier démarrage (seeding).
     const dbRoleCodes = user.roles.role_permissions.map((rp) => rp.permissions.code);
-    const catalogRoleCodes = ROLE_PERMISSIONS[user.roles.name] || [];
-    const baseCodes = new Set<string>([...dbRoleCodes, ...catalogRoleCodes]);
+    const baseCodes = new Set<string>(dbRoleCodes);
 
     // 2. Accès personnels (overrides)
     let overrides: any[] = [];
@@ -263,13 +265,23 @@ export class AuthService implements OnModuleInit {
   }> {
     const user = await this.prisma.users.findUnique({
       where: { id: userId },
-      include: { roles: true },
+      include: {
+        roles: {
+          include: {
+            role_permissions: {
+              include: { permissions: true },
+            },
+          },
+        },
+      },
     });
     if (!user) throw new NotFoundException('Utilisateur introuvable.');
 
     const roleName = user.roles.name as RoleName;
     const isSuperAdmin = roleName === 'SUPER_ADMIN' || roleName === 'ADMIN';
-    const roleDefaultCodes = new Set<string>(ROLE_PERMISSIONS[roleName] || []);
+    const roleDefaultCodes = isSuperAdmin
+      ? new Set<string>(['*'])
+      : new Set<string>(user.roles.role_permissions.map((rp) => rp.permissions.code));
 
     let overrides: any[] = [];
     try {
@@ -1421,6 +1433,7 @@ export class AuthService implements OnModuleInit {
       for (const u of affectedUsers) {
         this.invalidatePermissions(u.id);
       }
+      this.invalidatePermissions(); // Purge complète de tous les caches en mémoire pour synchronisation immédiate
     }
 
     await this.auditService.logAction({

@@ -22,12 +22,14 @@ export class AppComponent implements OnInit, OnDestroy {
   private readonly inactivityService = inject(InactivityService);
 
   constructor() {
-    // Démarre ou stoppe automatiquement le watcher d'inactivité selon l'état d'authentification
+    // Démarre ou stoppe automatiquement le watcher d'inactivité et la synchronisation temps réel des habilitations
     effect(() => {
       if (this.authService.isAuthenticated()) {
         this.inactivityService.startWatcher();
+        this.authService.startPermissionSync();
       } else {
         this.inactivityService.stopWatcher();
+        this.authService.stopPermissionSync();
       }
     });
   }
@@ -35,12 +37,12 @@ export class AppComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     if (this.authService.isAuthenticated()) {
       this.inactivityService.startWatcher();
-      this.authService.loadMe().subscribe({ error: () => {} });
+      this.authService.startPermissionSync();
     }
   }
 
   ngOnDestroy(): void {
     this.inactivityService.stopWatcher();
+    this.authService.stopPermissionSync();
   }
 }
-
