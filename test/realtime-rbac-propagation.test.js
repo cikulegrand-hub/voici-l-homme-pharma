@@ -75,7 +75,7 @@ async function runAll() {
 
     // 4. Simuler le calcul des droits effectifs (logique pure DB)
     function simulateEffectivePermissions(rolePermissions, overrides = [], roleName = '') {
-      if (roleName === 'SUPER_ADMIN' || roleName === 'ADMIN') {
+      if (roleName === 'SUPER_ADMIN') {
         return ['*'];
       }
       const baseCodes = new Set(rolePermissions);
@@ -118,6 +118,29 @@ async function runAll() {
       await client.query(`DELETE FROM roles WHERE id = $1`, [testRoleId]);
     });
 
+    // 7. Vérification de la hiérarchie SUPER_ADMIN vs ADMIN
+    await test('Hiérarchie : SUPER_ADMIN conserve le wildcard absolu "*"', async () => {
+      const perms = simulateEffectivePermissions([], [], 'SUPER_ADMIN');
+      assert.strictEqual(perms.length, 1);
+      assert.strictEqual(perms[0], '*');
+    });
+
+    await test('Hiérarchie : ADMIN tire ses droits de la DB (pas de wildcard * par défaut)', async () => {
+      const adminRoleRes = await client.query(`SELECT id FROM roles WHERE name = 'ADMIN'`);
+      assert(adminRoleRes.rows.length === 1, 'Rôle ADMIN présent');
+      const adminPermsRes = await client.query(
+        `SELECT p.code FROM role_permissions rp JOIN permissions p ON rp.permission_id = p.id WHERE rp.role_id = $1`,
+        [adminRoleRes.rows[0].id]
+      );
+      const adminCodes = adminPermsRes.rows.map(r => r.code);
+      assert(adminCodes.length > 0, 'Le rôle ADMIN doit posséder des permissions en base');
+      assert(!adminCodes.includes('*'), 'La base ne doit pas stocker "*" pour ADMIN');
+
+      const evaluated = simulateEffectivePermissions(adminCodes, [], 'ADMIN');
+      assert(!evaluated.includes('*'), 'L\'évaluation des droits ADMIN ne doit plus injecter "*"');
+      assert(evaluated.includes('admin.utilisateurs'), 'ADMIN possède les droits configurés');
+    });
+
     console.log(`\n================================================================`);
     console.log(`RÉSULTAT : ${passedTests}/${totalTests} tests réussis avec succès !`);
     console.log(`================================================================`);
@@ -131,3 +154,4 @@ runAll().catch(err => {
   console.error('Erreur critique pendant les tests :', err);
   process.exit(1);
 });
+

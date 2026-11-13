@@ -105,7 +105,12 @@ interface PermCatGroup {
               <p class="role-desc">{{ role.description || 'Aucune description' }}</p>
             </div>
             <div class="role-actions">
-              <button mat-icon-button (click)="editRole(role)" matTooltip="Modifier les habilitations">
+              <button
+                mat-icon-button
+                (click)="editRole(role)"
+                [disabled]="role.name === 'SUPER_ADMIN'"
+                [matTooltip]="role.name === 'SUPER_ADMIN' ? 'Le Super-Administrateur possède le plein pouvoir absolu (*)' : 'Modifier les habilitations'"
+              >
                 <mat-icon>edit</mat-icon>
               </button>
               <button
@@ -138,7 +143,7 @@ interface PermCatGroup {
               <mat-icon class="stat-icon">verified_user</mat-icon>
               <span class="stat-label">Habilitations :</span>
               <span class="stat-val highlight">
-                {{ isSuperAdminOrAdmin(role.name) ? 'Plein pouvoir (*)' : role.permissionCodes.length + ' accordée(s)' }}
+                {{ isSuperAdmin(role.name) ? 'Plein pouvoir (*)' : role.permissionCodes.length + ' accordée(s)' }}
               </span>
             </div>
           </div>
@@ -341,8 +346,8 @@ export class RolesListComponent implements OnInit {
     });
   }
 
-  isSuperAdminOrAdmin(roleName: string): boolean {
-    return roleName === 'SUPER_ADMIN' || roleName === 'ADMIN';
+  isSuperAdmin(roleName: string): boolean {
+    return roleName === 'SUPER_ADMIN';
   }
 
   getRoleBadgeClass(roleName: string): string {

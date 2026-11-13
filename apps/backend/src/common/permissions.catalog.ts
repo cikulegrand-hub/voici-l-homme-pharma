@@ -109,12 +109,13 @@ export function getPermissionsByCategory(): Record<string, PermissionDefinition[
 
 // ==============================================================================
 // MATRICE RÔLE → PERMISSIONS PAR DÉFAUT (cahier des charges section 3)
-// L'administrateur a le wildcard '*' et plein pouvoir.
+// Seul le SUPER_ADMIN a le wildcard '*' absolu et inaltérable.
+// L'ADMIN possède par défaut toutes les permissions métier, modulables par le Super-Admin.
 // ==============================================================================
 
 export const ROLE_PERMISSIONS: Record<string, string[]> = {
   SUPER_ADMIN: ['*'],
-  ADMIN: ['*'],
+  ADMIN: PERMISSIONS_CATALOG.map((p) => p.code),
 
   PHARMACIEN: [
     // Ventes / Caisse (complet)

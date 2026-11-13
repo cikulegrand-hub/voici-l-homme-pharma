@@ -85,7 +85,7 @@ export class RolesGuard implements CanActivate {
     // 2. Vérification des rôles (si spécifiés)
     if (requiredRoles && requiredRoles.length > 0) {
       const hasRole = requiredRoles.includes(user.role);
-      if (!hasRole && user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
+      if (!hasRole && user.role !== 'SUPER_ADMIN') {
         await this.handleAccessDenial(request, user, `Rôle requis : ${requiredRoles.join(', ')}`);
         throw new ForbiddenException('Action non disponible');
       }
@@ -95,8 +95,8 @@ export class RolesGuard implements CanActivate {
     if (requiredPermissions && requiredPermissions.length > 0) {
       const userPerms: string[] = user.permissions || [];
 
-      // Wildcard administrateur ou super-administrateur
-      if (userPerms.includes('*') || user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {
+      // Wildcard absolu : seul le SUPER_ADMIN bénéficie d'un passe-partout inconditionnel
+      if (userPerms.includes('*') || user.role === 'SUPER_ADMIN') {
         return true;
       }
 

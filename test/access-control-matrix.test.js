@@ -50,7 +50,8 @@ it('Matrice des rôles : Couvre les 5 profils exigés', () => {
 });
 
 it('Matrice : Profil ADMIN possède le wildcard ou l\'ensemble complet des droits', () => {
-  assert(ROLE_PERMISSIONS.ADMIN.includes('*'), 'ADMIN doit avoir le wildcard "*"');
+  const hasWildcardOrAll = ROLE_PERMISSIONS.ADMIN.includes('*') || ROLE_PERMISSIONS.ADMIN.length === ALL_PERMISSION_CODES.size;
+  assert(hasWildcardOrAll, 'ADMIN doit avoir le wildcard "*" ou l\'ensemble complet des permissions');
 });
 
 it('Matrice : Profil CAISSIER ne peut pas modifier les prix ni accéder au stock complet', () => {

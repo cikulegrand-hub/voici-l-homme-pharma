@@ -111,7 +111,7 @@ export class AuthService implements OnModuleInit {
       // 2. Synchronisation de la matrice par défaut rôle × permissions
       // UNIQUEMENT lors du premier démarrage si le rôle ne possède aucune permission configurée
       for (const [roleName, codes] of Object.entries(ROLE_PERMISSIONS)) {
-        if (roleName === 'ADMIN' || roleName === 'SUPER_ADMIN') continue;
+        if (roleName === 'SUPER_ADMIN') continue;
         const role = await this.prisma.roles.findFirst({ where: { name: roleName } });
         if (!role) continue;
 
@@ -179,11 +179,11 @@ export class AuthService implements OnModuleInit {
       return [];
     }
 
-    // Super-Administrateur ou Administrateur : wildcard '*'
-    if (user.roles.name === 'SUPER_ADMIN' || user.roles.name === 'ADMIN') {
-      const adminPerms = ['*'];
-      this.permissionsCache.set(userId, { perms: adminPerms, expiresAt: Date.now() + 60000 });
-      return adminPerms;
+    // Super-Administrateur racine : wildcard '*' absolu et inaltérable
+    if (user.roles.name === 'SUPER_ADMIN') {
+      const superAdminPerms = ['*'];
+      this.permissionsCache.set(userId, { perms: superAdminPerms, expiresAt: Date.now() + 60000 });
+      return superAdminPerms;
     }
 
     // 1. Droits de base conférés par le rôle
@@ -278,7 +278,7 @@ export class AuthService implements OnModuleInit {
     if (!user) throw new NotFoundException('Utilisateur introuvable.');
 
     const roleName = user.roles.name as RoleName;
-    const isSuperAdmin = roleName === 'SUPER_ADMIN' || roleName === 'ADMIN';
+    const isSuperAdmin = roleName === 'SUPER_ADMIN';
     const roleDefaultCodes = isSuperAdmin
       ? new Set<string>(['*'])
       : new Set<string>(user.roles.role_permissions.map((rp) => rp.permissions.code));
@@ -370,17 +370,25 @@ export class AuthService implements OnModuleInit {
       }
     }
 
-    // Garde-fou 2 : il doit toujours rester au moins un administrateur actif avec tous les droits
+    // Garde-fou 2 : un administrateur ne peut pas brider le dernier administrateur, mais un SUPER_ADMIN a tous les pouvoirs
     if (targetUser.roles.name === 'ADMIN') {
-      const activeAdminCount = await this.prisma.users.count({
-        where: {
-          is_active: true,
-          roles: { name: 'ADMIN' },
-        },
+      const author = await this.prisma.users.findUnique({
+        where: { id: authorId },
+        include: { roles: true },
       });
-      const hasDenials = dto.overrides.some((o) => !o.granted);
-      if (activeAdminCount <= 1 && hasDenials) {
-        throw new BadRequestException('Action impossible : il doit toujours rester au moins un administrateur actif.');
+      const isAuthorSuperAdmin = author?.roles?.name === 'SUPER_ADMIN';
+
+      if (!isAuthorSuperAdmin) {
+        const activeAdminCount = await this.prisma.users.count({
+          where: {
+            is_active: true,
+            roles: { name: 'ADMIN' },
+          },
+        });
+        const hasDenials = dto.overrides.some((o) => !o.granted);
+        if (activeAdminCount <= 1 && hasDenials) {
+          throw new BadRequestException('Action impossible : il doit toujours rester au moins un administrateur actif.');
+        }
       }
     }
 
@@ -936,16 +944,24 @@ export class AuthService implements OnModuleInit {
       }
     }
 
-    // Garde-fou 2 : si changement de rôle d'un admin vers autre chose, vérifier qu'il reste un admin actif
+    // Garde-fou 2 : si changement de rôle d'un admin vers autre chose, seul le Super-Admin a le pouvoir sans restriction
     if (user.roles?.name === 'ADMIN' && dto.role && dto.role !== 'ADMIN') {
-      const activeAdminCount = await this.prisma.users.count({
-        where: {
-          is_active: true,
-          roles: { name: 'ADMIN' },
-        },
-      });
-      if (activeAdminCount <= 1) {
-        throw new BadRequestException('Action impossible : il doit toujours rester au moins un administrateur actif.');
+      const author = authorId ? await this.prisma.users.findUnique({
+        where: { id: authorId },
+        include: { roles: true },
+      }) : null;
+      const isAuthorSuperAdmin = author?.roles?.name === 'SUPER_ADMIN';
+
+      if (!isAuthorSuperAdmin) {
+        const activeAdminCount = await this.prisma.users.count({
+          where: {
+            is_active: true,
+            roles: { name: 'ADMIN' },
+          },
+        });
+        if (activeAdminCount <= 1) {
+          throw new BadRequestException('Action impossible : il doit toujours rester au moins un administrateur actif.');
+        }
       }
     }
 
@@ -1022,16 +1038,24 @@ export class AuthService implements OnModuleInit {
       }
     }
 
-    // Garde-fou 3 : il doit toujours rester au moins un administrateur actif
+    // Garde-fou 3 : un admin ne peut pas désactiver le dernier admin, mais un SUPER_ADMIN a tous les pouvoirs
     if (user.roles.name === 'ADMIN') {
-      const activeAdminCount = await this.prisma.users.count({
-        where: {
-          is_active: true,
-          roles: { name: 'ADMIN' },
-        },
-      });
-      if (activeAdminCount <= 1) {
-        throw new BadRequestException('Action impossible : il doit toujours rester au moins un administrateur actif.');
+      const author = authorId ? await this.prisma.users.findUnique({
+        where: { id: authorId },
+        include: { roles: true },
+      }) : null;
+      const isAuthorSuperAdmin = author?.roles?.name === 'SUPER_ADMIN';
+
+      if (!isAuthorSuperAdmin) {
+        const activeAdminCount = await this.prisma.users.count({
+          where: {
+            is_active: true,
+            roles: { name: 'ADMIN' },
+          },
+        });
+        if (activeAdminCount <= 1) {
+          throw new BadRequestException('Action impossible : il doit toujours rester au moins un administrateur actif.');
+        }
       }
     }
 
@@ -1290,7 +1314,7 @@ export class AuthService implements OnModuleInit {
       maxDiscountPercent: Number(r.max_discount_percent),
       isSystem: r.is_system,
       userCount: r._count?.users || 0,
-      permissionCodes: r.name === 'SUPER_ADMIN' || r.name === 'ADMIN'
+      permissionCodes: r.name === 'SUPER_ADMIN'
         ? ['*']
         : r.role_permissions.map((rp) => rp.permissions.code),
       createdAt: r.created_at.toISOString(),
@@ -1318,7 +1342,7 @@ export class AuthService implements OnModuleInit {
       maxDiscountPercent: Number(role.max_discount_percent),
       isSystem: role.is_system,
       userCount: role._count?.users || 0,
-      permissionCodes: role.name === 'SUPER_ADMIN' || role.name === 'ADMIN'
+      permissionCodes: role.name === 'SUPER_ADMIN'
         ? ['*']
         : role.role_permissions.map((rp) => rp.permissions.code),
       createdAt: role.created_at.toISOString(),
@@ -1409,7 +1433,7 @@ export class AuthService implements OnModuleInit {
       });
     }
 
-    if (dto.permissionCodes && role.name !== 'SUPER_ADMIN' && role.name !== 'ADMIN') {
+    if (dto.permissionCodes && role.name !== 'SUPER_ADMIN') {
       await this.prisma.role_permissions.deleteMany({
         where: { role_id: id },
       });

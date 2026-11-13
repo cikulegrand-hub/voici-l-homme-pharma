@@ -80,6 +80,7 @@ async function runMigrations() {
       ['20261107100000_persist_sale_cancellation_requests', path.join(prismaMigrationsDir, '20261107100000_persist_sale_cancellation_requests', 'migration.sql')],
       ['20261111130000_user_personal_permissions', path.join(prismaMigrationsDir, '20261111130000_user_personal_permissions', 'migration.sql')],
       ['20261112120000_super_admin_and_dynamic_roles', path.join(prismaMigrationsDir, '20261112120000_super_admin_and_dynamic_roles', 'migration.sql')],
+      ['20261113090000_seed_admin_role_permissions', path.join(prismaMigrationsDir, '20261113090000_seed_admin_role_permissions', 'migration.sql')],
     ];
 
     await client.query(`
