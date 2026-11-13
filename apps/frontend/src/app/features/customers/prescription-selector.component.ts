@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+﻿import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject } from '@angular/core';
 import { CustomersApiService } from '../../core/api/services/customers-api.service';
 
@@ -64,17 +64,17 @@ import { CustomersApiService } from '../../core/api/services/customers-api.servi
   styles: [`
     .prescription-selector { background: #f8faf9; border: 1px solid #d5ded9; border-radius: 8px; padding: 12px; margin-top: 8px; }
     .selector-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-    .title { font-size: 13px; font-weight: 600; color: #116149; }
+    .title { font-size: 13px; font-weight: 600; color: #1e3a2f; }
     .btn-refresh { background: none; border: 1px solid #cbd5d0; padding: 3px 8px; border-radius: 4px; font-size: 12px; cursor: pointer; }
     .prescription-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
     .prescription-list li { background: #fff; border: 1px solid #e2e8e5; border-radius: 6px; padding: 8px 10px; display: flex; justify-content: space-between; align-items: center; }
-    .prescription-list li.selected { border-color: #116149; background: #f0fdf4; }
+    .prescription-list li.selected { border-color: #1e3a2f; background: #f0fdf4; }
     .item-info { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
     .center { color: #555; font-size: 12px; }
     .date { color: #777; font-size: 11px; }
     .item-actions { display: flex; gap: 6px; }
     .btn-preview { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer; }
-    .btn-select { background: #116149; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+    .btn-select { background: #1e3a2f; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
     .empty-hint { color: #6b7280; font-size: 12px; }
     .error-msg { color: #dc2626; font-size: 12px; }
     .preview-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1100; }

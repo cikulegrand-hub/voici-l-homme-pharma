@@ -51,11 +51,15 @@ export interface ConfirmDialogData {
     }
 
     .dialog-icon.warn {
-      color: #c5221f;
+      color: var(--vhp-warn, #c5221f);
     }
 
     .dialog-icon.primary {
-      color: #1a73e8;
+      color: var(--vhp-primary, #1e3a2f);
+    }
+
+    .dialog-icon.accent {
+      color: var(--vhp-accent, #0f9d58);
     }
 
     .dialog-message {

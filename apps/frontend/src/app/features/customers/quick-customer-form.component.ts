@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+﻿import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, OnInit, Output, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CustomersApiService } from '../../core/api/services/customers-api.service';
@@ -52,7 +52,7 @@ import { CustomersApiService } from '../../core/api/services/customers-api.servi
   styles: [`
     .quick-customer-dialog { background: #fff; border-radius: 8px; padding: 16px; border: 1px solid #d0d7d3; max-width: 440px; width: 100%; box-sizing: border-box; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
     .dialog-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-    .dialog-header h4 { margin: 0; color: #116149; font-size: 16px; font-weight: 600; }
+    .dialog-header h4 { margin: 0; color: #1e3a2f; font-size: 16px; font-weight: 600; }
     .close-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: #666; line-height: 1; }
     .privacy-banner { background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 8px; margin-bottom: 12px; color: #065f46; font-size: 11px; display: flex; gap: 6px; align-items: flex-start; }
     .form-group { margin-bottom: 12px; }
@@ -62,9 +62,9 @@ import { CustomersApiService } from '../../core/api/services/customers-api.servi
     .fixed-type { padding: 8px; background: #f3f4f6; border-radius: 4px; color: #374151; font-size: 13px; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .form-control { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #cbd5d0; border-radius: 4px; font-size: 13px; }
-    .form-control:focus { outline: none; border-color: #116149; }
+    .form-control:focus { outline: none; border-color: #1e3a2f; }
     .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
-    .btn-primary { background: #116149; color: white; border: none; padding: 7px 14px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+    .btn-primary { background: #1e3a2f; color: white; border: none; padding: 7px 14px; border-radius: 4px; cursor: pointer; font-size: 13px; }
     .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
     .btn-cancel { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; padding: 7px 14px; border-radius: 4px; cursor: pointer; font-size: 13px; }
     .error-msg { color: #dc2626; font-size: 12px; margin-top: 8px; }

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+﻿import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -284,7 +284,7 @@ interface ReportCard { key: ReportKey; label: string; description: string; }
     .subtitle { color:#5f6368; font-size:13px; margin-top:4px; }
     .report-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:16px; }
     .report-card { display:flex; flex-direction:column; gap:8px; padding:20px; border:1px solid #dbe8e0; border-radius:12px; color:#173d2d; text-decoration:none; background:white; }
-    .report-card:hover { border-color:#116149; box-shadow:0 2px 8px rgba(17,97,73,.12); }
+    .report-card:hover { border-color:#1e3a2f; box-shadow:0 2px 8px rgba(17,97,73,.12); }
     .report-card span { color:#5f6368; font-size:13px; }
     .content-card { padding:20px; border-radius:12px; }
     .toolbar, .pagination { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; flex-wrap: wrap; }

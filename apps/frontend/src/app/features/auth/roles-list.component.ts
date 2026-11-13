@@ -289,6 +289,17 @@ interface PermCatGroup {
 
     .modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; padding-top: 16px; border-top: 1px solid #e2e8f0; }
     .btn-spinner { display: inline-block; margin-right: 6px; }
+
+    @media (max-width: 768px) {
+      .roles-page { padding: 12px 6px; }
+      .header-card { padding: 12px 14px; margin-bottom: 16px; }
+      .header-content { flex-direction: column; align-items: stretch; gap: 12px; }
+      .header-actions button { width: 100%; }
+      .roles-grid { grid-template-columns: 1fr; }
+      .modal-card { width: 95vw; padding: 16px; }
+      .modal-footer { flex-direction: column; }
+      .modal-footer button { width: 100%; }
+    }
   `],
 })
 export class RolesListComponent implements OnInit {

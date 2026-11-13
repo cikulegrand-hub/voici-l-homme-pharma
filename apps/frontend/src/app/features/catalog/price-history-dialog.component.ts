@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit, inject, signal } from '@angular/core';
+﻿import { Component, Inject, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatDialogModule, MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -109,7 +109,7 @@ import { PriceHistoryEntry, Product } from '@vhp/shared';
   styles: [
     `
       .dialog-container {
-        min-width: 680px;
+        min-width: 320px; width: 100%;
         max-width: 850px;
         padding: 8px 16px;
       }

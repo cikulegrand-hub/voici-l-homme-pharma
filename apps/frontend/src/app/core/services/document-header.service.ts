@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+﻿import { Injectable, inject, signal } from '@angular/core';
 import { SettingsApiService } from '../api/services/settings-api.service';
 import { PharmacyIdentity, PrintTemplates } from '@vhp/shared';
 
@@ -159,13 +159,13 @@ export class DocumentHeaderService {
       ? `<div class="vhp-header-left" style="flex: 0 0 auto; max-width: 45%; display: flex; align-items: center;">
           <img src="${identity.logoUrl}" alt="${pharmacyName}" style="max-height: 75px; max-width: 220px; object-fit: contain; display: block;" />
          </div>`
-      : `<div class="vhp-header-left vhp-logo-fallback" style="flex: 0 0 auto; max-width: 40%; font-size: 15px; font-weight: 800; color: #116149; text-transform: uppercase; letter-spacing: 0.5px;">
+      : `<div class="vhp-header-left vhp-logo-fallback" style="flex: 0 0 auto; max-width: 40%; font-size: 15px; font-weight: 800; color: #1e3a2f; text-transform: uppercase; letter-spacing: 0.5px;">
           ${pharmacyName}
          </div>`;
 
     const rightInfoBlock = `
       <div class="vhp-header-right" style="flex: 1 1 auto; text-align: right; padding-left: 20px;">
-        <div class="vhp-pharmacy-name" style="font-size: 17px; font-weight: 800; color: #116149; text-transform: uppercase; margin: 0 0 3px; letter-spacing: 0.5px;">${pharmacyName}</div>
+        <div class="vhp-pharmacy-name" style="font-size: 17px; font-weight: 800; color: #1e3a2f; text-transform: uppercase; margin: 0 0 3px; letter-spacing: 0.5px;">${pharmacyName}</div>
         <div class="vhp-pharmacy-subtitle" style="font-size: 10px; color: #4b5563; margin-bottom: 4px;">Officine Pharmaceutique Agréée — République Démocratique du Congo</div>
         <div class="vhp-header-coords" style="font-size: 11px; color: #1f2937; line-height: 1.35;">
           ${address ? `<div>${address}</div>` : ''}
@@ -185,13 +185,13 @@ export class DocumentHeaderService {
 
     const customInvoiceHeader =
       options.showCustomHeader !== false && printTemplates.invoiceHeader
-        ? `<div class="vhp-invoice-custom-header" style="font-size: 12px; font-weight: 600; text-align: center; margin-top: 8px; border-top: 1px solid #116149; padding-top: 4px; color: #116149;">
+        ? `<div class="vhp-invoice-custom-header" style="font-size: 12px; font-weight: 600; text-align: center; margin-top: 8px; border-top: 1px solid #1e3a2f; padding-top: 4px; color: #1e3a2f;">
             ${this.escapeHtml(printTemplates.invoiceHeader).replace(/\n/g, '<br>')}
            </div>`
         : '';
 
     return `
-      <div class="vhp-document-header vhp-header-a4" style="border-bottom: 2px solid #116149; padding-bottom: 10px; margin-bottom: 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+      <div class="vhp-document-header vhp-header-a4" style="border-bottom: 2px solid #1e3a2f; padding-bottom: 10px; margin-bottom: 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
           ${leftLogoBlock}
           ${rightInfoBlock}

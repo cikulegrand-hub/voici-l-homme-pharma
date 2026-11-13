@@ -1,6 +1,6 @@
-.sales-history-container {
+﻿.sales-history-container {
   padding: 16px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--vhp-font);
 }
 
 .page-header {
@@ -13,7 +13,7 @@
     margin: 0 0 4px;
     font-size: 20px;
     font-weight: 800;
-    color: #116149;
+    color: var(--vhp-primary);
   }
 }
 
@@ -50,8 +50,8 @@
   }
 
   &.active {
-    color: #116149;
-    border-bottom: 3px solid #116149;
+    color: var(--vhp-primary);
+    border-bottom: 3px solid var(--vhp-primary);
     font-weight: 800;
   }
 }
@@ -166,7 +166,7 @@
 }
 
 .invoice-link {
-  color: #116149;
+  color: var(--vhp-primary);
   cursor: pointer;
   text-decoration: underline;
   font-weight: 700;
@@ -218,7 +218,7 @@
 .sale-detail-card {
   margin-top: 18px;
   background: #fff;
-  border: 2px solid #116149;
+  border: 2px solid var(--vhp-primary);
   border-radius: 8px;
   padding: 16px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.06);
@@ -234,7 +234,7 @@
 
   h3 {
     margin: 0;
-    color: #116149;
+    color: var(--vhp-primary);
     font-size: 16px;
   }
 }

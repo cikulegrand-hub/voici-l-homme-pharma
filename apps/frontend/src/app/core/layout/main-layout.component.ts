@@ -726,6 +726,25 @@ export interface NavItem {
       }
     }
 
+    @media (max-width: 420px) {
+      .topbar {
+        padding: 0 4px;
+        gap: 2px;
+      }
+
+      .rate-chip {
+        font-size: 10px;
+        padding: 2px 4px;
+        gap: 3px;
+      }
+
+      .rate-icon {
+        font-size: 15px;
+        width: 15px;
+        height: 15px;
+      }
+    }
+
     
 
   `],

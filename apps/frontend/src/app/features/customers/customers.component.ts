@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+﻿import { CommonModule } from '@angular/common';
 import { Component, OnInit, OnDestroy, inject, ViewChild, ElementRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Customer } from '@vhp/shared';
@@ -1288,7 +1288,7 @@ interface ReceiptTicket {
               </label>
             </div>
 
-            <div class="alert alert-info py-2 px-3 small" style="font-size: 11.5px; margin: 0; background: #eef6f2; border: 1px solid #cce3d8; color: #116149; border-radius: 6px;">
+            <div class="alert alert-info py-2 px-3 small" style="font-size: 11.5px; margin: 0; background: #eef6f2; border: 1px solid #cce3d8; color: var(--vhp-primary, #1e3a2f); border-radius: 6px;">
               ℹ️ Document A4 officiel avec en-tête de l'officine, photo, état civil, couverture santé, pharmacovigilance et mention de confidentialité.
             </div>
           </div>
@@ -1310,7 +1310,7 @@ interface ReceiptTicket {
           </div>
           <div class="modal-body text-center">
             <p class="text-muted small mb-2">Vérifiez l'aperçu avant d'enregistrer sur le stockage persistant :</p>
-            <div style="margin: 12px auto; width: 140px; height: 160px; border: 2px solid #116149; border-radius: 8px; overflow: hidden; background: #f0fdf4; display: flex; align-items: center; justify-content: center;">
+            <div style="margin: 12px auto; width: 140px; height: 160px; border: 2px solid var(--vhp-primary, #1e3a2f); border-radius: 8px; overflow: hidden; background: #f0fdf4; display: flex; align-items: center; justify-content: center;">
               <img [src]="pendingPhotoPreviewUrl" alt="Aperçu photo" style="width: 100%; height: 100%; object-fit: cover;">
             </div>
             <div class="text-muted small" *ngIf="pendingPhotoSizeKb">
@@ -1371,37 +1371,37 @@ interface ReceiptTicket {
   styles: [`
     .customers-module { display: flex; flex-direction: column; gap: 16px; padding: 16px; }
     .module-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
-    .module-header h2 { margin: 0; color: #116149; font-size: 20px; font-weight: 700; }
+    .module-header h2 { margin: 0; color: var(--vhp-primary, #1e3a2f); font-size: 20px; font-weight: 700; }
     .subtitle { margin: 4px 0 0; color: #556960; font-size: 13px; }
     .toolbar-card { background: #fff; padding: 12px; border-radius: 8px; border: 1px solid #d5ded9; }
     .toolbar-form { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
     .search-input-group { flex: 1; min-width: 250px; }
     .form-control { width: 100%; box-sizing: border-box; padding: 8px 12px; border: 1px solid #cbd5d0; border-radius: 6px; font-size: 13px; }
-    .form-control:focus { outline: none; border-color: #116149; }
+    .form-control:focus { outline: none; border-color: var(--vhp-primary, #1e3a2f); }
     .main-grid { display: grid; grid-template-columns: 1fr 1.3fr; gap: 16px; align-items: start; }
     @media (max-width: 992px) { .main-grid { grid-template-columns: 1fr; } }
     .customers-list-panel, .card-details { background: #fff; border: 1px solid #d5ded9; border-radius: 8px; overflow: hidden; }
     .panel-header { padding: 12px 16px; border-bottom: 1px solid #edf0ee; background: #fbfcfb; }
-    .panel-header h3 { margin: 0; font-size: 15px; color: #116149; }
+    .panel-header h3 { margin: 0; font-size: 15px; color: var(--vhp-primary, #1e3a2f); }
     .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; max-height: 600px; }
     .data-table { width: 100%; min-width: 580px; border-collapse: collapse; font-size: 13px; }
     .data-table th, .data-table td { padding: 10px 12px; border-bottom: 1px solid #edf0ee; text-align: left; }
     .data-table th { background: #f8faf9; color: #475569; font-weight: 600; }
     .data-table tbody tr { cursor: pointer; transition: background 0.15s; }
     .data-table tbody tr:hover { background: #f0fdf4; }
-    .active-row { background: #ecfdf5 !important; border-left: 3px solid #116149; }
+    .active-row { background: #ecfdf5 !important; border-left: 3px solid var(--vhp-primary, #1e3a2f); }
     .customer-card-header { padding: 16px; border-bottom: 1px solid #edf0ee; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
     .profile-photo-block { display: flex; align-items: center; gap: 8px; }
     .profile-photo, .profile-photo-placeholder { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2px solid #d7e5de; }
-    .profile-photo-placeholder { display: flex; align-items: center; justify-content: center; background: #eaf5ef; color: #116149; font-weight: 700; font-size: 18px; }
-    .customer-card-header h3 { margin: 4px 0 2px; color: #116149; font-size: 18px; }
+    .profile-photo-placeholder { display: flex; align-items: center; justify-content: center; background: #eaf5ef; color: var(--vhp-primary, #1e3a2f); font-weight: 700; font-size: 18px; }
+    .customer-card-header h3 { margin: 4px 0 2px; color: var(--vhp-primary, #1e3a2f); font-size: 18px; }
     .financial-summary { display: flex; gap: 16px; }
     .metric { background: #f8faf9; border: 1px solid #e2e8e5; border-radius: 6px; padding: 6px 12px; text-align: right; }
     .metric small { display: block; font-size: 11px; color: #64748b; }
     .metric strong { font-size: 14px; }
     .nav-tabs { display: flex; gap: 4px; border-bottom: 1px solid #d5ded9; background: #f8faf9; padding: 8px 12px 0; overflow-x: auto; }
     .tab-link { background: none; border: none; padding: 8px 14px; font-size: 13px; font-weight: 500; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; }
-    .tab-link.active { color: #116149; border-bottom-color: #116149; font-weight: 600; background: #fff; border-top-left-radius: 6px; border-top-right-radius: 6px; }
+    .tab-link.active { color: var(--vhp-primary, #1e3a2f); border-bottom-color: var(--vhp-primary, #1e3a2f); font-weight: 600; background: #fff; border-top-left-radius: 6px; border-top-right-radius: 6px; }
     .tab-content { padding: 16px; }
     .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .info-item label { display: block; font-size: 12px; color: #64748b; margin-bottom: 2px; }
@@ -1411,7 +1411,7 @@ interface ReceiptTicket {
     .medical-text { color: #92400e; font-size: 13px; margin: 0; }
     .privacy-notice-box { background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 10px; margin-bottom: 12px; color: #065f46; font-size: 12px; display: flex; gap: 8px; align-items: center; }
     .btn { padding: 7px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid transparent; transition: all 0.2s; }
-    .btn-primary { background: #116149; color: #fff; }
+    .btn-primary { background: var(--vhp-primary, #1e3a2f); color: #fff; }
     .btn-primary:hover { background: #0d4a38; }
     .btn-secondary { background: #334155; color: #fff; }
     .btn-success { background: #15803d; color: #fff; }
@@ -1439,15 +1439,15 @@ interface ReceiptTicket {
     .d-flex { display: flex; }
     .justify-between { justify-content: space-between; }
     .section-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-    .section-actions h4 { margin: 0; color: #116149; font-size: 15px; }
+    .section-actions h4 { margin: 0; color: var(--vhp-primary, #1e3a2f); font-size: 15px; }
     .settlement-form-card, .prescription-form-card { background: #f8faf9; border: 1px solid #cbd5d0; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
-    .settlement-form-card h5, .prescription-form-card h5 { margin: 0 0 12px; color: #116149; font-size: 14px; }
+    .settlement-form-card h5, .prescription-form-card h5 { margin: 0 0 12px; color: var(--vhp-primary, #1e3a2f); font-size: 14px; }
     .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
     .form-group { display: flex; flex-direction: column; gap: 4px; }
     .form-group label { font-size: 12px; font-weight: 500; color: #374151; }
     .form-actions { display: flex; justify-content: flex-end; gap: 8px; }
     .imputation-box { background: #fff; border: 1px solid #d5ded9; border-radius: 6px; padding: 12px; }
-    .imputation-box h6 { margin: 0 0 8px; color: #116149; font-size: 12px; }
+    .imputation-box h6 { margin: 0 0 8px; color: var(--vhp-primary, #1e3a2f); font-size: 12px; }
     .preview-table { font-size: 12px; }
     .preview-table th, .preview-table td { padding: 6px 8px; }
     .statement-summary-boxes { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 12px; }
@@ -1460,10 +1460,10 @@ interface ReceiptTicket {
     .modal-dialog { background: #fff; border-radius: 8px; max-width: 520px; width: 95%; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
     .customer-modal-dialog { max-width: 760px; }
     .form-section { border: 1px solid #d5ded9; border-radius: 8px; padding: 14px; margin-top: 14px; background: #fafbfa; }
-    .form-section legend { font-weight: 700; color: #116149; font-size: 13px; padding: 2px 8px; background: #fff; border: 1px solid #cbd5d0; border-radius: 4px; }
+    .form-section legend { font-weight: 700; color: var(--vhp-primary, #1e3a2f); font-size: 13px; padding: 2px 8px; background: #fff; border: 1px solid #cbd5d0; border-radius: 4px; }
     .consent-line { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; color: #475569; margin: 12px 0; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 10px; border-radius: 6px; }
     .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid #edf0ee; background: #fbfcfb; }
-    .modal-header h4 { margin: 0; font-size: 15px; color: #116149; }
+    .modal-header h4 { margin: 0; font-size: 15px; color: var(--vhp-primary, #1e3a2f); }
     .close-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: #64748b; }
 
     /* ── En-tête professionnel du formulaire client ── */
@@ -1586,7 +1586,7 @@ interface ReceiptTicket {
     .photo-actions { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
     .cursor-pointer { cursor: pointer; }
     .info-block { background: #fbfcfb; border: 1px solid #edf0ee; border-radius: 6px; padding: 12px; }
-    .info-block h5 { margin: 0 0 8px; color: #116149; font-size: 13px; font-weight: 600; border-bottom: 1px solid #edf0ee; padding-bottom: 4px; }
+    .info-block h5 { margin: 0 0 8px; color: var(--vhp-primary, #1e3a2f); font-size: 13px; font-weight: 600; border-bottom: 1px solid #edf0ee; padding-bottom: 4px; }
     .doc-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dashed #edf0ee; }
     .doc-item:last-child { border-bottom: none; }
     .border-top { border-top: 1px solid #edf0ee; }
@@ -1597,9 +1597,9 @@ interface ReceiptTicket {
     .ml-2 { margin-left: 8px; }
     .purchase-items-row { background: #fbfdfc; }
     .purchase-items-card { padding: 12px; background: #fff; border: 1px solid #d5ded9; border-radius: 6px; margin: 4px 0; }
-    .purchase-items-card h6 { margin: 0 0 8px; color: #116149; font-size: 13px; font-weight: 600; }
+    .purchase-items-card h6 { margin: 0 0 8px; color: var(--vhp-primary, #1e3a2f); font-size: 13px; font-weight: 600; }
     .settlement-clean-alert { background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 12px 16px; margin-bottom: 16px; color: #065f46; font-size: 13px; display: flex; align-items: center; gap: 8px; }
-    .officine-statement-badge h2 { margin: 0; color: #116149; font-size: 17px; }
+    .officine-statement-badge h2 { margin: 0; color: var(--vhp-primary, #1e3a2f); font-size: 17px; }
     .officine-statement-badge p { margin: 2px 0; font-size: 12px; color: #475569; }
     .officine-statement-badge h3 { margin: 8px 0 2px; color: #0f172a; font-size: 14px; font-weight: 700; }
     .officine-statement-badge small { font-size: 11px; color: #64748b; }
@@ -2957,9 +2957,9 @@ export class CustomersComponent implements OnInit, OnDestroy {
               color: #1f2937;
               margin: 0;
             }
-            .header-table { width: 100%; border-bottom: 2px solid #116149; padding-bottom: 12px; margin-bottom: 16px; }
+            .header-table { width: 100%; border-bottom: 2px solid var(--vhp-primary, #1e3a2f); padding-bottom: 12px; margin-bottom: 16px; }
             .header-table td { vertical-align: top; }
-            .officine-title { font-size: 16pt; font-weight: bold; color: #116149; margin: 0; letter-spacing: 0.5px; }
+            .officine-title { font-size: 16pt; font-weight: bold; color: var(--vhp-primary, #1e3a2f); margin: 0; letter-spacing: 0.5px; }
             .officine-subtitle { font-size: 9pt; color: #4b5563; margin: 2px 0 0; }
             .doc-title { font-size: 13pt; font-weight: bold; color: #111827; text-align: right; margin: 0; text-transform: uppercase; }
             .doc-meta { font-size: 9pt; color: #6b7280; text-align: right; margin: 4px 0 0; }
@@ -3013,7 +3013,7 @@ export class CustomersComponent implements OnInit, OnDestroy {
               </td>
               <td class="summary-card" style="width: 25%;">
                 <span class="summary-label">Total Achats Crédit</span>
-                <span class="summary-val" style="color: #116149;">${Number(this.getTotalCreditPurchases()).toLocaleString('fr-FR')} CDF</span>
+                <span class="summary-val" style="color: var(--vhp-primary, #1e3a2f);">${Number(this.getTotalCreditPurchases()).toLocaleString('fr-FR')} CDF</span>
               </td>
               <td class="summary-card" style="width: 25%;">
                 <span class="summary-label">Total Règlements</span>
@@ -3026,7 +3026,7 @@ export class CustomersComponent implements OnInit, OnDestroy {
             </tr>
           </table>
 
-          <h4 style="margin: 16px 0 6px; font-size: 11pt; color: #116149;">Détail chronologique des opérations comptables :</h4>
+          <h4 style="margin: 16px 0 6px; font-size: 11pt; color: var(--vhp-primary, #1e3a2f);">Détail chronologique des opérations comptables :</h4>
           <table class="ops-table">
             <thead>
               <tr>
@@ -3246,15 +3246,15 @@ export class CustomersComponent implements OnInit, OnDestroy {
               color: #1f2937;
               margin: 0;
             }
-            .header-table { width: 100%; border-bottom: 2px solid #116149; padding-bottom: 10px; margin-bottom: 14px; }
+            .header-table { width: 100%; border-bottom: 2px solid var(--vhp-primary, #1e3a2f); padding-bottom: 10px; margin-bottom: 14px; }
             .header-table td { vertical-align: top; }
-            .officine-title { font-size: 15pt; font-weight: bold; color: #116149; margin: 0; }
+            .officine-title { font-size: 15pt; font-weight: bold; color: var(--vhp-primary, #1e3a2f); margin: 0; }
             .officine-sub { font-size: 8.5pt; color: #4b5563; margin: 2px 0 0; }
             .doc-badge { text-align: right; }
             .doc-title { font-size: 13pt; font-weight: bold; color: #111827; margin: 0; text-transform: uppercase; }
             .doc-meta { font-size: 8.5pt; color: #6b7280; margin-top: 3px; }
             .section-card { border: 1px solid #d1d5db; border-radius: 6px; padding: 10px 12px; margin-bottom: 12px; page-break-inside: avoid; }
-            .section-title { font-weight: bold; color: #116149; font-size: 10.5pt; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; margin-bottom: 8px; }
+            .section-title { font-weight: bold; color: var(--vhp-primary, #1e3a2f); font-size: 10.5pt; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; margin-bottom: 8px; }
             .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; font-size: 9.5pt; }
             .medical-warning-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 4px; padding: 8px 10px; margin-bottom: 8px; font-size: 9.5pt; color: #92400e; }
             .data-table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 9pt; }

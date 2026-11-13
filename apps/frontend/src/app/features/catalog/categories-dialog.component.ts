@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+﻿import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -166,7 +166,7 @@ import { ProductCategory } from '@vhp/shared';
     `
       .dialog-container {
         padding: 8px 16px;
-        min-width: 600px;
+        min-width: 320px; width: 100%;
         max-width: 750px;
       }
       .dialog-header {

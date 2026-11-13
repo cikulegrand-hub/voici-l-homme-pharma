@@ -2,21 +2,31 @@
 @use '@angular/material' as mat;
 
 :root {
-  --vhp-primary: #1e3a2f;
-  --vhp-primary-light: #2d5444;
-  --vhp-accent: #0f9d58;
-  --vhp-accent-light: #e6f4ea;
-  --vhp-warn: #c5221f;
+  /* Charte Graphique Principale (Officine Pharmaceutique Agréée RDC) */
+  --vhp-primary: #1e3a2f;          /* Vert profond de l'officine (Dark Forest Green) */
+  --vhp-primary-light: #2d5444;    /* Teinte hover / accents foncés */
+  --vhp-accent: #0f9d58;           /* Vert émeraude / caducée d'action */
+  --vhp-accent-light: #e6f4ea;     /* Vert pastel de surface / badges */
+  --vhp-warn: #c5221f;             /* Rouge alerte / rupture / erreur */
   --vhp-warn-light: #fce8e6;
-  --vhp-warning: #f2994a;
+  --vhp-warning: #f2994a;          /* Ambre / péremption proche */
   --vhp-warning-light: #fef4e8;
-  --vhp-bg: #f8f9fa;
-  --vhp-surface: #ffffff;
-  --vhp-border: #e0e0e0;
+  --vhp-info: #1a73e8;             /* Bleu informatif */
+  --vhp-info-light: #e8f0fe;
+  --vhp-bg: #f8f9fa;               /* Fond d'application doux */
+  --vhp-surface: #ffffff;          /* Surface blanche des cartes */
+  --vhp-border: #e0e0e0;           /* Bordure discrète */
+  --vhp-border-subtle: #edf1ee;
   --vhp-text-primary: #202124;
   --vhp-text-secondary: #5f6368;
   --vhp-font: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --vhp-font-mono: 'JetBrains Mono', monospace;
+
+  /* MDC / Material System Tokens */
+  --mat-sys-primary: var(--vhp-primary);
+  --mat-sys-on-primary: #ffffff;
+  --mat-sys-secondary: var(--vhp-accent);
+  --mat-sys-error: var(--vhp-warn);
 }
 
 * {
@@ -37,6 +47,7 @@ html, body {
 
 /* Typographie & Utilitaires */
 h1, h2, h3, h4, h5, h6 {
+  font-family: var(--vhp-font);
   font-weight: 700;
   color: var(--vhp-primary);
 }
@@ -47,6 +58,107 @@ h1, h2, h3, h4, h5, h6 {
 
 .font-mono {
   font-family: var(--vhp-font-mono);
+}
+
+/* ==========================================================================
+   ALIGNEMENT CHARTE GRAPHIQUE ANGULAR MATERIAL (MDC)
+   Harmonise les composants Material avec l'identité verte & émeraude VHP
+   ========================================================================== */
+
+/* Boutons Primary */
+.mat-mdc-unelevated-button.mat-primary,
+.mat-mdc-raised-button.mat-primary,
+.mat-mdc-fab.mat-primary,
+.mat-mdc-mini-fab.mat-primary {
+  --mdc-filled-button-container-color: var(--vhp-primary) !important;
+  --mdc-filled-button-label-text-color: #ffffff !important;
+  --mdc-protected-button-container-color: var(--vhp-primary) !important;
+  --mdc-protected-button-label-text-color: #ffffff !important;
+  background-color: var(--vhp-primary) !important;
+  color: #ffffff !important;
+
+  &:hover {
+    background-color: var(--vhp-primary-light) !important;
+  }
+}
+
+/* Boutons Accent */
+.mat-mdc-unelevated-button.mat-accent,
+.mat-mdc-raised-button.mat-accent,
+.mat-mdc-fab.mat-accent,
+.mat-mdc-mini-fab.mat-accent {
+  --mdc-filled-button-container-color: var(--vhp-accent) !important;
+  --mdc-filled-button-label-text-color: #ffffff !important;
+  --mdc-protected-button-container-color: var(--vhp-accent) !important;
+  --mdc-protected-button-label-text-color: #ffffff !important;
+  background-color: var(--vhp-accent) !important;
+  color: #ffffff !important;
+}
+
+/* Boutons Outlined Primary */
+.mat-mdc-outlined-button.mat-primary {
+  --mdc-outlined-button-label-text-color: var(--vhp-primary) !important;
+  --mdc-outlined-button-outline-color: var(--vhp-primary) !important;
+  color: var(--vhp-primary) !important;
+  border-color: var(--vhp-primary) !important;
+
+  &:hover {
+    background-color: var(--vhp-accent-light) !important;
+  }
+}
+
+/* Boutons Text Primary */
+.mat-mdc-button.mat-primary {
+  --mdc-text-button-label-text-color: var(--vhp-primary) !important;
+  color: var(--vhp-primary) !important;
+
+  &:hover {
+    background-color: var(--vhp-accent-light) !important;
+  }
+}
+
+/* Onglets Mat-Tab */
+.mat-mdc-tab-header {
+  --mdc-tab-indicator-active-indicator-color: var(--vhp-accent) !important;
+}
+
+.mat-mdc-tab.mdc-tab--active .mdc-tab__text-label {
+  color: var(--vhp-primary) !important;
+  font-weight: 700 !important;
+}
+
+/* Form Fields & Focus */
+.mat-mdc-form-field.mat-focused.mat-primary .mdc-notched-outline__thick {
+  border-color: var(--vhp-accent) !important;
+}
+
+.mat-mdc-form-field.mat-focused .mat-mdc-floating-label {
+  color: var(--vhp-primary) !important;
+}
+
+/* Checkbox & Radio */
+.mat-mdc-checkbox.mat-primary {
+  --mdc-checkbox-selected-checkmark-color: #ffffff;
+  --mdc-checkbox-selected-focus-icon-color: var(--vhp-accent);
+  --mdc-checkbox-selected-hover-icon-color: var(--vhp-accent);
+  --mdc-checkbox-selected-icon-color: var(--vhp-accent);
+}
+
+.mat-mdc-radio-button.mat-primary {
+  --mdc-radio-selected-focus-icon-color: var(--vhp-accent);
+  --mdc-radio-selected-hover-icon-color: var(--vhp-accent);
+  --mdc-radio-selected-icon-color: var(--vhp-accent);
+}
+
+/* Spinners */
+.mat-mdc-progress-spinner.mat-primary {
+  --mdc-circular-progress-active-indicator-color: var(--vhp-accent) !important;
+}
+
+/* Badges Warn */
+.mat-badge-warn .mat-badge-content {
+  background-color: var(--vhp-warn) !important;
+  color: #ffffff !important;
 }
 
 /* Snackbars personnalisés pour la gestion globale d'erreurs */
@@ -101,20 +213,29 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   &.badge-info {
-    background-color: #e8f0fe;
-    color: #1a73e8;
+    background-color: var(--vhp-info-light);
+    color: var(--vhp-info);
   }
 }
 
-/* Règles responsive (ERG-02 : écran >= 1366x768, tablette 10" et mobile) */
+/* ==========================================================================
+   RÈGLES RESPONSIVES GLOBALES (ERG-02 : Écran >= 1366x768, Tablette 10", Mobile)
+   ========================================================================== */
 @media (max-width: 1024px) {
-  /* Tablette */
+  /* Tablette 10 pouces */
   body {
     font-size: 15px;
   }
 
   button, input, select {
-    min-height: 44px; /* Touch target minimum */
+    min-height: 44px; /* Touch target minimum selon directives d'ergonomie */
+  }
+
+  .table-container,
+  .table-wrap,
+  .table-responsive,
+  .mat-mdc-table-container {
+    overflow-x: auto !important;
   }
 }
 
@@ -124,13 +245,19 @@ h1, h2, h3, h4, h5, h6 {
     font-size: 14px;
   }
 
-  /* Boîtes de dialogue en plein écran ou presque sur petit écran */
+  /* Boîtes de dialogue en plein écran adaptatif sans débordement horizontal */
   .cdk-overlay-pane {
     max-width: 96vw !important;
+    width: auto !important;
   }
 
-  .mat-mdc-dialog-container .mdc-dialog__surface {
+  .mat-mdc-dialog-container,
+  .mat-mdc-dialog-surface,
+  .dialog-container {
     max-width: 96vw !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
     padding: 16px !important;
   }
 
@@ -141,30 +268,66 @@ h1, h2, h3, h4, h5, h6 {
 
     button {
       flex: 1 1 auto !important;
+      width: 100% !important;
     }
   }
 
   /* Grilles responsive automatiques */
   .responsive-grid-2,
   .responsive-grid-3,
-  .responsive-grid-4 {
+  .responsive-grid-4,
+  .kpi-grid,
+  .content-grid {
     grid-template-columns: 1fr !important;
   }
 
-  /* Tableaux scrollables */
-  .mat-mdc-table {
-    min-width: 600px;
+  /* Tableaux scrollables pour garantir zéro débordement */
+  .table-container,
+  .table-wrap,
+  .table-responsive,
+  .mat-mdc-table-container {
+    overflow-x: auto !important;
+    width: 100% !important;
   }
 
-  .table-container,
-  .mat-mdc-table-container {
-    overflow-x: auto;
+  .mat-mdc-table,
+  .data-table,
+  .products-table,
+  .cart-table,
+  .count-table,
+  .order-table,
+  .history-table {
+    min-width: 520px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Écrans smartphones étroits (320px - 480px) */
+  .page-content {
+    padding: 10px 6px !important;
+  }
+
+  .topbar {
+    padding: 0 6px !important;
+    gap: 4px !important;
+  }
+
+  .rate-chip {
+    padding: 2px 6px !important;
+    font-size: 11px !important;
+  }
+
+  .mat-mdc-table,
+  .data-table,
+  .products-table,
+  .cart-table {
+    min-width: 440px;
   }
 }
 
 /* Utilitaires globaux de layout */
 .overflow-x-auto {
-  overflow-x: auto;
+  overflow-x: auto !important;
 }
 
 .w-full {
