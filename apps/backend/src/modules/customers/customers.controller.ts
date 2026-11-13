@@ -6,6 +6,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { RequirePermission } from '../auth/decorators/auth.decorators';
 import { CustomersService } from './customers.service';
+import { CustomerPdfService } from './customer-pdf.service';
 import { CreateCustomerDto, CreatePrescriptionDto, CustomerQueryDto, SettleDebtDto, UpdateCustomerDto, CreateQuickCustomerDto } from './dto/customers.dto';
 
 @ApiTags('Fichier Clients & Ordonnances (CLI)')
@@ -13,7 +14,10 @@ import { CreateCustomerDto, CreatePrescriptionDto, CustomerQueryDto, SettleDebtD
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('customers')
 export class CustomersController {
-  constructor(private readonly customersService: CustomersService) {}
+  constructor(
+    private readonly customersService: CustomersService,
+    private readonly customerPdfService: CustomerPdfService,
+  ) {}
 
   private actor(req: any) {
     const user = req?.user;
@@ -151,6 +155,32 @@ export class CustomersController {
   @ApiOperation({ summary: 'Encaisser un règlement FIFO idempotent lié à la caisse (CLI-04)' })
   settleDebt(@Param('id', ParseUUIDPipe) id: string, @Body() dto: SettleDebtDto, @Req() req: any) {
     return this.customersService.settleDebt(id, dto, this.actor(req));
+  }
+
+  @Get(':id/pdf')
+  @RequirePermission('client.fiche_imprimer')
+  @ApiOperation({ summary: 'Télécharger ou imprimer la fiche client en PDF (CLI-11)' })
+  async downloadCustomerPdf(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('includeHistory') includeHistory: string,
+    @Req() req: any,
+    @Res() response: Response,
+  ) {
+    const actor = this.actor(req);
+    const result = await this.customersService.getCustomerForPdf(id, actor, includeHistory === 'true');
+    const { buffer, filename } = await this.customerPdfService.generateCustomerPdf(result.customer, {
+      includeHistory: includeHistory === 'true',
+      editorName: actor.fullName || 'Utilisateur',
+      prescriptions: result.prescriptions,
+      history: result.history,
+    });
+
+    response.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Length': buffer.length,
+    });
+    response.end(buffer);
   }
 
   @Get(':id')

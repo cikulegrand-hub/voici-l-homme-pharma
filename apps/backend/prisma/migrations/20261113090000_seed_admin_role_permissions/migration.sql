@@ -8,3 +8,4 @@ FROM roles r
 CROSS JOIN permissions p
 WHERE r.name = 'ADMIN'
 ON CONFLICT (role_id, permission_id) DO NOTHING;
+

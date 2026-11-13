@@ -280,7 +280,7 @@ export class CustomersService {
   async listInsurers(actor: Actor) { return this.prisma.insurers.findMany({ where: { pharmacy_id: actor.pharmacyId, is_active: true }, orderBy: { name: 'asc' } }); }
 
   async revealIdentityNumber(documentId: string, actor: Actor) {
-    if (!['ADMIN', 'PHARMACIEN'].includes(actor.role)) throw new ForbiddenException('Action non disponible');
+    if (!['SUPER_ADMIN', 'ADMIN', 'PHARMACIEN'].includes(actor.role)) throw new ForbiddenException('Action non disponible');
     const document = await this.prisma.identity_documents.findFirst({ where: { id: documentId, pharmacy_id: actor.pharmacyId } });
     if (!document) throw new NotFoundException('Pièce d’identité introuvable.');
     await this.audit(actor, 'CONSULTATION_NUMERO_PIECE', 'IDENTITY_DOCUMENT', document.id, undefined, { customerId: document.customer_id });
@@ -288,7 +288,7 @@ export class CustomersService {
   }
 
   async getIdentityScan(documentId: string, actor: Actor) {
-    if (!['ADMIN', 'PHARMACIEN'].includes(actor.role)) throw new ForbiddenException('Action non disponible');
+    if (!['SUPER_ADMIN', 'ADMIN', 'PHARMACIEN'].includes(actor.role)) throw new ForbiddenException('Action non disponible');
     const document = await this.prisma.identity_documents.findFirst({ where: { id: documentId, pharmacy_id: actor.pharmacyId } });
     if (!document || !document.file_front_path) throw new NotFoundException('Scan de pièce indisponible.');
     const signed = await this.storage.createSignedUrl(document.file_front_path);
@@ -297,7 +297,7 @@ export class CustomersService {
   }
 
   async getIdentityDocumentFile(documentId: string, actor: Actor) {
-    if (!['ADMIN', 'PHARMACIEN'].includes(actor.role)) throw new ForbiddenException('Action non disponible');
+    if (!['SUPER_ADMIN', 'ADMIN', 'PHARMACIEN'].includes(actor.role)) throw new ForbiddenException('Action non disponible');
     const document = await this.prisma.identity_documents.findFirst({ where: { id: documentId, pharmacy_id: actor.pharmacyId } });
     if (!document || !document.file_front_path) throw new NotFoundException('Scan de pièce indisponible.');
     const file = await this.storage.readLocal(document.file_front_path);
@@ -319,7 +319,7 @@ export class CustomersService {
   async getProfilePhoto(customerId: string, actor: Actor) {
     const customer = await this.getCustomerEntity(customerId, actor.pharmacyId);
     if (!customer.photo_profil_path) throw new NotFoundException('Aucune photo n’est enregistrée pour ce client.');
-    if (!['ADMIN', 'PHARMACIEN', 'CAISSIER'].includes(actor.role)) throw new ForbiddenException('Vous n’êtes pas autorisé à consulter la photo du client.');
+    if (!['SUPER_ADMIN', 'ADMIN', 'PHARMACIEN', 'CAISSIER'].includes(actor.role)) throw new ForbiddenException('Vous n’êtes pas autorisé à consulter la photo du client.');
     const signed = await this.storage.createProfilePhotoSignedUrl(customer.photo_profil_path);
     await this.audit(actor, 'CONSULTATION_PHOTO_CLIENT', 'CUSTOMER', customerId, undefined, { expiresAt: signed.expiresAt });
     return { ...signed, storageMode: this.storage.usesLocalStorage() ? 'local' : 'supabase' };
@@ -328,14 +328,14 @@ export class CustomersService {
   async getProfilePhotoFile(customerId: string, actor: Actor) {
     const customer = await this.getCustomerEntity(customerId, actor.pharmacyId);
     if (!customer.photo_profil_path) throw new NotFoundException('Aucune photo n’est enregistrée pour ce client.');
-    if (actor.role !== 'ADMIN' && actor.role !== 'PHARMACIEN' && actor.role !== 'CAISSIER') throw new ForbiddenException('Vous n’êtes pas autorisé à consulter la photo du client.');
+    if (!['SUPER_ADMIN', 'ADMIN', 'PHARMACIEN', 'CAISSIER'].includes(actor.role)) throw new ForbiddenException('Vous n’êtes pas autorisé à consulter la photo du client.');
     const file = await this.storage.readLocal(customer.photo_profil_path);
     await this.audit(actor, 'CONSULTATION_PHOTO_CLIENT', 'CUSTOMER', customerId, undefined, { local: true });
     return { file, storageFilePath: customer.photo_profil_path };
   }
 
   async removeProfilePhoto(customerId: string, actor: Actor) {
-    if (!['ADMIN', 'PHARMACIEN'].includes(actor.role)) throw new ForbiddenException('Seuls l’Administrateur et le Pharmacien peuvent retirer la photo du client.');
+    if (!['SUPER_ADMIN', 'ADMIN', 'PHARMACIEN'].includes(actor.role)) throw new ForbiddenException('Seuls l’Administrateur et le Pharmacien peuvent retirer la photo du client.');
     const customer = await this.getCustomerEntity(customerId, actor.pharmacyId);
     await this.prisma.customers.update({ where: { id: customerId }, data: { photo_profil_path: null, photo_profil_ajoutee_le: null, photo_profil_ajoutee_par: null } });
     if (customer.photo_profil_path) await this.storage.deleteStoredFile(customer.photo_profil_path);
@@ -497,6 +497,27 @@ export class CustomersService {
     return { customer: this.mapCustomer(customer, balance), currentBalanceCdf: balance, availableCreditCdf: Math.max(0, Number(customer.credit_limit_cdf) - balance), ...history, generatedAt: new Date().toISOString() };
   }
 
+  async getCustomerForPdf(customerId: string, actor: Actor, includeHistory = false) {
+    const customer = await this.getCustomerEntity(customerId, actor.pharmacyId);
+    const balance = await this.calculateBalance(customerId, actor.pharmacyId);
+    (customer as any).calculated_balance = balance;
+
+    let prescriptions: any[] = [];
+    let history: any = undefined;
+    if (includeHistory) {
+      const rawPrescriptions = await this.prisma.prescriptions.findMany({
+        where: { customer_id: customerId, customers: { pharmacy_id: actor.pharmacyId } },
+        orderBy: { created_at: 'desc' },
+        take: 10,
+      });
+      prescriptions = rawPrescriptions.map((p) => this.mapPrescription(p));
+      history = await this.getCustomerHistory(customerId, actor);
+    }
+
+    await this.audit(actor, 'FICHE_CLIENT_TELECHARGEE', 'CUSTOMER', customerId, undefined, { includeHistory });
+    return { customer, prescriptions, history };
+  }
+
   async createPrescription(dto: CreatePrescriptionDto, file: Express.Multer.File | undefined, actor: Actor) {
     await this.getCustomerEntity(dto.customerId, actor.pharmacyId);
     let path = dto.storageFilePath;
@@ -652,7 +673,7 @@ export class CustomersService {
   }
 
   private mapCustomer(customer: any, balance: number, actor?: Actor): Customer {
-    const privileged = actor?.role === 'ADMIN' || actor?.role === 'PHARMACIEN';
+    const privileged = actor?.role === 'SUPER_ADMIN' || actor?.role === 'ADMIN' || actor?.role === 'PHARMACIEN';
     const documents = (customer.identity_documents || []).map((d: any) => ({ id: d.id, type: d.document_type, number: privileged ? d.document_number : this.maskValue(d.document_number), fullNumber: privileged ? d.document_number : undefined, issueDate: d.issue_date, expirationDate: d.expiration_date, hasScan: Boolean(d.file_front_path || d.file_back_path), isPrimary: d.is_primary }));
     const coverage = customer.insurance_coverages?.[0];
     const insuranceStatus = customer.customer_type !== 'ASSURANCE' ? undefined : !coverage ? 'INCOMPLETE' : !coverage.end_date ? 'INCOMPLETE' : new Date(coverage.end_date) < new Date() ? 'EXPIRED' : 'VALID';

@@ -17,7 +17,7 @@ export class ReportsService {
   }
 
   assertAccess(role: string, reportKey?: string, exportRequested = false): void {
-    const fullRoles = ['ADMIN', 'PHARMACIEN', 'COMPTABLE'];
+    const fullRoles = ['SUPER_ADMIN', 'ADMIN', 'PHARMACIEN', 'COMPTABLE'];
     if (fullRoles.includes(role)) return;
     if (exportRequested) throw new ForbiddenException('Les exports sont réservés à l’administration, au pharmacien et à la comptabilité.');
     if (!reportKey || reportKey === 'dashboard') return;

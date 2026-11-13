@@ -224,7 +224,7 @@ export class NotificationsService {
    * - Autres rôles : cloisonnement strict par périmètre de responsabilité.
    */
   private getRoleNotificationWhere(actor: { role: string; pharmacyId: string }): any {
-    if (actor.role === 'ADMIN') {
+    if (actor.role === 'SUPER_ADMIN' || actor.role === 'ADMIN') {
       return { pharmacy_id: actor.pharmacyId };
     }
 
@@ -295,7 +295,7 @@ export class NotificationsService {
     };
 
     // Filtrage par rôle cible (Admin voit tout, les autres voient leur rôle ou null)
-    if (actor.role !== 'ADMIN') {
+    if (actor.role !== 'SUPER_ADMIN' && actor.role !== 'ADMIN') {
       where.OR = [
         { target_role: actor.role },
         { target_role: null },
@@ -359,7 +359,7 @@ export class NotificationsService {
       },
     };
 
-    if (actor.role !== 'ADMIN') {
+    if (actor.role !== 'SUPER_ADMIN' && actor.role !== 'ADMIN') {
       where.OR = [
         { target_role: actor.role },
         { target_role: null },
@@ -410,7 +410,7 @@ export class NotificationsService {
       },
     };
 
-    if (actor.role !== 'ADMIN') {
+    if (actor.role !== 'SUPER_ADMIN' && actor.role !== 'ADMIN') {
       where.OR = [
         { target_role: actor.role },
         { target_role: null },

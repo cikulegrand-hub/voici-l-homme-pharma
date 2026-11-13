@@ -137,6 +137,10 @@ export class CustomersApiService {
     return this.client.getBlob(`/customers/prescriptions/${id}/file`);
   }
 
+  downloadCustomerPdf(customerId: string, includeHistory = false): Observable<Blob> {
+    return this.client.getBlob(`/customers/${customerId}/pdf?includeHistory=${includeHistory}`);
+  }
+
   getPrescriptions(customerId: string): Observable<Array<{ id: string; prescriberName: string; healthCenter?: string; prescriptionDate: string }>> {
     return this.client.get<Array<{ id: string; prescriberName: string; healthCenter?: string; prescriptionDate: string }>>(`/customers/${customerId}/prescriptions`);
   }

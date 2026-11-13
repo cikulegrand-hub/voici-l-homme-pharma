@@ -23,6 +23,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CumpService } from '../stock/cump.service';
 import { Prisma } from '@prisma/client';
 import { ExchangeRateResolver } from '../cash/exchange-rate.resolver';
+import { DocumentHeaderService } from '../settings/document-header.service';
 
 @Injectable()
 export class SuppliersService implements OnModuleInit {
@@ -33,6 +34,7 @@ export class SuppliersService implements OnModuleInit {
     private readonly cumpService: CumpService,
     private readonly auditService: AuditService,
     private readonly exchangeRateResolver: ExchangeRateResolver,
+    private readonly documentHeaderService: DocumentHeaderService,
   ) {}
 
   async onModuleInit() {
@@ -622,11 +624,17 @@ export class SuppliersService implements OnModuleInit {
   }
 
   private generatePurchaseOrderPdfBuffer(order: PurchaseOrder, pharmacy: any): Buffer {
+    const identity = this.documentHeaderService.getPharmacyIdentity();
+    const img = this.documentHeaderService.parseImageForPdf(identity.logoUrl);
+
     const objects: string[] = [];
     const font1Obj = 3;
     const font2Obj = 4;
     const pageObjNum = 5;
     const contentObjNum = 6;
+    const imgObjNum = 7;
+    const smaskObjNum = img?.smask ? 8 : undefined;
+    const xobjRes = img ? ` /XObject << /Im1 ${imgObjNum} 0 R >>` : '';
 
     // 1. Catalog
     objects.push('<< /Type /Catalog /Pages 2 0 R >>');
@@ -638,34 +646,63 @@ export class SuppliersService implements OnModuleInit {
     objects.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>');
     // 5. Page
     objects.push(
-      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 ${font1Obj} 0 R /F2 ${font2Obj} 0 R >> >> /Contents ${contentObjNum} 0 R >>`,
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 ${font1Obj} 0 R /F2 ${font2Obj} 0 R >>${xobjRes} >> /Contents ${contentObjNum} 0 R >>`,
     );
 
-    const pharmacyName = this.pdfEscape(pharmacy?.name || "VOICI L'HOMME PHARMA");
-    const pharmacyCity = this.pdfEscape(pharmacy?.city || 'Kinshasa, RDC');
+    const pharmacyName = this.pdfEscape(identity.name || pharmacy?.name || "VOICI L'HOMME PHARMA");
+    const pharmacyCity = this.pdfEscape(identity.address || pharmacy?.city || 'Kinshasa, RDC');
+    const pharmacyPhone = this.pdfEscape(identity.phone || '');
+    const pharmacyEmail = this.pdfEscape(identity.email || '');
+    const pharmacyRccm = this.pdfEscape(identity.rccm || 'N/A');
+    const pharmacyNif = this.pdfEscape(identity.nif || (identity as any).taxNumber || 'N/A');
     const supplierName = this.pdfEscape(order.supplierName || 'Fournisseur');
     const orderNumber = this.pdfEscape(order.orderNumber);
     const orderDate = order.orderDate ? order.orderDate.slice(0, 10) : '';
 
     const cmds: string[] = [];
-    cmds.push(`BT /F2 16 Tf 50 780 Td (${pharmacyName}) Tj ET`);
-    cmds.push(`BT /F1 10 Tf 50 765 Td (${pharmacyCity} - Officine Pharmaceutique Agreee) Tj ET`);
-    cmds.push(`BT /F2 13 Tf 50 725 Td (BON DE COMMANDE FOURNISSEUR N* ${orderNumber}) Tj ET`);
-    cmds.push(`BT /F1 9 Tf 50 705 Td (Date: ${orderDate} | Statut: ${order.status}) Tj ET`);
-    cmds.push(`BT /F2 10 Tf 50 680 Td (Fournisseur : ${supplierName}) Tj ET`);
-    if (order.notes) {
-      cmds.push(`BT /F1 8 Tf 50 665 Td (Notes: ${this.pdfEscape(order.notes.slice(0, 80))}) Tj ET`);
+
+    if (img) {
+      let dispW = Math.min(120, img.width);
+      let dispH = dispW / (img.width / img.height);
+      if (dispH > 50) {
+        dispH = 50;
+        dispW = dispH * (img.width / img.height);
+      }
+      const imgX = 50;
+      const imgY = 780 - dispH;
+      cmds.push('q');
+      cmds.push(`${dispW.toFixed(2)} 0 0 ${dispH.toFixed(2)} ${imgX.toFixed(2)} ${imgY.toFixed(2)} cm`);
+      cmds.push('/Im1 Do');
+      cmds.push('Q');
+
+      const textX = 50 + Math.ceil(dispW) + 16;
+      cmds.push(`BT /F2 14 Tf ${textX} 772 Td (${pharmacyName}) Tj ET`);
+      cmds.push(`BT /F1 9 Tf ${textX} 758 Td (${pharmacyCity.slice(0, 45)}) Tj ET`);
+      cmds.push(`BT /F1 8 Tf ${textX} 746 Td (Tel: ${pharmacyPhone} | Email: ${pharmacyEmail}) Tj ET`);
+      cmds.push(`BT /F1 8 Tf ${textX} 734 Td (RCCM: ${pharmacyRccm} | NIF: ${pharmacyNif}) Tj ET`);
+    } else {
+      cmds.push(`BT /F2 16 Tf 50 780 Td (${pharmacyName}) Tj ET`);
+      cmds.push(`BT /F1 10 Tf 50 765 Td (${pharmacyCity.slice(0, 50)} - Officine Pharmaceutique Agreee) Tj ET`);
+      cmds.push(`BT /F1 8 Tf 50 750 Td (Tel: ${pharmacyPhone} | Email: ${pharmacyEmail}) Tj ET`);
+      cmds.push(`BT /F1 8 Tf 50 738 Td (RCCM: ${pharmacyRccm} | NIF: ${pharmacyNif}) Tj ET`);
     }
 
-    cmds.push('50 650 m 545 650 l S');
-    cmds.push('BT /F2 8 Tf 50 638 Td (Article / Produit) Tj ET');
-    cmds.push('BT /F2 8 Tf 220 638 Td (DCI) Tj ET');
-    cmds.push('BT /F2 8 Tf 330 638 Td (Qte) Tj ET');
-    cmds.push('BT /F2 8 Tf 390 638 Td (P.U. CDF) Tj ET');
-    cmds.push('BT /F2 8 Tf 470 638 Td (Total CDF) Tj ET');
-    cmds.push('50 630 m 545 630 l S');
+    cmds.push(`BT /F2 13 Tf 50 710 Td (BON DE COMMANDE FOURNISSEUR N* ${orderNumber}) Tj ET`);
+    cmds.push(`BT /F1 9 Tf 50 692 Td (Date: ${orderDate} | Statut: ${order.status}) Tj ET`);
+    cmds.push(`BT /F2 10 Tf 50 670 Td (Fournisseur : ${supplierName}) Tj ET`);
+    if (order.notes) {
+      cmds.push(`BT /F1 8 Tf 50 655 Td (Notes: ${this.pdfEscape(order.notes.slice(0, 80))}) Tj ET`);
+    }
 
-    let y = 615;
+    cmds.push('50 642 m 545 642 l S');
+    cmds.push('BT /F2 8 Tf 50 630 Td (Article / Produit) Tj ET');
+    cmds.push('BT /F2 8 Tf 220 630 Td (DCI) Tj ET');
+    cmds.push('BT /F2 8 Tf 330 630 Td (Qte) Tj ET');
+    cmds.push('BT /F2 8 Tf 390 630 Td (P.U. CDF) Tj ET');
+    cmds.push('BT /F2 8 Tf 470 630 Td (Total CDF) Tj ET');
+    cmds.push('50 622 m 545 622 l S');
+
+    let y = 608;
     for (const item of order.items.slice(0, 24)) {
       const pName = this.pdfEscape((item.productName || 'Produit').slice(0, 28));
       const pDci = this.pdfEscape((item.dci || '').slice(0, 18));
@@ -687,10 +724,15 @@ export class SuppliersService implements OnModuleInit {
     y -= 35;
     cmds.push(`BT /F1 9 Tf 50 ${y} Td (Visa et Cachet du Pharmacien Titulaire Responsable :) Tj ET`);
     cmds.push('50 40 m 545 40 l S');
-    cmds.push('BT /F1 7 Tf 50 28 Td (Document edite automatiquement - Logiciel Voici l\'Homme Pharma) Tj ET');
+    cmds.push(`BT /F1 7 Tf 50 28 Td (Document edite automatiquement - Logiciel ${pharmacyName}) Tj ET`);
 
     const streamContent = cmds.join('\n');
     objects.push(`<< /Length ${Buffer.byteLength(streamContent, 'latin1')} >>\nstream\n${streamContent}\nendstream`);
+
+    if (img) {
+      const imgObjs = this.documentHeaderService.createPdfImageObjects(img, imgObjNum, smaskObjNum);
+      objects.push(...imgObjs);
+    }
 
     let output = '%PDF-1.4\n';
     const offsets = [0];

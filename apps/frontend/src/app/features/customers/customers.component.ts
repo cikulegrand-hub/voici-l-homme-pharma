@@ -1,8 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ViewChild, ElementRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Customer } from '@vhp/shared';
 import { CustomersApiService, CustomerStatement } from '../../core/api/services/customers-api.service';
+import { DocumentHeaderService } from '../../core/services/document-header.service';
 import { CashApiService } from '../../core/api/services/cash-api.service';
 import { AuthService } from '../../core/auth/auth.service';
 
@@ -109,10 +110,18 @@ interface ReceiptTicket {
                       {{ c.currentBalanceCdf | number }} CDF
                     </span>
                   </td>
-                  <td>
-                    <button type="button" class="btn btn-sm btn-outline" (click)="selectCustomer(c); $event.stopPropagation()">
-                      Fiche
-                    </button>
+                  <td (click)="$event.stopPropagation()">
+                    <div style="display: flex; gap: 4px; align-items: center;">
+                      <button type="button" class="btn btn-xs btn-outline" (click)="selectCustomer(c)" title="Consulter la fiche détaillée">
+                        Fiche
+                      </button>
+                      <button type="button" class="btn btn-xs btn-primary" *ngIf="auth.peut('client.fiche_imprimer')" (click)="openPdfModal(c, 'download')" title="Télécharger la fiche (PDF)">
+                        📥 PDF
+                      </button>
+                      <button type="button" class="btn btn-xs btn-outline" *ngIf="auth.peut('client.fiche_imprimer')" (click)="openPdfModal(c, 'print')" title="Imprimer la fiche">
+                        🖨️
+                      </button>
+                    </div>
                   </td>
                 </tr>
                 <tr *ngIf="!customers.length && !loading">
@@ -136,13 +145,17 @@ interface ReceiptTicket {
                   <img *ngIf="profilePhotoUrl" [src]="profilePhotoUrl" alt="Photo du client" class="profile-photo cursor-pointer" (click)="openPhotoZoomModal()" title="Cliquer pour agrandir la photo">
                   <div *ngIf="!profilePhotoUrl" class="profile-photo-placeholder">{{ getInitials(selectedCustomer.fullName) }}</div>
                 </div>
-                <input #profilePhotoInput type="file" accept="image/jpeg,image/png,image/webp" hidden (change)="onProfilePhotoSelected($event)">
+                <input #profilePhotoInput type="file" accept="image/jpeg,image/png" hidden (change)="onProfilePhotoSelected($event)">
+                <input #cameraPhotoInput type="file" accept="image/jpeg,image/png" capture="environment" hidden (change)="onProfilePhotoSelected($event)">
                 <div class="photo-actions">
-                  <button type="button" class="btn btn-xs btn-outline" (click)="profilePhotoInput.click()">
-                    {{ selectedCustomer.hasProfilePhoto ? 'Changer photo' : 'Ajouter photo' }}
+                  <button type="button" class="btn btn-xs btn-outline" (click)="profilePhotoInput.click()" title="Choisir un fichier image (JPG/PNG max 2 Mo)">
+                    📁 {{ selectedCustomer.hasProfilePhoto ? 'Changer' : 'Ajouter' }}
                   </button>
-                  <button type="button" class="btn btn-xs btn-danger-outline" *ngIf="selectedCustomer.hasProfilePhoto" (click)="removeProfilePhoto()">
-                    🗑️ Retirer
+                  <button type="button" class="btn btn-xs btn-outline" (click)="openCameraModal()" title="Prendre une photo en direct avec la webcam ou la caméra">
+                    📷 Caméra
+                  </button>
+                  <button type="button" class="btn btn-xs btn-danger-outline" *ngIf="selectedCustomer.hasProfilePhoto" (click)="removeProfilePhoto()" title="Retirer la photo actuelle">
+                    🗑️
                   </button>
                 </div>
               </div>
@@ -153,6 +166,12 @@ interface ReceiptTicket {
                 <div class="mt-2 d-flex gap-2 flex-wrap">
                   <button type="button" class="btn btn-sm btn-outline" (click)="openEditCustomerModal(selectedCustomer)">
                     ✏️ Modifier la fiche
+                  </button>
+                  <button type="button" class="btn btn-sm btn-primary" *ngIf="auth.peut('client.fiche_imprimer')" (click)="openPdfModal(selectedCustomer, 'download')">
+                    📥 Télécharger la fiche (PDF)
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline" *ngIf="auth.peut('client.fiche_imprimer')" (click)="openPdfModal(selectedCustomer, 'print')">
+                    🖨️ Imprimer la fiche
                   </button>
                   <button type="button" class="btn btn-sm btn-secondary" (click)="printFullCustomerDossier()">
                     🖨️ Imprimer le Dossier Complet
@@ -1240,6 +1259,113 @@ interface ReceiptTicket {
           </div>
         </div>
       </div>
+
+      <!-- MODALE 5 : TÉLÉCHARGEMENT / IMPRESSION FICHE CLIENT PDF -->
+      <div class="modal-backdrop" *ngIf="showPdfModal">
+        <div class="modal-dialog" style="max-width: 480px;">
+          <div class="modal-header">
+            <h4>{{ pdfActionMode === 'print' ? 'Imprimer la fiche client' : 'Télécharger la fiche client (PDF)' }}</h4>
+            <button type="button" class="close-btn" (click)="closePdfModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="d-flex align-items-center gap-3 mb-3 p-2" style="background: #f4f7f5; border-radius: 6px;">
+              <span class="badge badge-type">{{ pdfTargetCustomer?.customerType }}</span>
+              <div>
+                <strong>{{ pdfTargetCustomer?.fullName }}</strong>
+                <div class="text-muted small font-mono">{{ pdfTargetCustomer?.code }}</div>
+              </div>
+            </div>
+
+            <div class="form-group mb-3">
+              <label class="checkbox-label" style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; user-select: none;">
+                <input type="checkbox" [(ngModel)]="pdfIncludeHistory" style="margin-top: 3px;" />
+                <span>
+                  <strong>Inclure les dernières ordonnances et achats</strong>
+                  <small class="d-block text-muted" style="font-size: 11px; margin-top: 2px;">
+                    Ajoute l'historique récent (sans aucun montant interne confidentiel ni marge).
+                  </small>
+                </span>
+              </label>
+            </div>
+
+            <div class="alert alert-info py-2 px-3 small" style="font-size: 11.5px; margin: 0; background: #eef6f2; border: 1px solid #cce3d8; color: #116149; border-radius: 6px;">
+              ℹ️ Document A4 officiel avec en-tête de l'officine, photo, état civil, couverture santé, pharmacovigilance et mention de confidentialité.
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline" (click)="closePdfModal()">Annuler</button>
+            <button type="button" class="btn btn-primary" (click)="executePdfAction()" [disabled]="pdfGenerating">
+              {{ pdfGenerating ? 'Génération en cours...' : (pdfActionMode === 'print' ? '🖨️ Ouvrir pour impression' : '📥 Télécharger le PDF') }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODALE 6 : APERÇU ET CONFIRMATION NOUVELLE PHOTO DU CLIENT -->
+      <div class="modal-backdrop" *ngIf="showPhotoConfirmModal">
+        <div class="modal-dialog" style="max-width: 440px;">
+          <div class="modal-header">
+            <h4>Aperçu de la photo client</h4>
+            <button type="button" class="close-btn" (click)="cancelPhotoConfirm()">×</button>
+          </div>
+          <div class="modal-body text-center">
+            <p class="text-muted small mb-2">Vérifiez l'aperçu avant d'enregistrer sur le stockage persistant :</p>
+            <div style="margin: 12px auto; width: 140px; height: 160px; border: 2px solid #116149; border-radius: 8px; overflow: hidden; background: #f0fdf4; display: flex; align-items: center; justify-content: center;">
+              <img [src]="pendingPhotoPreviewUrl" alt="Aperçu photo" style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+            <div class="text-muted small" *ngIf="pendingPhotoSizeKb">
+              Taille optimisée : <strong>{{ pendingPhotoSizeKb }} Ko</strong> (JPG/PNG max 2 Mo)
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline" (click)="cancelPhotoConfirm()">Annuler</button>
+            <button type="button" class="btn btn-primary" (click)="saveConfirmedPhoto()" [disabled]="submitting">
+              {{ submitting ? 'Enregistrement...' : '✅ Valider et enregistrer' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODALE 7 : PRISE DE PHOTO PAR WEBCAM / CAMÉRA -->
+      <div class="modal-backdrop" *ngIf="showCameraModal">
+        <div class="modal-dialog" style="max-width: 500px;">
+          <div class="modal-header">
+            <h4>📷 Prise de photo par webcam</h4>
+            <button type="button" class="close-btn" (click)="closeCameraModal()">×</button>
+          </div>
+          <div class="modal-body text-center p-3">
+            <div *ngIf="cameraErrorMessage" class="alert alert-danger mb-3 py-2 px-3 small text-start">
+              ⚠️ {{ cameraErrorMessage }}
+            </div>
+            
+            <div style="position: relative; width: 100%; max-width: 440px; height: 320px; margin: 0 auto; background: #0f172a; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+              <video #webcamVideo autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover;"></video>
+              
+              <!-- Ovale de guidage pour centrer le visage du patient -->
+              <div style="position: absolute; width: 170px; height: 220px; border: 2px dashed rgba(255, 255, 255, 0.85); border-radius: 50%; pointer-events: none; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.25);"></div>
+              
+              <div *ngIf="cameraLoading" style="position: absolute; color: #fff; font-size: 13px; font-weight: 500; background: rgba(0,0,0,0.6); padding: 8px 14px; border-radius: 6px;">
+                Initialisation de la caméra...
+              </div>
+            </div>
+            
+            <p class="text-muted small mt-2 mb-0" style="font-size: 11.5px;">
+              Positionnez le visage du client dans le cadre puis cliquez sur « Prendre la photo ».
+            </p>
+          </div>
+          <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+            <button type="button" class="btn btn-outline" (click)="closeCameraModal()">Annuler</button>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-outline" *ngIf="hasMultipleCameras" (click)="switchCamera()" title="Basculer vers une autre caméra">
+                🔄 Changer caméra
+              </button>
+              <button type="button" class="btn btn-primary" (click)="captureWebcamPhoto()" [disabled]="cameraLoading">
+                📸 Prendre la photo
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   `,
   styles: [`
@@ -1493,10 +1619,11 @@ interface ReceiptTicket {
     }
   `],
 })
-export class CustomersComponent implements OnInit {
+export class CustomersComponent implements OnInit, OnDestroy {
   private readonly api = inject(CustomersApiService);
+  private readonly docHeaderService = inject(DocumentHeaderService);
   private readonly cashApi = inject(CashApiService);
-  private readonly auth = inject(AuthService);
+  readonly auth = inject(AuthService);
 
   customers: Customer[] = [];
   selectedCustomer?: Customer;
@@ -1534,7 +1661,31 @@ export class CustomersComponent implements OnInit {
   expandedPurchaseId: string | null = null;
   prescriptionFilter = '';
   @ViewChild('profilePhotoInput') profilePhotoInputRef?: ElementRef<HTMLInputElement>;
+  @ViewChild('cameraPhotoInput') cameraPhotoInputRef?: ElementRef<HTMLInputElement>;
+  @ViewChild('webcamVideo') webcamVideoRef?: ElementRef<HTMLVideoElement>;
   private previewTimer: any;
+
+  // Prise de photo par webcam
+  showCameraModal = false;
+  cameraLoading = false;
+  cameraErrorMessage = '';
+  cameraStream: MediaStream | null = null;
+  hasMultipleCameras = false;
+  availableVideoDevices: MediaDeviceInfo[] = [];
+  currentCameraIndex = 0;
+
+  // Fiche PDF & Impression (CLI-11)
+  showPdfModal = false;
+  pdfActionMode: 'download' | 'print' = 'download';
+  pdfTargetCustomer?: Customer;
+  pdfIncludeHistory = false;
+  pdfGenerating = false;
+
+  // Aperçu & Confirmation photo avec compression
+  showPhotoConfirmModal = false;
+  pendingPhotoBlob: Blob | null = null;
+  pendingPhotoPreviewUrl = '';
+  pendingPhotoSizeKb = 0;
 
   // Modèles de données formulaires
   newCustomerForm = {
@@ -1615,6 +1766,10 @@ export class CustomersComponent implements OnInit {
     this.loadCustomers();
     this.loadPrivacyNotice();
     this.loadInsurers();
+  }
+
+  ngOnDestroy() {
+    this.closeCameraModal();
   }
 
   loadInsurers() {
@@ -1700,17 +1855,220 @@ export class CustomersComponent implements OnInit {
     });
   }
 
-  onProfilePhotoSelected(event: Event) {
+  compressImage(file: File, maxDim = 1200, quality = 0.85): Promise<{ blob: Blob; sizeKb: number }> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Canvas non disponible'));
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error('Échec de la compression'));
+              return;
+            }
+            resolve({ blob, sizeKb: Math.round(blob.size / 1024) });
+          },
+          'image/jpeg',
+          quality,
+        );
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Impossible de lire l’image'));
+      };
+      img.src = url;
+    });
+  }
+
+  async onProfilePhotoSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file || !this.selectedCustomer) return;
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 8 * 1024 * 1024) { this.errorMessage = 'La photo doit être au format JPEG, PNG ou WebP et ne pas dépasser 8 Mo.'; input.value = ''; return; }
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      this.errorMessage = 'La photo doit être au format JPEG ou PNG (max 2 Mo).';
+      input.value = '';
+      return;
+    }
+
+    try {
+      // Compression côté client pour conformité stricte max 2 Mo et affichage fluide
+      const { blob, sizeKb } = await this.compressImage(file, 1200, 0.85);
+      if (blob.size > 2 * 1024 * 1024) {
+        this.errorMessage = 'La photo dépasse la taille maximale autorisée de 2 Mo même après compression.';
+        input.value = '';
+        return;
+      }
+
+      this.pendingPhotoBlob = blob;
+      this.pendingPhotoSizeKb = sizeKb;
+      if (this.pendingPhotoPreviewUrl) {
+        URL.revokeObjectURL(this.pendingPhotoPreviewUrl);
+      }
+      this.pendingPhotoPreviewUrl = URL.createObjectURL(blob);
+      this.showPhotoConfirmModal = true;
+    } catch {
+      this.errorMessage = 'Erreur lors du traitement de la photo sélectionnée.';
+    } finally {
+      input.value = '';
+    }
+  }
+
+  saveConfirmedPhoto() {
+    if (!this.selectedCustomer || !this.pendingPhotoBlob) return;
     this.submitting = true;
+    const file = new File([this.pendingPhotoBlob], 'profile-photo.jpg', { type: 'image/jpeg' });
     this.api.uploadProfilePhoto(this.selectedCustomer.id, file).subscribe({
-      next: () => { this.submitting = false; this.selectedCustomer!.hasProfilePhoto = true; this.loadProfilePhoto(this.selectedCustomer!.id); },
-      error: (err) => { this.submitting = false; this.errorMessage = err.error?.message || 'La photo n’a pas pu être enregistrée.'; },
+      next: () => {
+        this.submitting = false;
+        this.showPhotoConfirmModal = false;
+        this.selectedCustomer!.hasProfilePhoto = true;
+        this.loadProfilePhoto(this.selectedCustomer!.id);
+      },
+      error: (err) => {
+        this.submitting = false;
+        this.errorMessage = err.error?.message || 'La photo n’a pas pu être enregistrée.';
+      },
     });
-    input.value = '';
+  }
+
+  cancelPhotoConfirm() {
+    this.showPhotoConfirmModal = false;
+    if (this.pendingPhotoPreviewUrl) {
+      URL.revokeObjectURL(this.pendingPhotoPreviewUrl);
+      this.pendingPhotoPreviewUrl = '';
+    }
+    this.pendingPhotoBlob = null;
+    this.pendingPhotoSizeKb = 0;
+  }
+
+  async openCameraModal() {
+    this.cameraErrorMessage = '';
+    this.showCameraModal = true;
+    this.cameraLoading = true;
+
+    if (!navigator?.mediaDevices?.getUserMedia) {
+      this.closeCameraModal();
+      this.cameraPhotoInputRef?.nativeElement.click();
+      return;
+    }
+
+    try {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        this.availableVideoDevices = devices.filter((d) => d.kind === 'videoinput');
+        this.hasMultipleCameras = this.availableVideoDevices.length > 1;
+      } catch {}
+
+      await this.startCameraStream();
+    } catch (err: any) {
+      this.cameraLoading = false;
+      this.cameraErrorMessage = 'Impossible d’accéder à la caméra. Vérifiez les autorisations de votre navigateur.';
+    }
+  }
+
+  async startCameraStream(deviceId?: string) {
+    if (this.cameraStream) {
+      this.cameraStream.getTracks().forEach((t) => t.stop());
+      this.cameraStream = null;
+    }
+
+    this.cameraLoading = true;
+    const constraints: MediaStreamConstraints = {
+      video: deviceId
+        ? { deviceId: { exact: deviceId } }
+        : { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+      audio: false,
+    };
+
+    try {
+      this.cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+      this.cameraLoading = false;
+      setTimeout(() => {
+        if (this.webcamVideoRef?.nativeElement && this.cameraStream) {
+          this.webcamVideoRef.nativeElement.srcObject = this.cameraStream;
+          this.webcamVideoRef.nativeElement.play().catch(() => {});
+        }
+      }, 100);
+    } catch {
+      this.cameraLoading = false;
+      this.cameraErrorMessage = 'Erreur lors du démarrage du flux vidéo. Vérifiez que la caméra n’est pas utilisée par une autre application.';
+    }
+  }
+
+  async switchCamera() {
+    if (!this.availableVideoDevices.length) return;
+    this.currentCameraIndex = (this.currentCameraIndex + 1) % this.availableVideoDevices.length;
+    const nextDevice = this.availableVideoDevices[this.currentCameraIndex];
+    await this.startCameraStream(nextDevice.deviceId);
+  }
+
+  closeCameraModal() {
+    this.showCameraModal = false;
+    this.cameraLoading = false;
+    this.cameraErrorMessage = '';
+    if (this.cameraStream) {
+      this.cameraStream.getTracks().forEach((track) => track.stop());
+      this.cameraStream = null;
+    }
+  }
+
+  async captureWebcamPhoto() {
+    const video = this.webcamVideoRef?.nativeElement;
+    if (!video || !this.cameraStream) return;
+
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      this.closeCameraModal();
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            this.errorMessage = 'Échec de la capture photo.';
+            return;
+          }
+          this.pendingPhotoBlob = blob;
+          this.pendingPhotoSizeKb = Math.round(blob.size / 1024);
+          if (this.pendingPhotoPreviewUrl) {
+            URL.revokeObjectURL(this.pendingPhotoPreviewUrl);
+          }
+          this.pendingPhotoPreviewUrl = URL.createObjectURL(blob);
+          this.showPhotoConfirmModal = true;
+        },
+        'image/jpeg',
+        0.88,
+      );
+    } catch {
+      this.closeCameraModal();
+      this.errorMessage = 'Erreur lors de la capture de l’image.';
+    }
   }
 
   loadStatement(customerId: string) {
@@ -2477,6 +2835,16 @@ export class CustomersComponent implements OnInit {
     const patientCode = this.escapeHtml(this.selectedCustomer?.code || '');
     const dateStr = new Date().toLocaleDateString('fr-FR');
 
+    const headerHtml = this.docHeaderService.renderHtmlHeader({
+      format: 'a4',
+      documentTitle: 'Dossier Ordonnance Médicale Sécurisée',
+      documentSubtitle: `Patient : ${patientName} (${patientCode}) | Délivré le ${dateStr}`,
+    });
+    const footerHtml = this.docHeaderService.renderHtmlFooter({
+      format: 'a4',
+      customFooter: 'Document confidentiel soumis au secret professionnel pharmaceutique. Extrait certifié conforme.',
+    });
+
     const html = `
       <!DOCTYPE html>
       <html lang="fr">
@@ -2486,41 +2854,24 @@ export class CustomersComponent implements OnInit {
           <style>
             @page {
               size: A4 portrait;
-              margin: 15mm;
+              margin: 12mm 15mm;
             }
             body {
               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
               color: #111;
               margin: 0;
               padding: 0;
-              text-align: center;
             }
-            .header {
-              text-align: left;
-              border-bottom: 2px solid #116149;
-              padding-bottom: 8px;
-              margin-bottom: 16px;
-            }
-            .header h2 { margin: 0; color: #116149; font-size: 16pt; }
-            .header p { margin: 3px 0 0; font-size: 10pt; color: #4b5563; }
-            .meta { font-size: 9pt; color: #6b7280; margin-top: 4px; }
-            .img-container { margin: 20px auto; max-height: 80vh; }
-            img { max-width: 100%; max-height: 75vh; object-fit: contain; border: 1px solid #d1d5db; border-radius: 4px; }
-            .footer { margin-top: 20px; font-size: 8.5pt; color: #6b7280; text-align: right; border-top: 1px dashed #cbd5d0; padding-top: 8px; }
+            .img-container { margin: 15px auto; text-align: center; max-height: 75vh; }
+            img { max-width: 100%; max-height: 70vh; object-fit: contain; border: 1px solid #d1d5db; border-radius: 4px; }
           </style>
         </head>
         <body>
-          <div class="header">
-            <h2>PHARMACIE VOICI L'HOMME</h2>
-            <p>Dossier Ordonnance Médicale Sécurisée — Patient : <strong>${patientName}</strong> (${patientCode})</p>
-            <div class="meta">Extrait certifié conforme délivré pour dispensation et archivage officinal le ${dateStr}</div>
-          </div>
+          ${headerHtml}
           <div class="img-container">
             <img src="${this.previewModalUrl}" alt="Ordonnance médicale scannée" />
           </div>
-          <div class="footer">
-            Document confidentiel soumis au secret professionnel pharmaceutique.
-          </div>
+          ${footerHtml}
         </body>
       </html>
     `;
@@ -2632,19 +2983,11 @@ export class CustomersComponent implements OnInit {
           </style>
         </head>
         <body>
-          <table class="header-table">
-            <tr>
-              <td>
-                <div class="officine-title">PHARMACIE VOICI L'HOMME</div>
-                <div class="officine-subtitle">Officine Pharmaceutique Agréée — Kinshasa / RDC</div>
-                <div class="officine-subtitle">Service de Gestion Financière & Suivi des Comptes Clients</div>
-              </td>
-              <td>
-                <div class="doc-title">Relevé de Compte Client</div>
-                <div class="doc-meta">Situation comptable au : <strong>${generatedDate}</strong></div>
-              </td>
-            </tr>
-          </table>
+          ${this.docHeaderService.renderHtmlHeader({
+            format: 'a4',
+            documentTitle: 'Relevé de Compte Client',
+            documentSubtitle: `Situation comptable au : ${generatedDate}`,
+          })}
 
           <div class="client-box">
             <div class="client-grid">
@@ -2716,6 +3059,7 @@ export class CustomersComponent implements OnInit {
               </td>
             </tr>
           </table>
+          ${this.docHeaderService.renderHtmlFooter({ format: 'a4' })}
         </body>
       </html>
     `;
@@ -2776,12 +3120,10 @@ export class CustomersComponent implements OnInit {
           </style>
         </head>
         <body>
-          <div class="header">
-            <h2>VOICI L'HOMME PHARMA</h2>
-            <p>Officine Pharmaceutique — Kinshasa / RDC</p>
-            <p>Tél : +243 81 000 0000 / Service Comptabilité</p>
-            <p class="font-bold" style="margin-top: 4px; font-size: 12px;">REÇU D'ENCAISSEMENT CRÉANCE</p>
-          </div>
+          ${this.docHeaderService.renderHtmlHeader({
+            format: 'ticket',
+            documentTitle: "REÇU D'ENCAISSEMENT CRÉANCE",
+          })}
 
           <div class="meta-box">
             <div class="meta-row"><span>RÉFÉRENCE :</span><span class="font-bold">${this.escapeHtml(r.receiptReference)}</span></div>
@@ -2805,11 +3147,10 @@ export class CustomersComponent implements OnInit {
             ${remainingHtml}
           </div>
 
-          <div class="footer">
-            <p>Merci pour votre confiance.</p>
-            <p>Quittance officielle délivrée par le système informatique.</p>
-            <p>Conservation recommandée pour toute contestation comptable.</p>
-          </div>
+          ${this.docHeaderService.renderHtmlFooter({
+            format: 'ticket',
+            customFooter: 'Merci pour votre confiance. Quittance officielle délivrée par le système informatique.',
+          })}
         </body>
       </html>
     `;
@@ -2925,20 +3266,11 @@ export class CustomersComponent implements OnInit {
           </style>
         </head>
         <body>
-          <table class="header-table">
-            <tr>
-              <td>
-                <div class="officine-title">PHARMACIE VOICI L'HOMME</div>
-                <div class="officine-sub">Officine Pharmaceutique — Kinshasa / RDC</div>
-                <div class="officine-sub">Dossier Pharmaceutique & Médical Unique du Patient</div>
-              </td>
-              <td class="doc-badge">
-                <div class="doc-title">Fiche Dossier Patient</div>
-                <div class="doc-meta">Code Patient : <strong style="font-family: monospace;">${this.escapeHtml(c.code)}</strong></div>
-                <div class="doc-meta">Édition : <strong>${printDate}</strong></div>
-              </td>
-            </tr>
-          </table>
+          ${this.docHeaderService.renderHtmlHeader({
+            format: 'a4',
+            documentTitle: 'Fiche Dossier Patient',
+            documentSubtitle: `Code Patient : ${this.escapeHtml(c.code)} | Édition : ${printDate}`,
+          })}
 
           <!-- SECTION 1 : ÉTAT CIVIL & COORDONNÉES -->
           <div class="section-card">
@@ -3041,6 +3373,88 @@ export class CustomersComponent implements OnInit {
       </html>
     `;
     this.printHtmlDocument(html, `Dossier-${c.code}`);
+  }
+
+  openPdfModal(customer: Customer, mode: 'download' | 'print' = 'download') {
+    this.pdfTargetCustomer = customer;
+    this.pdfActionMode = mode;
+    this.pdfIncludeHistory = false;
+    this.showPdfModal = true;
+  }
+
+  closePdfModal() {
+    this.showPdfModal = false;
+    this.pdfGenerating = false;
+  }
+
+  executePdfAction() {
+    if (!this.pdfTargetCustomer || this.pdfGenerating) return;
+    this.pdfGenerating = true;
+
+    this.api.downloadCustomerPdf(this.pdfTargetCustomer.id, this.pdfIncludeHistory).subscribe({
+      next: (blob) => {
+        this.pdfGenerating = false;
+        this.showPdfModal = false;
+
+        const customerName = (this.pdfTargetCustomer!.fullName || 'Client')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-zA-Z0-9-]/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '');
+        const dateIso = new Date().toISOString().slice(0, 10);
+        const filename = `Fiche-client_${customerName}_${dateIso}.pdf`;
+
+        const blobUrl = URL.createObjectURL(blob);
+
+        if (this.pdfActionMode === 'print') {
+          const printWin = window.open(blobUrl, '_blank');
+          if (printWin) {
+            printWin.focus();
+            setTimeout(() => {
+              try { printWin.print(); } catch {}
+            }, 1000);
+          } else {
+            this.printBlobViaIframe(blobUrl);
+          }
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 120000);
+        } else {
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+        }
+      },
+      error: (err) => {
+        this.pdfGenerating = false;
+        this.errorMessage = err.error?.message || 'Erreur lors de la génération de la fiche client en PDF.';
+      },
+    });
+  }
+
+  private printBlobViaIframe(blobUrl: string) {
+    let iframe = document.getElementById('vhp-pdf-frame') as HTMLIFrameElement;
+    if (!iframe) {
+      iframe = document.createElement('iframe');
+      iframe.id = 'vhp-pdf-frame';
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = 'none';
+      document.body.appendChild(iframe);
+    }
+    iframe.src = blobUrl;
+    iframe.onload = () => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch {}
+    };
   }
 
   openPhotoZoomModal() {

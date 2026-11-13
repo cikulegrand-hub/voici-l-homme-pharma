@@ -40,6 +40,7 @@ export const PERMISSIONS_CATALOG: PermissionDefinition[] = [
   { code: 'client.paiement',         category: 'CLIENTS',      label: 'Enregistrer un règlement de créance' },
   { code: 'client.identite_complete', category: 'CLIENTS',     label: 'Consulter le numéro complet et scan de pièce d\'identité' },
   { code: 'client.notes_medicales',  category: 'CLIENTS',      label: 'Consulter les notes médicales' },
+  { code: 'client.fiche_imprimer',   category: 'CLIENTS',      label: 'Télécharger / imprimer une fiche client' },
 
   // ── CATALOGUE PRODUITS ──
   { code: 'catalogue.consulter',     category: 'CATALOGUE',    label: 'Consulter le catalogue des produits' },
@@ -124,7 +125,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'ordonnance.creer', 'ordonnance.consulter', 'ordonnance.valider',
     // Clients & Identité
     'client.consulter', 'clients.consulter', 'client.creer', 'client.credit', 'client.paiement',
-    'client.identite_complete', 'client.notes_medicales',
+    'client.identite_complete', 'client.notes_medicales', 'client.fiche_imprimer',
     // Catalogue (modifier) & prix
     'catalogue.consulter', 'catalogue.creer', 'catalogue.modifier', 'prix.modifier',
     // Stock (réceptions, validation ajustements, validation inventaires)

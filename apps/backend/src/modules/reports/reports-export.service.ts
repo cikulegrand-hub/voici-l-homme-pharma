@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { DocumentHeaderService } from '../settings/document-header.service';
 import { ReportResult } from '@vhp/shared';
 
 @Injectable()
 export class ReportsExportService {
+  constructor(private readonly documentHeaderService: DocumentHeaderService) {}
   export(result: ReportResult, format: 'csv' | 'xlsx' | 'pdf'): { buffer: Buffer; contentType: string; extension: string } {
     result = this.sanitize(result);
     if (format === 'csv') {
@@ -148,10 +150,16 @@ export class ReportsExportService {
     const linesPerPage = 27;
     const totalPages = Math.max(1, Math.ceil(formattedLines.length / linesPerPage));
 
+    const identity = this.documentHeaderService.getPharmacyIdentity();
+    const img = this.documentHeaderService.parseImageForPdf(identity.logoUrl);
+
     const objects: string[] = [];
     const font1Obj = 3;
     const font2Obj = 4;
     const pageObjStart = 5;
+    const imgObjNum = pageObjStart + totalPages * 2;
+    const smaskObjNum = img?.smask ? imgObjNum + 1 : undefined;
+    const xobjRes = img ? ` /XObject << /Im1 ${imgObjNum} 0 R >>` : '';
 
     const pageKids: string[] = [];
     for (let p = 0; p < totalPages; p++) {
@@ -160,14 +168,15 @@ export class ReportsExportService {
 
     // Obj 1: Catalog
     objects.push('<< /Type /Catalog /Pages 2 0 R >>');
-    // Obj 2: Pages
+    // 2: Pages
     objects.push(`<< /Type /Pages /Kids [${pageKids.join(' ')}] /Count ${totalPages} >>`);
-    // Obj 3: Font Regular
+    // 3: Font Regular
     objects.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
-    // Obj 4: Font Bold
+    // 4: Font Bold
     objects.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>');
 
     const generatedDate = new Date().toLocaleString('fr-FR', { timeZone: 'Africa/Kinshasa' });
+    const pharmacyName = identity.name || "VOICI L'HOMME PHARMA";
 
     for (let p = 0; p < totalPages; p++) {
       const pageIndex = p + 1;
@@ -176,18 +185,43 @@ export class ReportsExportService {
 
       // Page object
       objects.push(
-        `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 ${font1Obj} 0 R /F2 ${font2Obj} 0 R >> >> /Contents ${contentObjNum} 0 R >>`,
+        `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 ${font1Obj} 0 R /F2 ${font2Obj} 0 R >>${xobjRes} >> /Contents ${contentObjNum} 0 R >>`,
       );
 
       // Commands
       const cmds: string[] = [];
-      // Header Banner
-      cmds.push(`BT /F2 13 Tf 40 802 Td (${this.pdfText("VOICI L'HOMME PHARMA")}) Tj ET`);
-      cmds.push(`BT /F2 10 Tf 40 784 Td (${this.pdfText(`Rapport : ${this.getReportLabel(result.reportKey)}`)}) Tj ET`);
-      cmds.push(
-        `BT /F1 8 Tf 40 768 Td (${this.pdfText(`Période : ${this.periodLabel(result)} | Généré le : ${generatedDate} | Enregistrements : ${rawRows.length}`)}) Tj ET`,
-      );
-      cmds.push(`BT /F1 7 Tf 40 756 Td (${this.pdfText(`Totaux : ${this.totalsLabel(result)}`)}) Tj ET`);
+
+      // Header Banner on every page
+      if (img) {
+        let dispW = Math.min(100, img.width);
+        let dispH = dispW / (img.width / img.height);
+        if (dispH > 42) {
+          dispH = 42;
+          dispW = dispH * (img.width / img.height);
+        }
+        const imgX = 40;
+        const imgY = 818 - dispH;
+        cmds.push('q');
+        cmds.push(`${dispW.toFixed(2)} 0 0 ${dispH.toFixed(2)} ${imgX.toFixed(2)} ${imgY.toFixed(2)} cm`);
+        cmds.push('/Im1 Do');
+        cmds.push('Q');
+
+        const textX = 40 + Math.ceil(dispW) + 14;
+        cmds.push(`BT /F2 13 Tf ${textX} 802 Td (${this.pdfText(pharmacyName)}) Tj ET`);
+        cmds.push(`BT /F2 10 Tf ${textX} 786 Td (${this.pdfText(`Rapport : ${this.getReportLabel(result.reportKey)}`)}) Tj ET`);
+        cmds.push(
+          `BT /F1 8 Tf ${textX} 770 Td (${this.pdfText(`Période : ${this.periodLabel(result)} | Généré le : ${generatedDate} | Lignes : ${rawRows.length}`)}) Tj ET`,
+        );
+        cmds.push(`BT /F1 7 Tf ${textX} 758 Td (${this.pdfText(`Totaux : ${this.totalsLabel(result)}`)}) Tj ET`);
+      } else {
+        cmds.push(`BT /F2 13 Tf 40 802 Td (${this.pdfText(pharmacyName)}) Tj ET`);
+        cmds.push(`BT /F2 10 Tf 40 784 Td (${this.pdfText(`Rapport : ${this.getReportLabel(result.reportKey)}`)}) Tj ET`);
+        cmds.push(
+          `BT /F1 8 Tf 40 768 Td (${this.pdfText(`Période : ${this.periodLabel(result)} | Généré le : ${generatedDate} | Enregistrements : ${rawRows.length}`)}) Tj ET`,
+        );
+        cmds.push(`BT /F1 7 Tf 40 756 Td (${this.pdfText(`Totaux : ${this.totalsLabel(result)}`)}) Tj ET`);
+      }
+
       cmds.push(`BT /F1 8 Tf 480 802 Td (${this.pdfText(`Page ${pageIndex} / ${totalPages}`)}) Tj ET`);
 
       // Top separator line
@@ -207,11 +241,19 @@ export class ReportsExportService {
 
       // Bottom separator line
       cmds.push('40 42 m 555 42 l S');
-      cmds.push(`BT /F1 7 Tf 40 28 Td (${this.pdfText('Document confidentiel réservé à l’usage interne de l’officine.')}) Tj ET`);
+      const footerNotice = identity.legalNotice
+        ? this.pdfText(identity.legalNotice.slice(0, 80))
+        : 'Document confidentiel réservé à l’usage interne de l’officine.';
+      cmds.push(`BT /F1 7 Tf 40 28 Td (${footerNotice}) Tj ET`);
       cmds.push(`BT /F1 7 Tf 490 28 Td (${this.pdfText(`Page ${pageIndex} / ${totalPages}`)}) Tj ET`);
 
       const streamContent = cmds.join('\n');
       objects.push(`<< /Length ${Buffer.byteLength(streamContent, 'latin1')} >>\nstream\n${streamContent}\nendstream`);
+    }
+
+    if (img) {
+      const imgObjs = this.documentHeaderService.createPdfImageObjects(img, imgObjNum, smaskObjNum);
+      objects.push(...imgObjs);
     }
 
     let output = '%PDF-1.4\n';

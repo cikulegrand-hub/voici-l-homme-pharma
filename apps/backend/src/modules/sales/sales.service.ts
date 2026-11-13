@@ -23,6 +23,7 @@ import { StockService } from '../stock/stock.service';
 import { CatalogService } from '../catalog/catalog.service';
 import { CustomersService } from '../customers/customers.service';
 import { SettingsService } from '../settings/settings.service';
+import { DocumentHeaderService } from '../settings/document-header.service';
 import { AuditService } from '../audit/audit.service';
 import { AuthService } from '../auth/auth.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -43,6 +44,7 @@ export class SalesService {
     private readonly authService: AuthService,
     private readonly invoiceNumberService: InvoiceNumberService,
     private readonly exchangeRateResolver: ExchangeRateResolver,
+    private readonly documentHeaderService: DocumentHeaderService,
   ) {}
 
   /**
@@ -912,7 +914,7 @@ export class SalesService {
       throw new BadRequestException('Ce panier a expiré après 24 heures de conservation.');
     }
 
-    if (userId && cart.user_id !== userId && userRole !== 'ADMIN' && userRole !== 'PHARMACIEN') {
+    if (userId && cart.user_id !== userId && userRole !== 'SUPER_ADMIN' && userRole !== 'ADMIN' && userRole !== 'PHARMACIEN') {
       throw new ForbiddenException('Seul le vendeur propriétaire ou un pharmacien peut reprendre ce panier.');
     }
 
@@ -1393,31 +1395,7 @@ export class SalesService {
   </style>
 </head>
 <body>
-  <div class="header-box">
-    ${
-      showLogo
-        ? `<div class="logo-wrapper" style="text-align: center; margin-bottom: 8px;">
-      <img src="${identity.logoUrl}" alt="Logo Officine" style="max-height: ${ticket ? '48px' : '75px'}; max-width: ${ticket ? '140px' : '220px'}; object-fit: contain;" />
-    </div>`
-        : ''
-    }
-    <div class="pharmacy-name">${identity.name}</div>
-    <div class="header-meta">
-      ${identity.address}<br>
-      Tél : ${identity.phone || '+243 ...'} | Email : ${identity.email || ''}<br>
-      RCCM : ${identity.rccm || 'N/A'} | ID.NAT : ${identity.idNat || 'N/A'} | NIF : ${identity.nif || (identity as any).taxNumber || 'N/A'}
-    </div>
-    ${
-      ticket && printTemplates.ticketHeader
-        ? `<div class="ticket-header-text" style="font-size: 10px; font-style: italic; margin-top: 5px; text-align: center; border-top: 1px dotted #888; padding-top: 4px;">${printTemplates.ticketHeader.replace(/\n/g, '<br>')}</div>`
-        : ''
-    }
-    ${
-      !ticket && printTemplates.invoiceHeader
-        ? `<div class="invoice-header-text" style="font-size: 13px; font-weight: 700; margin-top: 6px; text-align: center; border-top: 1px solid #111; padding-top: 4px;">${printTemplates.invoiceHeader.replace(/\n/g, '<br>')}</div>`
-        : ''
-    }
-  </div>
+  ${this.documentHeaderService.renderHtmlHeader({ format: ticket ? 'ticket' : 'a4' })}
 
   ${duplicateBanner}
 
@@ -1495,150 +1473,13 @@ export class SalesService {
       : ''
   }
 
-  <div class="legal-notice">
-    ${
-      ticket && printTemplates.ticketFooter
-        ? `<div style="font-weight: 600; margin-bottom: 4px; font-size: 10px;">${printTemplates.ticketFooter}</div>`
-        : ''
-    }
-    ${
-      !ticket && printTemplates.invoiceFooter
-        ? `<div style="font-weight: 600; margin-bottom: 4px; font-size: 11px;">${printTemplates.invoiceFooter}</div>`
-        : ''
-    }
-    ${identity.invoiceFooter || (identity as any).receiptFooterText || 'Tout médicament vendu ne peut être repris ni échangé sans accord préalable du pharmacien responsable.'}<br>
-    ${identity.legalNotice || (identity as any).invoiceLegalNotice || ''}
-  </div>
+  ${this.documentHeaderService.renderHtmlFooter({ format: ticket ? 'ticket' : 'a4' })}
 </body>
 </html>`;
   }
 
-  private parseImageForPdf(dataUrl?: string): {
-    width: number;
-    height: number;
-    stream: Buffer;
-    isJpeg: boolean;
-    smask?: Buffer;
-  } | null {
-    if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) {
-      return null;
-    }
-    const match = dataUrl.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,(.+)$/);
-    if (!match) return null;
-    const buf = Buffer.from(match[2], 'base64');
-    if (buf.length < 8) return null;
-
-    // 1. JPEG
-    if (buf[0] === 0xff && buf[1] === 0xd8) {
-      let pos = 2;
-      while (pos < buf.length - 8) {
-        if (buf[pos] !== 0xff) {
-          pos++;
-          continue;
-        }
-        const marker = buf[pos + 1];
-        if (
-          (marker >= 0xc0 && marker <= 0xc3) ||
-          (marker >= 0xc5 && marker <= 0xc7) ||
-          (marker >= 0xc9 && marker <= 0xcb) ||
-          (marker >= 0xcd && marker <= 0xcf)
-        ) {
-          const height = buf.readUInt16BE(pos + 5);
-          const width = buf.readUInt16BE(pos + 7);
-          if (width > 0 && height > 0) {
-            return { width, height, stream: buf, isJpeg: true };
-          }
-        }
-        const len = buf.readUInt16BE(pos + 2);
-        pos += 2 + len;
-      }
-      return null;
-    }
-
-    // 2. PNG
-    if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) {
-      try {
-        let pos = 8;
-        let width = 0;
-        let height = 0;
-        let colorType = 0;
-        const idats: Buffer[] = [];
-        while (pos < buf.length) {
-          const len = buf.readUInt32BE(pos);
-          const type = buf.slice(pos + 4, pos + 8).toString('ascii');
-          if (type === 'IHDR') {
-            width = buf.readUInt32BE(pos + 8);
-            height = buf.readUInt32BE(pos + 12);
-            colorType = buf[pos + 17];
-          } else if (type === 'IDAT') {
-            idats.push(buf.slice(pos + 8, pos + 8 + len));
-          }
-          pos += 12 + len;
-        }
-        if (!width || !height || idats.length === 0) return null;
-        const inflated = zlib.inflateSync(Buffer.concat(idats));
-        const bpp = colorType === 6 ? 4 : colorType === 2 ? 3 : 0;
-        if (!bpp) return null;
-
-        const bytesPerLine = width * bpp;
-        const raw = Buffer.alloc(width * height * bpp);
-        let srcPos = 0;
-        for (let y = 0; y < height; y++) {
-          const filter = inflated[srcPos++];
-          const lineStart = y * bytesPerLine;
-          const prevLineStart = (y - 1) * bytesPerLine;
-          for (let x = 0; x < bytesPerLine; x++) {
-            const left = x >= bpp ? raw[lineStart + x - bpp] : 0;
-            const up = y > 0 ? raw[prevLineStart + x] : 0;
-            const upLeft = y > 0 && x >= bpp ? raw[prevLineStart + x - bpp] : 0;
-            let val = inflated[srcPos++];
-            if (filter === 1) val = (val + left) & 0xff;
-            else if (filter === 2) val = (val + up) & 0xff;
-            else if (filter === 3) val = (val + Math.floor((left + up) / 2)) & 0xff;
-            else if (filter === 4) {
-              const p = left + up - upLeft;
-              const pa = Math.abs(p - left);
-              const pb = Math.abs(p - up);
-              const pc = Math.abs(p - upLeft);
-              let pr = upLeft;
-              if (pa <= pb && pa <= pc) pr = left;
-              else if (pb <= pc) pr = up;
-              val = (val + pr) & 0xff;
-            }
-            raw[lineStart + x] = val;
-          }
-        }
-
-        if (colorType === 6) {
-          const rgb = Buffer.alloc(width * height * 3);
-          const alpha = Buffer.alloc(width * height);
-          for (let i = 0, j = 0; i < width * height; i++) {
-            rgb[j++] = raw[i * 4];
-            rgb[j++] = raw[i * 4 + 1];
-            rgb[j++] = raw[i * 4 + 2];
-            alpha[i] = raw[i * 4 + 3];
-          }
-          return {
-            width,
-            height,
-            stream: zlib.deflateSync(rgb),
-            isJpeg: false,
-            smask: zlib.deflateSync(alpha),
-          };
-        }
-
-        return {
-          width,
-          height,
-          stream: zlib.deflateSync(raw),
-          isJpeg: false,
-        };
-      } catch {
-        return null;
-      }
-    }
-
-    return null;
+  private parseImageForPdf(dataUrl?: string) {
+    return this.documentHeaderService.parseImageForPdf(dataUrl);
   }
 
   /** Génère un PDF autonome (sans dépendance native) pour facture/ticket avec support des caractères accentués (WinAnsiEncoding) et logo officiel. */
@@ -1651,34 +1492,8 @@ export class SalesService {
       ? (printTemplates.showLogoOnTicket ?? true) && !!identity.logoUrl
       : (printTemplates.showLogoOnInvoice ?? true) && !!identity.logoUrl;
 
-    const img = showLogo ? this.parseImageForPdf(identity.logoUrl) : null;
-
-    const sanitizeForWinAnsi = (text: string) => {
-      const map: Record<string, string> = {
-        'é': '\xE9', 'è': '\xE8', 'ê': '\xEA', 'ë': '\xEB',
-        'à': '\xE0', 'â': '\xE2', 'ä': '\xE4',
-        'î': '\xEE', 'ï': '\xEF',
-        'ô': '\xF4', 'ö': '\xF6',
-        'ù': '\xF9', 'û': '\xFB', 'ü': '\xFC',
-        'ç': '\xE7',
-        'É': '\xC9', 'È': '\xC8', 'Ê': '\xCA', 'Ë': '\xCB',
-        'À': '\xC0', 'Â': '\xC2', 'Ä': '\xC4',
-        'Î': '\xCE', 'Ï': '\xCF',
-        'Ô': '\xD4', 'Ö': '\xD6',
-        'Ù': '\xD9', 'Û': '\xDB', 'Ü': '\xDC',
-        'Ç': '\xC7',
-        '’': '\x27', '‘': '\x27', '“': '\x22', '”': '\x22',
-        '«': '\xAB', '»': '\xBB', '–': '-', '—': '-',
-        '°': '\xB0',
-      };
-      let out = '';
-      for (const ch of String(text || '')) {
-        if (map[ch]) out += map[ch];
-        else if (ch.charCodeAt(0) >= 32 && ch.charCodeAt(0) <= 126) out += ch;
-        else out += '?';
-      }
-      return out.replace(/[()\\]/g, '\\$&');
-    };
+    const img = showLogo ? this.documentHeaderService.parseImageForPdf(identity.logoUrl) : null;
+    const sanitizeForWinAnsi = (text: string) => this.documentHeaderService.sanitizeForWinAnsi(text);
 
     const lines = [
       sanitizeForWinAnsi(identity.name),
@@ -1730,7 +1545,7 @@ export class SalesService {
           dispH = 60;
           dispW = dispH * (img.width / img.height);
         }
-        imgX = (pageWidth - dispW) / 2;
+        imgX = 40;
         imgY = pageHeight - dispH - 24;
       }
     }

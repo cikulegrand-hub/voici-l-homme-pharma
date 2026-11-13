@@ -4,6 +4,7 @@ import {
   Patch,
   Post,
   Body,
+  Query,
   Req,
   UseGuards,
   HttpCode,
@@ -12,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { SettingsService } from './settings.service';
+import { DocumentHeaderService } from './document-header.service';
 import {
   UpdatePharmacyIdentityDto,
   UpdateFinancialRulesDto,
@@ -30,7 +32,10 @@ import { RequirePermission } from '../auth/decorators/auth.decorators';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('settings')
 export class SettingsController {
-  constructor(private readonly settingsService: SettingsService) {}
+  constructor(
+    private readonly settingsService: SettingsService,
+    private readonly documentHeaderService: DocumentHeaderService,
+  ) {}
 
   private getAuthorId(req: any): string {
     const authorId = req?.user?.id;
@@ -49,6 +54,18 @@ export class SettingsController {
       financial: this.settingsService.getFinancialRules(),
       alerts: this.settingsService.getAlertThresholds(),
       printTemplates: this.settingsService.getPrintTemplates(),
+    };
+  }
+
+  @Get('document-header')
+  @ApiOperation({ summary: 'En-tête et pied de page centralisés pour documents officiels' })
+  getDocumentHeader(@Query('format') format?: 'a4' | 'ticket') {
+    const fmt = format === 'ticket' ? 'ticket' : 'a4';
+    return {
+      identity: this.documentHeaderService.getPharmacyIdentity(),
+      printTemplates: this.documentHeaderService.getPrintTemplates(),
+      headerHtml: this.documentHeaderService.renderHtmlHeader({ format: fmt }),
+      footerHtml: this.documentHeaderService.renderHtmlFooter({ format: fmt }),
     };
   }
 

@@ -75,4 +75,12 @@ export class SettingsApiService {
     return this.client.post('/settings/import/execute', dto);
   }
 
+  getDocumentHeader(format: 'a4' | 'ticket' = 'a4'): Observable<{
+    identity: PharmacyIdentity;
+    printTemplates: PrintTemplates;
+    headerHtml: string;
+    footerHtml: string;
+  }> {
+    return this.client.get(`/settings/document-header?format=${format}`);
+  }
 }

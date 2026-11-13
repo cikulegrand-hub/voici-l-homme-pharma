@@ -117,7 +117,17 @@ export class AuthService implements OnModuleInit {
 
         const count = await this.prisma.role_permissions.count({ where: { role_id: role.id } });
         if (count > 0) {
-          // Ce rôle a déjà été initialisé ou personnalisé par le Super-Admin : ne pas écraser ses choix
+          // Si une nouvelle permission par défaut manque au rôle système ADMIN ou PHARMACIEN, on l'ajoute
+          if (roleName === 'ADMIN' || roleName === 'PHARMACIEN') {
+            const syncCodes = ['client.fiche_imprimer'];
+            const syncPerms = await this.prisma.permissions.findMany({ where: { code: { in: syncCodes } } });
+            for (const p of syncPerms) {
+              const hasPerm = await this.prisma.role_permissions.findFirst({ where: { role_id: role.id, permission_id: p.id } });
+              if (!hasPerm) {
+                await this.prisma.role_permissions.create({ data: { role_id: role.id, permission_id: p.id } }).catch(() => {});
+              }
+            }
+          }
           continue;
         }
 
