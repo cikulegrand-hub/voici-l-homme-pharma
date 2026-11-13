@@ -57,7 +57,7 @@ export interface NavItem {
       >
         <div class="sidebar-header">
           <div class="sidebar-logo">
-            <mat-icon class="logo-icon">local_pharmacy</mat-icon>
+            <img src="/logo.jpg" alt="Voici l'Homme Pharma" class="sidebar-logo-img" />
             <div class="logo-text">
               <span class="logo-title">{{ i18n.appName }}</span>
               <span class="logo-subtitle">{{ i18n.appSubtitle }}</span>
@@ -285,6 +285,16 @@ export interface NavItem {
       display: flex;
       align-items: center;
       gap: 12px;
+    }
+
+    .sidebar-logo-img {
+      height: 38px;
+      max-width: 54px;
+      object-fit: contain;
+      background: #ffffff;
+      padding: 2px 4px;
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
     }
 
     .logo-icon {

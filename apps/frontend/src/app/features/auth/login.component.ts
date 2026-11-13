@@ -31,8 +31,8 @@ import { I18N_FR } from '../../core/i18n/translations.fr';
       <div class="login-container">
         <!-- Logo et En-tête -->
         <div class="brand-header">
-          <div class="logo-circle">
-            <mat-icon class="brand-icon">local_pharmacy</mat-icon>
+          <div class="logo-container">
+            <img src="/logo.jpg" alt="Voici l'Homme Pharma" class="brand-logo" />
           </div>
           <h1 class="brand-title">{{ i18n.appName }}</h1>
           <p class="brand-subtitle">{{ i18n.appSubtitle }}</p>
@@ -151,23 +151,23 @@ import { I18N_FR } from '../../core/i18n/translations.fr';
       color: #ffffff;
     }
 
-    .logo-circle {
-      width: 64px;
-      height: 64px;
-      background: #0f9d58;
-      border-radius: 50%;
+    .logo-container {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 12px;
-      box-shadow: 0 4px 12px rgba(15, 157, 88, 0.4);
+      margin-bottom: 14px;
+      padding: 6px 14px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
     }
 
-    .brand-icon {
-      font-size: 36px;
-      width: 36px;
-      height: 36px;
-      color: #ffffff;
+    .brand-logo {
+      height: 64px;
+      max-width: 220px;
+      object-fit: contain;
+      border-radius: 6px;
+      display: block;
     }
 
     .brand-title {
